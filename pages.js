@@ -73,7 +73,7 @@ async function pageAVoir() {
   av.films = (await chargerFilms()).filter((f) => f.statut === 'a_voir');
   av.vus = [];
   const n = av.films.length;
-  return `<div class="coll-tete avoir-tete"><div class="titre-page"><p class="sur-titre">À voir</p><h1>Watchlist</h1></div>
+  return `<div class="coll-tete avoir-tete"><div class="titre-page"><h1>Watchlist</h1></div>
     <p class="muted"><strong>${n}</strong> ${n > 1 ? 'films à voir' : 'film à voir'}</p></div>
   ${n ? `<div class="filtres"><div class="filtres-ligne">${champRecherche('av-q', av.q, 'Rechercher dans la watchlist')}
       ${champTri('av-tri', [['ajout', 'Date d’ajout'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['duree', 'Durée'], ['titre', 'Titre']], av.tri)}</div>
@@ -219,7 +219,7 @@ function htmlTops() {
     <button class="btn carre" type="button" data-top-descendre="${i}" ${i === liste.length - 1 ? 'disabled' : ''} aria-label="Faire descendre ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
     <button class="btn carre" type="button" data-top-retirer="${i}" aria-label="Retirer ${esc(f.titre)} du classement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
   const note = (f) => (f.note ? `<span aria-hidden="true" class="etoile-txt">★</span> ${fr(f.note)}` : 'Pas noté');
-  return `<div class="titre-page"><p class="sur-titre">Mes tops</p><h1>Classements</h1><p class="muted">Ton classement à toi, dans l'ordre que tu veux. Utilise les flèches pour faire monter ou descendre un film.</p></div>
+  return `<div class="titre-page"><h1>Mes tops</h1><p class="muted">Ton classement à toi, dans l'ordre que tu veux. Utilise les flèches pour faire monter ou descendre un film.</p></div>
   <nav class="puces" aria-label="Choisir un classement">${['tous', ...GENRES].map((x) => `<a href="#tops/${x === 'tous' ? 'tous' : slugGenre(x)}" ${x === l ? 'aria-current="page"' : ''}>${x === 'tous' ? `<span class="trophee">${ICO_TROPHEE}</span>Tous les temps` : `<img src="${buste(x)}" alt="">${x}`}</a>`).join('')}</nav>
   <div class="tops-tete"><h2 class="section">${nomTop(l)}</h2><div><span class="muted">${liste.length} / ${taille} places</span>
     ${liste.length < taille && liste.length ? `<button class="btn primaire" type="button" data-top-ajouter>${ICO_TROPHEE}Ajouter au top</button>` : ''}</div></div>
@@ -228,7 +228,8 @@ function htmlTops() {
       <button class="btn primaire" type="button" data-top-ajouter>Choisir un premier film</button></div></div>`
   : `<ol class="podium">${liste.slice(0, 3).map((f, i) => `<li><div class="podium-haut"><span class="rang" style="color:${medailles[i]}" aria-hidden="true">${i + 1}</span>
       <a href="#film/${f.id}" aria-label="N°${i + 1} : ${esc(f.titre)}">${posterHtml({ ...f, genres: [] })}</a></div>
-      <div class="podium-bas"><div><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''} · ${note(f)}</small></div>${fleches(f, i)}</div></li>`).join('')}</ol>
+      <div class="podium-bas"><div><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''} · ${note(f)}</small></div>${fleches(f, i)}</div></li>`).join('')}
+      ${Array.from({ length: 3 - Math.min(liste.length, 3) }, (_, k) => `<li class="podium-libre"><button class="btn" type="button" data-top-ajouter><span class="rang" style="color:${medailles[liste.length + k]}" aria-hidden="true">${liste.length + k + 1}</span><span>+ Place libre · ajouter un film</span></button></li>`).join('')}</ol>
     <ol class="top-suite" start="4">${liste.slice(3).map((f, j) => `<li><span class="rang-ligne">${j + 4}</span>${affiche(f.affiche)}
       <div><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}</small></div><span class="note-ligne">${note(f)}</span>${fleches(f, j + 3)}</li>`).join('')}
       ${Array.from({ length: taille - Math.max(liste.length, 3) }, (_, k) => `<li class="libre"><button class="btn" type="button" data-top-ajouter><span class="rang-ligne">${Math.max(liste.length, 3) + k + 1}</span><span>+ Place libre · ajouter un film</span></button></li>`).join('')}</ol>`}`;
@@ -308,6 +309,9 @@ function maxRond(m) {
 }
 
 // Barres verticales avec axe des ordonnées : 5 graduations rondes de 0 au maximum.
+// « +3 ce mois-ci » en vert, « −2 … » en rouge, « 0 … » neutre.
+const evol = (n, suite) => `<span class="${n > 0 ? 'hausse' : n < 0 ? 'baisse' : 'muted'}">${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)} ${suite}</span>`;
+
 function barres(items, unite = '') {
   const max = maxRond(Math.max(0, ...items.map((i) => i.v))), ticks = [4, 3, 2, 1, 0].map((k) => (max * k) / 4);
   return `<div class="graph"><div class="axe" aria-hidden="true">${ticks.map((t) => `<span>${t}${unite}</span>`).join('')}</div>
@@ -320,7 +324,18 @@ const lignesH = (rows) => `<ol class="hbarres">${rows.map((r) => `<li>${r.ico ||
 
 /* ---------- Statistiques ---------- */
 
-const st = { films: [], annee: null, mesure: 'films', periodeReal: 'annee', periodeActeur: 'annee', carte: null };
+const st = { films: [], annee: null, mesure: 'films', periodeReal: 'annee', periodeActeur: 'annee', carte: null, photos: {}, cherches: new Set() };
+
+// Les photos des réalisateurs ne sont pas en base : une recherche TMDB par nom, une fois par session, puis on redessine.
+function photosReals(noms) {
+  const manquants = noms.filter((n) => !st.cherches.has(n));
+  if (!manquants.length || !reglages.tmdb_token) return;
+  manquants.forEach((n) => st.cherches.add(n));
+  Promise.all(manquants.map((n) => tmdb('/search/person', { query: n }).then((r) => {
+    const p = r.results?.find((x) => x.known_for_department === 'Directing' && x.profile_path) || r.results?.find((x) => x.profile_path);
+    if (p) st.photos[n] = p.profile_path;
+  }).catch(() => {}))).then(() => { if (location.hash.startsWith('#stats')) majStats(); });
+}
 
 async function pageStats() {
   st.films = (await chargerFilms()).filter((f) => f.statut === 'vu' && f.visions.length);
@@ -330,7 +345,7 @@ async function pageStats() {
 
 function htmlStats() {
   const F = st.films, auj = aujourdhui(), moisCourant = auj.slice(0, 7);
-  if (!F.length) return `<div class="titre-page"><p class="sur-titre">Statistiques</p><h1>Ton cinéma, décortiqué</h1></div>${videMascotte('Pas encore de statistiques', 'Ajoute tes premiers films vus : Baudet calculera tes chiffres, tes genres et tes pays.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
+  if (!F.length) return `<div class="titre-page"><h1>Statistiques</h1></div>${videMascotte('Pas encore de statistiques', 'Ajoute tes premiers films vus : Baudet calculera tes chiffres, tes genres et tes pays.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
   const visions = F.flatMap((f) => f.visions.map((d) => ({ d, f })));
   const notes = F.filter((f) => f.note).map((f) => f.note);
   const minutes = visions.reduce((s, v) => s + (v.f.duree || 0), 0);
@@ -338,13 +353,14 @@ function htmlStats() {
   const top = parGenre[0];
   const nouveauxMois = F.filter((f) => f.visions[0].startsWith(moisCourant)).length;
   const debut = F.map((f) => f.visions[0]).sort()[0];
-  const kpis = [['Films vus', F.length, '', `+${nouveauxMois} ce mois-ci`], ['Heures passées', Math.round(minutes / 60), 'h', `environ ${pluriel(Math.round(minutes / 1440), 'jour')}`],
+  const kpis = [['Films vus', F.length, '', evol(nouveauxMois, 'ce mois-ci')], ['Heures passées', Math.round(minutes / 60), 'h', `environ ${pluriel(Math.round(minutes / 1440), 'jour')}`],
     ['Note moyenne', notes.length ? fr1(moyenne(notes)) : '–', '/ 5', `${pluriel(notes.filter((n) => n === 5).length, 'film noté', 'films notés')} 5 ★`], ['Genre préféré', top ? top.g : '–', '', top ? pluriel(top.n, 'film') : '']];
 
   // 12 derniers mois
   const mois = Array.from({ length: 12 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 11 + i); return iso(d).slice(0, 7); });
   const cumul = mois.map((m) => F.filter((f) => f.visions[0].slice(0, 7) <= m).length);
-  const maxC = maxRond(Math.max(...cumul)), pts = cumul.map((v, i) => [i * (1000 / 11), 250 - (v / maxC) * 240]);
+  const maxC = maxRond(Math.max(...cumul)), pts = cumul.map((v, i) => [i * (1000 / 11), 260 - (v / maxC) * 260]);
+  const vusMois = mois.map((m) => F.filter((f) => f.visions[0].startsWith(m)).length);
   const lab = (m) => MOIS_COURT[Number(m.slice(5)) - 1];
   const parMois = mois.map((m) => {
     const vs = visions.filter((v) => v.d.startsWith(m)), h = Math.round(vs.reduce((s, v) => s + (v.f.duree || 0), 0) / 60);
@@ -352,9 +368,8 @@ function htmlStats() {
     return { v, label: lab(m), tip: `${majuscule(MOIS[Number(m.slice(5)) - 1])} ${m.slice(0, 4)} : ${st.mesure === 'films' ? pluriel(vs.length, 'film') : h + ' h'}` };
   });
   const repNotes = Array.from({ length: 10 }, (_, i) => { const n = (i + 1) / 2, c = notes.filter((x) => x === n).length; return { v: c, label: fr(n), tip: `${fr(n)} ★ : ${pluriel(c, 'film')}` }; });
-  const decs = [...new Set(F.filter((f) => f.annee).map((f) => Math.floor(f.annee / 10) * 10))].sort();
-  const parDec = decs.map((d) => ({ d, v: F.filter((f) => f.annee >= d && f.annee < d + 10).length }));
-  const decMax = parDec.reduce((a, b) => (b.v > a.v ? b : a), { v: -1 });
+  const parAn = [...new Set(F.filter((f) => f.annee).map((f) => f.annee))].sort().map((a) => ({ a, v: F.filter((f) => f.annee === a).length }));
+  const anMax = parAn.reduce((a, b) => (b.v > a.v ? b : a), { v: -1 });
 
   // Calendrier annuel
   const annees = [...new Set([Number(auj.slice(0, 4)), ...visions.map((v) => Number(v.d.slice(0, 4)))])].sort((a, b) => b - a);
@@ -384,10 +399,11 @@ function htmlStats() {
   // Réalisateurs et acteurs : sur le mois en cours ou l'année en cours.
   const classement = (cle, periode) => {
     const pref = periode === 'mois' ? moisCourant : auj.slice(0, 4), compte = {};
-    F.filter((f) => f.visions.some((d) => d.startsWith(pref))).forEach((f) => (cle === 'real' ? f.realisateurs : f.acteurs.slice(0, 5).map((a) => a.nom)).forEach((n) => (compte[n] = (compte[n] || 0) + 1)));
+    F.filter((f) => f.visions.some((d) => d.startsWith(pref))).forEach((f) => (cle === 'real' ? f.realisateurs : f.acteurs.slice(0, 5).map((a) => { if (a.photo) st.photos[a.nom] ??= a.photo; return a.nom; })).forEach((n) => (compte[n] = (compte[n] || 0) + 1)));
     const rows = Object.entries(compte).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr')).slice(0, 5);
     const m = rows[0]?.[1] || 1;
-    return rows.length ? lignesH(rows.map(([nom, n]) => ({ ico: `<span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>`, nom: esc(nom), pct: (n / m) * 100, val: pluriel(n, 'film') })))
+    if (cle === 'real') photosReals(rows.map(([nom]) => nom));
+    return rows.length ? lignesH(rows.map(([nom, n]) => ({ ico: st.photos[nom] ? `<img class="initiales" src="https://image.tmdb.org/t/p/w92${esc(st.photos[nom])}" alt="" loading="lazy">` : `<span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>`, nom: esc(nom), pct: (n / m) * 100, val: pluriel(n, 'film') })))
       : `<p class="muted">Aucun film ${periode === 'mois' ? 'ce mois-ci' : 'cette année'}.</p>`;
   };
   const seg = (attr, val, opts) => `<div class="bascule" role="group">${opts.map(([v, l]) => `<button type="button" ${attr}="${v}" aria-pressed="${v === val}">${l}</button>`).join('')}</div>`;
@@ -400,24 +416,24 @@ function htmlStats() {
   const nomPays = (c) => { try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(c); } catch { return c; } };
   st.pays = pays;
 
-  return `<div class="titre-page"><p class="sur-titre">Statistiques</p><h1>Ton cinéma, décortiqué</h1><p class="muted">Depuis ${MOIS[Number(debut.slice(5, 7)) - 1]} ${debut.slice(0, 4)} · seuls les films vus comptent.</p></div>
-  <section class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span><span class="muted">${s}</span></div>`).join('')}</section>
+  return `<div class="titre-page"><h1>Statistiques</h1><p class="muted">Depuis ${MOIS[Number(debut.slice(5, 7)) - 1]} ${debut.slice(0, 4)} · seuls les films vus comptent.</p></div>
+  <section class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</section>
   <div class="stats-grille">
-  <section class="carte stat large"><div class="stat-tete"><h2>Ta collection au fil des mois</h2><span class="muted">${pluriel(F.length, 'film')} · +${cumul[11] - cumul[0]} en 12 mois</span></div>
+  <section class="carte stat large"><div class="stat-tete"><h2>Ta collection au fil des mois</h2><span class="muted">${pluriel(F.length, 'film')} · ${evol(cumul[11] - cumul[0], 'en 12 mois')}</span></div>
     <div class="graph"><div class="axe" aria-hidden="true">${[4, 3, 2, 1, 0].map((k) => `<span>${(maxC * k) / 4}</span>`).join('')}</div>
     <div class="zone"><div class="lignes" aria-hidden="true">${[0, 1, 2, 3, 4].map(() => '<span></span>').join('')}</div>
     <svg viewBox="0 0 1000 260" preserveAspectRatio="none" role="img" aria-label="Nombre total de films vus, cumulé : de ${cumul[0]} en ${MOIS[Number(mois[0].slice(5)) - 1]} ${mois[0].slice(0, 4)} à ${cumul[11]} aujourd’hui">
-      <path d="M0,250 L${pts.map((p) => p.join(',')).join(' L')} L1000,250 Z" fill="var(--accent)" fill-opacity=".12"/>
+      <path d="M0,260 L${pts.map((p) => p.join(',')).join(' L')} L1000,260 Z" fill="var(--accent)" fill-opacity=".12"/>
       <polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
-    ${pts.map((p, i) => `<span class="point" style="left:${p[0] / 10}%;top:${(p[1] / 260) * 100}%" title="${MOIS_COURT[Number(mois[i].slice(5)) - 1]} ${mois[i].slice(0, 4)} : ${pluriel(cumul[i], 'film')}"></span>`).join('')}</div>
+    ${pts.map((p, i) => `<span class="point" style="left:${p[0] / 10}%;top:${(p[1] / 260) * 100}%"><span class="tip">${majuscule(MOIS[Number(mois[i].slice(5)) - 1])} ${mois[i].slice(0, 4)} : ${pluriel(vusMois[i], 'film vu', 'films vus')}</span></span>`).join('')}</div>
     <span></span><div class="etiquettes" aria-hidden="true">${mois.map((m) => `<span>${lab(m)}</span>`).join('')}</div></div></section>
 
   <section class="carte stat large"><div class="stat-tete"><h2>Ton année ciné, jour par jour</h2>
-    <label class="champ petit-champ"><span>Année</span><select id="stats-annee">${annees.map((a) => `<option ${a === an ? 'selected' : ''}>${a}</option>`).join('')}</select></label></div>
+    ${annees.length > 1 ? `<label class="champ petit-champ"><span>Année</span><select id="stats-annee" data-menu>${annees.map((a) => `<option ${a === an ? 'selected' : ''}>${a}</option>`).join('')}</select></label>` : ''}</div>
     <div class="hm-defile"><div class="hm" style="--semaines:${nbSemaines}"><span></span><div class="hm-mois" aria-hidden="true">${etiquettesSem.join('')}</div>
       <div class="hm-jours" aria-hidden="true"><span></span><span>mar.</span><span></span><span>jeu.</span><span></span><span>sam.</span><span></span></div>
-      <div class="hm-cases" role="img" aria-label="${joursVus.length} jours avec un film en ${an}">${cases.join('')}</div></div></div>
-    <div class="hm-bas"><div class="hm-chiffres"><div><span class="chiffre">${joursVus.length}</span><span class="muted">jours avec un film</span></div>
+      <div class="hm-cases" role="img" aria-label="${joursVus.length} jours de cinéma en ${an}">${cases.join('')}</div></div></div>
+    <div class="hm-bas"><div class="hm-chiffres"><div><span class="chiffre">${joursVus.length}</span><span class="muted">jours de cinéma</span></div>
       <div><span class="chiffre">${pluriel(record, 'jour')}</span><span class="muted">plus longue série</span></div><div><span class="chiffre">${majuscule(jourFav.slice(3))}</span><span class="muted">ton jour préféré pour un film</span></div></div>
       <div class="hm-legende" aria-hidden="true"><span>Aucun</span>${[0, 1, 2, 3, 4].map((n) => `<span class="hm-${n}"></span>`).join('')}<span>4 films et +</span></div></div></section>
 
@@ -429,7 +445,7 @@ function htmlStats() {
     ${top ? `<a class="genre-prefere" href="#genre/${slugGenre(top.g)}"><img src="img/decor-${slugGenre(top.g)}.jpg" alt="${esc(GENRE_INFO[top.g][7])}">
       <span><span class="sur-titre">Genre préféré</span><b>${top.g}</b><small>${pluriel(top.n, 'film')} · ${Math.round((top.n / F.length) * 100)} % de ta collection</small></span></a>` : ''}</section>
 
-  <section class="carte stat large"><div class="stat-tete"><h2>Ton tour du monde</h2><span class="muted">un film coproduit compte dans chacun de ses pays · détail au survol</span></div>
+  <section class="carte stat large"><div class="stat-tete"><h2>Ton tour du monde</h2><span class="muted">un film coproduit compte dans chacun de ses pays</span></div>
     <div class="carte-monde"><div id="carte-monde" class="carte-svg">${st.carte || '<p class="muted">Chargement de la carte…</p>'}</div>
       <div class="carte-cote"><div><span class="chiffre">${Object.keys(pays).length}</span><span class="muted">${Object.keys(pays).length > 1 ? 'pays visités en films' : 'pays visité en films'}</span></div>
         <ol class="top-pays">${topPays.map(([c, l]) => `<li><span class="pastille-geo geo-${niveauPays(l.length)}" aria-hidden="true"></span><span>${esc(nomPays(c))}</span><b>${l.length}</b></li>`).join('')}</ol>
@@ -438,8 +454,8 @@ function htmlStats() {
   <section class="carte stat"><div class="stat-tete"><h2>Réalisateurs les plus vus</h2>${seg('data-periode-real', st.periodeReal, periodes)}</div>${classement('real', st.periodeReal)}</section>
   <section class="carte stat"><div class="stat-tete"><h2>Acteurs les plus vus</h2>${seg('data-periode-acteur', st.periodeActeur, periodes)}</div>${classement('acteur', st.periodeActeur)}</section>
 
-  <section class="carte stat large"><div class="stat-tete"><h2>Par décennie de sortie</h2>${decMax.v > 0 ? `<span class="muted">les années ${decMax.d} dominent</span>` : ''}</div>
-    ${barres(parDec.map((x) => ({ v: x.v, label: `${String(x.d).slice(2)}s`, tip: `Années ${x.d} : ${pluriel(x.v, 'film')}`, fort: x === decMax })))}</section>
+  <section class="carte stat large"><div class="stat-tete"><h2>Par année de sortie</h2>${anMax.v > 0 ? `<span class="muted">${anMax.a} domine · ${pluriel(anMax.v, 'film')}</span>` : ''}</div>
+    ${barres(parAn.map((x) => ({ v: x.v, label: parAn.length > 12 ? `’${String(x.a).slice(2)}` : x.a, tip: `${x.a} : ${pluriel(x.v, 'film')}`, fort: x === anMax })))}</section>
   </div>`;
 }
 
@@ -477,7 +493,7 @@ async function dessinerCarte() {
     const nom = (c) => { try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(c); } catch { return c; } };
     st.carte = `<svg viewBox="0 0 960 480" role="img" aria-label="Carte des pays d'origine de tes films">${features.map((f) => {
       const p = parNum[f.id];
-      return `<path d="${chemin(f)}" class="geo-${p ? niveauPays(p[1].length) : 0}">${p ? `<title>${esc(nom(p[0]))} : ${pluriel(p[1].length, 'film')} — ${esc(p[1].slice(0, 6).join(', '))}${p[1].length > 6 ? '…' : ''}</title>` : ''}</path>`;
+      return `<path d="${chemin(f)}" class="geo-${p ? niveauPays(p[1].length) : 0}"></path>`;
     }).join('')}</svg>`;
     if ($('#carte-monde')) $('#carte-monde').innerHTML = st.carte;
   } catch (err) {
@@ -594,28 +610,28 @@ async function pageAccueilPleine() {
   const souvenir = vus.flatMap((f) => f.visions.filter((d) => d.slice(5) === auj.slice(5) && d < auj).map((d) => ({ d, f }))).sort((a, b) => b.d.localeCompare(a.d))[0];
   const sorties = aVoir.filter((f) => f.date_sortie_fr && f.date_sortie_fr > auj).sort((a, b) => a.date_sortie_fr.localeCompare(b.date_sortie_fr)).slice(0, 4);
   const jourTxt = majuscule(new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })).replace(/ 1 /, ' 1er ');
-  const titreSection = (sur, titre, lien, label) => `<div class="section-tete"><div><p class="sur-titre">${sur}</p><h2 class="section">${titre}</h2></div>${lien ? `<a class="lien" href="${lien}">${label} →</a>` : ''}</div>`;
-  const kpis = [['Films vus', vus.length, '', `+${ceMois} ce mois-ci`], ['Heures passées', Math.round(minutes / 60), 'h', `environ ${pluriel(Math.round(minutes / 1440), 'jour')}`],
+  const titreSection = (sur, titre, lien, label) => `<div class="section-tete"><div>${sur ? `<p class="sur-titre">${sur}</p>` : ''}<h2 class="section">${titre}</h2></div>${lien ? `<a class="lien" href="${lien}">${label} →</a>` : ''}</div>`;
+  const kpis = [['Films vus', vus.length, '', evol(ceMois, 'ce mois-ci')], ['Heures passées', Math.round(minutes / 60), 'h', `environ ${pluriel(Math.round(minutes / 1440), 'jour')}`],
     ['Note moyenne', notes.length ? fr1(moyenne(notes)) : '–', '/ 5', `sur ${pluriel(notes.length, 'film noté', 'films notés')}`], ['À voir', aVoir.length, '', 'dans ta watchlist']];
   return `<section class="hero accueil-hero"><div class="hero-texte"><p class="sur-titre">${jourTxt}</p><h1>Quel film viens-tu de voir ?</h1>
       <p><span class="long">Tape son titre : affiche, synopsis et casting se remplissent tout seuls. Il ne te reste qu'à le noter.</span><span class="court">Tape son titre, le reste se remplit tout seul.</span></p>
       <div class="boutons"><button class="btn primaire grand" type="button" data-ajout>Ajouter un film</button><a class="btn grand" href="#a-voir">Ma watchlist · ${aVoir.length}</a></div></div></section>
   <section>${titreSection('', 'Ton cinéma en chiffres', '#stats', 'Toutes les statistiques')}
-    <div class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span><span class="muted">${s}</span></div>`).join('')}</div></section>
+    <div class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</div></section>
   ${souvenir ? `<section class="souvenir"><a href="#film/${souvenir.f.id}" tabindex="-1" aria-hidden="true">${affiche(souvenir.f.affiche)}</a>
     <div><p class="sur-titre">Ce jour-là · ${dateLongue(souvenir.d)}</p><h2>Il y a ${pluriel(Number(auj.slice(0, 4)) - Number(souvenir.d.slice(0, 4)), 'an')}, tu regardais <span>${esc(souvenir.f.titre)}</span></h2>
     <p class="muted">${souvenir.f.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(souvenir.f.note)} / 5` : 'Pas noté'}${souvenir.f.coup_de_coeur ? ' · coup de cœur' : ''}</p>
     <a class="btn" href="#film/${souvenir.f.id}">Revoir la fiche</a></div></section>` : ''}
-  ${vus.length ? `<section>${titreSection('Récemment', 'Derniers films vus', '#collection', 'Voir la collection')}
+  ${vus.length ? `<section>${titreSection('', 'Derniers films vus', '#collection', 'Voir la collection')}
     <div class="rangee">${[...vus].sort(parDernier).slice(0, 6).map((f) => carteFilm(f, noteBas(f), '<span class="badge vu">Vu</span>')).join('')}</div></section>` : ''}
   ${rp.n ? `<section class="retro-carte"><div><p class="sur-titre">Rétrospective · ${majuscule(MOIS[Number(md.slice(5, 7)) - 1])} ${md.slice(0, 4)}</p>
       <h2>${gMois?.n ? `Un mois sous le signe ${SIGNE[gMois.g]}` : 'Ton mois en un coup d’œil'}</h2>
       <p>Ton genre dominant, ton réalisateur phare et tes meilleures notes du mois, réunis sur une page.</p><a class="btn clair" href="#retros/mois-1">Voir ma rétro de ${MOIS[Number(md.slice(5, 7)) - 1]}</a></div>
     <div class="retro-carte-chiffres"><div><span class="chiffre">${rp.n}</span><span>${rp.n > 1 ? 'films vus' : 'film vu'}</span></div><div><span class="chiffre">${rp.heures}<small>h</small></span><span>devant l'écran</span></div>
       <div><span class="chiffre">${rp.note ? fr1(rp.note) : '–'}</span><span>note moyenne</span></div></div></section>` : ''}
-  ${aVoir.length ? `<section>${titreSection('Watchlist', 'À voir ensuite', '#a-voir', 'Toute la watchlist')}
+  ${aVoir.length ? `<section>${titreSection('', 'À voir ensuite', '#a-voir', 'Toute la watchlist')}
     <div class="rangee">${[...aVoir].sort((a, b) => b.ajoute_le.localeCompare(a.ajoute_le)).slice(0, 6).map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span><span>ajouté ${ilYa(f.ajout)}</span>`, '<span class="badge">À voir</span>')).join('')}</div></section>` : ''}
-  ${sorties.length ? `<section><div class="section-tete"><div><p class="sur-titre">Dans ta watchlist</p><h2 class="section">Bientôt au cinéma en France</h2></div></div>
+  ${sorties.length ? `<section><div class="section-tete"><div><h2 class="section">Bientôt au cinéma en France</h2></div></div>
     <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml({ ...f, genres: [] }, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>`)}
       <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}${f.genres[0] ? ' · ' + f.genres[0] : ''}</span></span></a>`; }).join('')}</div></section>` : ''}`;
 }

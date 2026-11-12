@@ -230,11 +230,12 @@ const titreReal = (rs) => (rs.every((r) => r.genre === 1) ? 'Réalisatrice' : 'R
 
 function htmlFilm(f) {
   const vu = f.statut === 'vu';
+  const pasSorti = String(f.date_sortie_fr || f.annee || '') > aujourdhui();
   const visions = f.visionnages.map((v) => v.date).sort();
   const n = visions.length;
   const vuTxt = !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
-  return `<div class="fiche-tete"><a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Collection</a>
+  return `<div class="fiche-tete"><a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>
   <section class="fiche-hero">
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
@@ -257,7 +258,7 @@ function htmlFilm(f) {
   </section></div>
   <div class="fiche-corps">
     <div class="fiche-main">
-      ${f.synopsis ? `<section><p class="sur-titre">L'histoire</p><h2 class="section">Synopsis</h2><p class="synopsis">${esc(f.synopsis)}</p></section>` : ''}
+      ${f.synopsis || pasSorti ? `<section><h2 class="section">Synopsis</h2><p class="synopsis${f.synopsis ? '' : ' muted'}">${f.synopsis ? esc(f.synopsis) : 'Le film n’est pas encore sorti : son synopsis sera bientôt disponible.'}</p></section>` : ''}
       ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
         <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path d="M33 26l23 14-23 14z" fill="#1A2730"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
       ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '')).join('')}</ul></section>` : ''}
@@ -521,7 +522,7 @@ const TRIS = [['date', 'Date de visionnage'], ['note', 'Note'], ['genre', 'Genre
 
 function entete(vue, compteur = '') {
   const lien = (v, label, ico) => `<a href="#${v}" ${v === vue ? 'aria-current="page"' : ''}>${ico}${label}</a>`;
-  return `<div class="coll-tete"><div class="titre-page"><p class="sur-titre">Collection</p><h1>Mes films</h1></div>
+  return `<div class="coll-tete"><div class="titre-page"><h1>Mes films</h1></div>
     <div class="coll-tete-droite">${compteur}<nav class="bascule bascule-liens" aria-label="Affichage">
       ${lien('collection', 'Grille', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>')}
       ${lien('calendrier', 'Calendrier', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>')}
