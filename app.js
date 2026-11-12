@@ -15,10 +15,17 @@ const GENRE_TMDB = { 28: 'Action', 12: 'Aventure', 16: 'Animation', 35: 'Comédi
 
 let uid = null, reglages = {}, films = [];
 
-function toast(msg) {
+function toast(msg, action) {
   const t = $('#toast');
-  t.textContent = msg; t.hidden = false;
-  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200);
+  t.replaceChildren(msg);
+  if (action) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = action.label;
+    b.onclick = () => { t.hidden = true; action.fn(); };
+    t.append(b);
+  }
+  t.hidden = false;
+  clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), action ? 6000 : 3200);
 }
 
 function appliquerTheme(theme) {
@@ -79,9 +86,9 @@ function pageAccueil() {
   if (films.length) {
     // shortcut: liste simple en attendant le vrai accueil (KPI, souvenirs, bientôt au cinéma) des maquettes.
     return `<div class="titre-page"><p class="sur-titre">Accueil</p><h1>Tes derniers films</h1></div>
-      <div class="grille">${films.slice(0, 18).map((f) => `<div class="film">
+      <div class="grille">${films.slice(0, 18).map((f) => `<a class="film" href="#film/${f.id}">
         <span class="affiche">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}<span class="badge ${f.statut === 'vu' ? 'vu' : ''}">${f.statut === 'vu' ? 'Vu' : 'À voir'}</span></span>
-        <b>${esc(f.titre)}</b><small>${esc(f.annee ?? '')}${f.note ? ` · ${fr(f.note)} / 5` : ''}${f.coup_de_coeur ? ' · coup de cœur' : ''}</small></div>`).join('')}</div>`;
+        <b>${esc(f.titre)}</b><small>${esc(f.annee ?? '')}${f.note ? ` · ${fr(f.note)} / 5` : ''}${f.coup_de_coeur ? ' · coup de cœur' : ''}</small></a>`).join('')}</div>`;
   }
   return `<section class="hero"><div class="hero-texte">
       <p class="sur-titre">Premier lancement</p><h1>Bienvenue sur DonkTV</h1>
@@ -123,11 +130,21 @@ function pageReglages() {
 
 const PAGES = { accueil: pageAccueil, reglages: pageReglages };
 
-function route() {
-  const nom = location.hash.slice(1) || 'accueil';
-  $('#page').innerHTML = (PAGES[nom] || (() => `<div class="titre-page"><p class="sur-titre">En construction</p><h1>Cette page arrive bientôt</h1><p class="muted">Elle sera ajoutée dans une prochaine étape du développement.</p></div>`))();
-  document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + nom ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  scrollTo(0, 0);
+async function route() {
+  const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
+  const actif = nom === 'film' ? 'collection' : nom;
+  document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  if (nom !== 'film') {
+    page.innerHTML = (PAGES[nom] || (() => `<div class="titre-page"><p class="sur-titre">En construction</p><h1>Cette page arrive bientôt</h1><p class="muted">Elle sera ajoutée dans une prochaine étape du développement.</p></div>`))();
+  } else {
+    if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement de la fiche…</p>';
+    let html;
+    try { html = await pageFilm(id); } catch (err) { html = `<p class="vide erreur">Fiche introuvable : ${esc(err.message)}</p>`; }
+    if (location.hash !== hash) return; // on a changé de page pendant le chargement
+    page.innerHTML = html;
+  }
+  if (page.dataset.vue !== hash) scrollTo(0, 0);
+  page.dataset.vue = hash;
 }
 addEventListener('hashchange', () => uid && route());
 
@@ -165,6 +182,222 @@ $('#page').addEventListener('click', async (e) => {
   } catch (err) { toast(err.message); }
 });
 
+/* ---------- Fiche film ---------- */
+
+const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const dateLongue = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d === 1 ? '1er' : d} ${MOIS[m - 1]} ${y}`; };
+const aujourdhui = () => new Date().toLocaleDateString('sv');
+const etoilesTxt = (n) => '★'.repeat(Math.floor(n)) + (n % 1 ? '½' : '');
+const ICO_ETOILE = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#F2B84B"/><path d="M26 13l3.9 8.2 8.9 1.1-6.6 6.1 1.8 8.8L26 32.8l-8 4.4 1.8-8.8-6.6-6.1 8.9-1.1z" fill="#5A3A08"/></svg>';
+const ICO_RT = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#E8664A"/><path d="M17 36l3.5-10.5L33 13l6 6-12.5 12.5z" fill="#FFF"/><path d="M20.5 25.5l6 6" stroke="#E8664A" stroke-width="2.4" stroke-linecap="round"/><circle cx="27.5" cy="24.5" r="2" fill="#E8664A"/><path d="M14 39h12" stroke="#FFF" stroke-width="2.6" stroke-linecap="round"/></svg>';
+const ICO_TMDB = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#3E8ED0"/><path d="M13 19h26v4.5a3.5 3.5 0 0 0 0 7V35H13v-4.5a3.5 3.5 0 0 0 0-7z" fill="#FFF"/><path d="M31 20v14" stroke="#3E8ED0" stroke-width="2.2" stroke-dasharray="2.5 2.5"/></svg>';
+const ICO_COEUR = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="#F07A6E"/></svg>';
+const ICO_POUBELLE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+
+function etoilesHtml(note, id) {
+  return `<div class="note"><div class="etoiles" role="radiogroup" aria-labelledby="${id}">${[1, 2, 3, 4, 5].map((i) => `<span class="etoile">
+    <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="var(${note >= i ? '--star' : '--star-empty'})"/>${note >= i - 0.5 ? '<path d="M12 2.5v14.8l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="var(--star)"/>' : ''}</svg>
+    <button type="button" role="radio" style="left:0" data-note="${i - 0.5}" aria-checked="${note === i - 0.5}" aria-label="${fr(i - 0.5)} sur 5"></button>
+    <button type="button" role="radio" style="right:0" data-note="${i}" aria-checked="${note === i}" aria-label="${i} sur 5"></button></span>`).join('')}</div>
+    <span class="chiffre">${note ? fr(note) + ' / 5' : 'À noter'}</span></div>`;
+}
+const coeurHtml = (on) => `<button class="btn coeur" type="button" data-coeur aria-pressed="${on}"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="none" stroke="#D2483B" stroke-width="1.8"/></svg>Coup de cœur</button>`;
+const genresHtml = (sel) => `<div class="genres">${GENRES.map((g) => `<button type="button" data-genre="${g}" aria-pressed="${sel.includes(g)}"><img src="${buste(g)}" alt="">${g}</button>`).join('')}</div>`;
+
+let fiche = null; // film affiché, avec ses visionnages
+
+function tuile(ico, label, valeur, unite, bas, lien) {
+  const contenu = `${ico}<div><span class="tuile-label">${label}</span>${valeur == null
+    ? '<span class="tuile-vide">Pas encore de note</span>'
+    : `<span class="chiffre">${valeur}<small>${unite}</small></span>`}<span class="tuile-bas">${bas}</span></div>`;
+  return lien ? `<a class="tuile" href="${lien}" target="_blank" rel="noopener">${contenu}</a>` : `<div class="tuile">${contenu}</div>`;
+}
+
+function htmlFilm(f) {
+  const vu = f.statut === 'vu';
+  const visions = f.visionnages.map((v) => v.date).sort();
+  const n = visions.length;
+  const vuTxt = !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
+  const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
+  return `<div class="fiche-tete"><a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Collection</a>
+  <section class="fiche-hero">
+    <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
+    <div class="fiche-infos">
+      <div class="fiche-genres">${f.genres.map((g) => `<span><img src="${buste(g)}" alt="">${g}</span>`).join('')}</div>
+      <h1>${esc(f.titre)}</h1>
+      <p class="fiche-meta">${meta}</p>
+      <div class="tuiles">
+        ${vu ? tuile(ICO_ETOILE, 'Ma note', f.note ? fr(f.note) : null, ' /5', f.note ? `<span aria-hidden="true" class="ma-note">${etoilesTxt(f.note)}</span>` : '') : ''}
+        ${tuile(ICO_RT, 'Critiques', f.note_rt, ' %', 'Rotten Tomatoes ↗', `https://www.rottentomatoes.com/search?search=${encodeURIComponent(f.titre_original || f.titre)}`)}
+        ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`)}
+      </div>
+      <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
+      <div class="fiche-actions">
+        <button class="btn clair" type="button" data-action="${vu ? 'revu' : 'vu'}">${vu ? 'Je l’ai revu' : 'Je l’ai vu'}</button>
+        <button class="btn contour" type="button" data-action="modifier">Modifier</button>
+        <button class="btn contour carre" type="button" data-action="supprimer" aria-label="Supprimer le film">${ICO_POUBELLE}</button>
+      </div>
+    </div>
+  </section></div>
+  <div class="fiche-corps">
+    <div class="fiche-main">
+      ${f.synopsis ? `<section><p class="sur-titre">L'histoire</p><h2 class="section">Synopsis</h2><p class="synopsis">${esc(f.synopsis)}</p></section>` : ''}
+      ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
+        <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path d="M33 26l23 14-23 14z" fill="#1A2730"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
+      ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => `<li>
+        <span class="photo">${a.photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(a.photo)}" alt="" loading="lazy">` : esc(a.nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
+        <b>${esc(a.nom)}</b><small>${esc(a.role)}</small></li>`).join('')}</ul></section>` : ''}
+    </div>
+    <aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
+      <b>${dateLongue(d)}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
+      : `<p class="muted">Pas encore vu. Dans ta watchlist depuis le ${dateLongue(f.ajoute_le.slice(0, 10))}.</p>`}</aside>
+  </div>`;
+}
+
+async function pageFilm(id) {
+  const { data: f, error } = await sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle();
+  if (error) throw error;
+  fiche = f;
+  return f ? htmlFilm(f) : `<div class="titre-page"><p class="sur-titre">Fiche film</p><h1>Ce film n'est plus dans ta collection</h1><a class="btn" href="#accueil" style="align-self:flex-start">Retour à l'accueil</a></div>`;
+}
+
+const fen = $('#fenetre'), fenCorps = $('#fenetre-corps');
+let edition = null; // brouillon de la fenêtre « Modifier »
+
+function ouvrirEdition(versVu) {
+  const visions = fiche.visionnages.map((v) => v.date).sort();
+  edition = { statut: versVu ? 'vu' : fiche.statut, note: Number(fiche.note) || 0, coeur: fiche.coup_de_coeur, genres: [...fiche.genres],
+    visions: versVu ? [aujourdhui()] : visions };
+  fen.classList.remove('petit');
+  afficherEdition();
+  fen.showModal();
+}
+
+function afficherEdition() {
+  const d = edition, vu = d.statut === 'vu';
+  fenCorps.innerHTML = `<div class="ajout-tete"><span class="mini-affiche">${affiche(fiche.affiche)}</span>
+    <div class="ajout-titres"><span class="sur-titre">${esc(fiche.titre)}</span><h2>${fiche.statut === 'vu' ? 'Modifier le film' : vu ? 'Ton avis' : 'Modifier le film'}</h2></div>
+    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div class="edition">
+    ${vu ? `<div class="avis"><div><span class="etiquette" id="edit-note">Ma note</span>${etoilesHtml(d.note, 'edit-note')}</div>${coeurHtml(d.coeur)}</div>` : ''}
+    <fieldset><legend>Genres</legend>${genresHtml(d.genres)}</fieldset>
+    ${vu ? `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
+        <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v}" max="${aujourdhui()}"></label>
+        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>`).join('')}
+      <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button></fieldset>` : ''}
+  </div>
+  <div class="ajout-pied"><p class="erreur" id="erreur-edition" role="alert" hidden></p><span></span>
+    <div class="boutons"><button class="btn" type="button" data-fermer>Annuler</button><button class="btn primaire" type="button" data-enregistrer-edition>Enregistrer</button></div></div>`;
+}
+
+function majListe(id, patch) {
+  const i = films.findIndex((x) => x.id === id);
+  if (i >= 0) films[i] = { ...films[i], ...patch };
+}
+
+async function enregistrerEdition(b) {
+  const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
+  if (vu && d.visions.some((v) => !v)) { err.textContent = 'Choisis une date pour chaque visionnage.'; err.hidden = false; return; }
+  b.disabled = true;
+  try {
+    const patch = { statut: d.statut, note: vu && d.note ? d.note : null, coup_de_coeur: vu && d.coeur, genres: d.genres };
+    const { error } = await sb.from('films').update(patch).eq('id', fiche.id);
+    if (error) throw error;
+    const anciens = fiche.visionnages.map((v) => v.date).sort();
+    if (vu && d.visions.slice().sort().join() !== anciens.join()) {
+      // Ajout avant suppression : si l'ajout échoue, les anciens visionnages restent.
+      const { error: e1 } = await sb.from('visionnages').insert(d.visions.map((date) => ({ film_id: fiche.id, date })));
+      if (e1) throw e1;
+      if (fiche.visionnages.length) {
+        const { error: e2 } = await sb.from('visionnages').delete().in('id', fiche.visionnages.map((v) => v.id));
+        if (e2) throw e2;
+      }
+    }
+    majListe(fiche.id, patch);
+    fen.close();
+    toast(fiche.statut === 'vu' || !vu ? 'Modifications enregistrées.' : `${fiche.titre} est maintenant dans tes films vus.`);
+    route();
+  } catch (e) {
+    err.textContent = 'Enregistrement impossible : ' + (e.message || e); err.hidden = false;
+    b.disabled = false;
+  }
+}
+
+async function ouvrirSuppression() {
+  const { data: tops } = await sb.from('tops').select('liste,position').eq('film_id', fiche.id);
+  const n = fiche.visionnages.length, morceaux = [];
+  if (fiche.note) morceaux.push(`ta note (${fr(fiche.note)} / 5)`);
+  if (n) morceaux.push(n > 1 ? `tes ${n} visionnages` : 'ton visionnage');
+  if (tops?.length) morceaux.push(`ses places dans tes tops (${tops.map((t) => `N°${t.position} du top ${t.liste === 'tous' ? 'général' : t.liste}`).join(', ')})`);
+  const texte = morceaux.length
+    ? (morceaux.length > 1 ? morceaux.slice(0, -1).join(', ') + ' et ' + morceaux.at(-1) : morceaux[0]).replace(/^./, (c) => c.toUpperCase()) + (morceaux.length > 1 || n > 1 ? ' seront effacés.' : ' sera effacé.')
+    : 'Il sera retiré de ta watchlist.';
+  fen.classList.add('petit');
+  fenCorps.innerHTML = `<div class="confirmation" role="alertdialog" aria-labelledby="del-titre" aria-describedby="del-texte">
+    <span class="ico-danger" aria-hidden="true">${ICO_POUBELLE}</span>
+    <div><h2 id="del-titre">Supprimer ${esc(fiche.titre)} ?</h2><p id="del-texte" class="muted">${texte}</p></div>
+    <div class="boutons"><button class="btn" type="button" data-fermer autofocus>Annuler</button><button class="btn danger" type="button" data-confirmer-suppression>Supprimer</button></div></div>`;
+  fen.showModal();
+}
+
+let suppressionEnAttente = null;
+function supprimerFilm() {
+  const f = fiche, i = films.findIndex((x) => x.id === f.id), ligne = films[i];
+  fen.close();
+  if (i >= 0) films.splice(i, 1);
+  // La suppression part après le délai d'annulation, ou tout de suite si l'app passe en arrière-plan.
+  const executer = async () => {
+    clearTimeout(minuteur); suppressionEnAttente = null;
+    const { error } = await sb.from('films').delete().eq('id', f.id);
+    if (error) { if (ligne) films.splice(i, 0, ligne); toast('Suppression impossible : ' + error.message); route(); }
+  };
+  const minuteur = setTimeout(executer, 6000);
+  suppressionEnAttente = executer;
+  location.hash = '#accueil';
+  toast(`${f.titre} a été supprimé de ta collection.`, { label: 'Annuler', fn: () => {
+    clearTimeout(minuteur); suppressionEnAttente = null;
+    if (ligne) films.splice(i, 0, ligne);
+    toast('Suppression annulée.'); route();
+  } });
+}
+document.addEventListener('visibilitychange', () => document.hidden && suppressionEnAttente?.());
+
+async function ajouterRevisionnage(b) {
+  b.disabled = true;
+  const { error } = await sb.from('visionnages').insert({ film_id: fiche.id, date: aujourdhui() });
+  if (error) { b.disabled = false; return toast('Revisionnage non enregistré : ' + error.message); }
+  toast('Revisionnage ajouté pour aujourd’hui.');
+  route();
+}
+
+$('#page').addEventListener('click', (e) => {
+  const a = e.target.closest('[data-action]')?.dataset.action;
+  if (a === 'revu') ajouterRevisionnage(e.target.closest('button'));
+  else if (a === 'vu') ouvrirEdition(true);
+  else if (a === 'modifier') ouvrirEdition(false);
+  else if (a === 'supprimer') ouvrirSuppression().catch((err) => toast(err.message));
+});
+
+fen.addEventListener('click', (e) => {
+  if (e.target === fen) return fen.close();
+  const b = e.target.closest('button');
+  if (!b) return;
+  const d = b.dataset;
+  if ('fermer' in d) fen.close();
+  else if ('confirmerSuppression' in d) supprimerFilm();
+  else if ('enregistrerEdition' in d) enregistrerEdition(b);
+  else {
+    if (d.note) edition.note = Number(d.note) === edition.note ? 0 : Number(d.note);
+    else if ('coeur' in d) edition.coeur = !edition.coeur;
+    else if (d.genre) edition.genres = edition.genres.includes(d.genre) ? edition.genres.filter((x) => x !== d.genre) : [...edition.genres, d.genre];
+    else if (d.retirer) edition.visions.splice(Number(d.retirer), 1);
+    else if ('ajouterVision' in d) edition.visions.push(aujourdhui());
+    else return;
+    afficherEdition();
+  }
+});
+fen.addEventListener('input', (e) => { if (e.target.dataset.vision) edition.visions[Number(e.target.dataset.vision)] = e.target.value; });
+
 /* ---------- Ajouter un film ---------- */
 
 const dlg = $('#ajout'), corps = $('#ajout-corps');
@@ -198,7 +431,7 @@ async function chercher(q) {
     if (moi !== dernier) return; // une frappe plus récente a pris le relais
     ul.innerHTML = results.length ? results.slice(0, 8).map((r) => {
       const connu = films.find((f) => f.tmdb_id === r.id);
-      return `<li><button type="button" data-id="${r.id}" ${connu?.statut === 'vu' ? 'disabled' : ''}>${affiche(r.poster_path)}
+      return `<li><button type="button" ${connu?.statut === 'vu' ? `data-fiche="${connu.id}"` : `data-id="${r.id}"`}>${affiche(r.poster_path)}
         <span><b>${esc(r.title)}</b><small>${esc((r.release_date || '').slice(0, 4) || 'Date inconnue')}</small></span>
         ${connu ? `<span class="badge ${connu.statut === 'vu' ? 'vu' : ''}">${connu.statut === 'vu' ? 'Déjà vu' : 'Dans ta watchlist'}</span>` : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>'}
       </button></li>`;
@@ -229,16 +462,11 @@ function afficherDetails() {
       <fieldset><legend>Statut</legend><div class="bascule">
         <button type="button" data-statut="vu" aria-pressed="${vu}">Je l’ai vu</button><button type="button" data-statut="a_voir" aria-pressed="${!vu}">À voir</button></div></fieldset>
       ${vu ? `<div class="avis">
-        <div><span class="etiquette" id="note-label">Ta note</span><div class="note"><div class="etoiles" role="radiogroup" aria-labelledby="note-label">${[1, 2, 3, 4, 5].map((i) => `<span class="etoile">
-          <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="var(${note >= i ? '--star' : '--star-empty'})"/>${note >= i - 0.5 ? '<path d="M12 2.5v14.8l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="var(--star)"/>' : ''}</svg>
-          <button type="button" role="radio" style="left:0" data-note="${i - 0.5}" aria-checked="${note === i - 0.5}" aria-label="${fr(i - 0.5)} sur 5"></button>
-          <button type="button" role="radio" style="right:0" data-note="${i}" aria-checked="${note === i}" aria-label="${i} sur 5"></button></span>`).join('')}</div>
-          <span class="chiffre">${note ? fr(note) + ' / 5' : 'À noter'}</span></div></div>
-        <button class="btn coeur" type="button" data-coeur aria-pressed="${coeur}"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="none" stroke="#D2483B" stroke-width="1.8"/></svg>Coup de cœur</button>
+        <div><span class="etiquette" id="note-label">Ta note</span>${etoilesHtml(note, 'note-label')}</div>
+        ${coeurHtml(coeur)}
         <label><span class="etiquette">Vu le</span><input type="date" id="date-vu" value="${date}" max="${new Date().toLocaleDateString('sv')}"></label>
       </div>` : '<p class="info">Il rejoindra ta watchlist. Tu pourras le noter le jour où tu le verras.</p>'}
-      <fieldset><legend>Genres <span>· pré-remplis par TMDB, modifiables</span></legend><div class="genres">${GENRES.map((g) =>
-        `<button type="button" data-genre="${g}" aria-pressed="${f.genres.includes(g)}"><img src="${buste(g)}" alt="">${g}</button>`).join('')}</div></fieldset>
+      <fieldset><legend>Genres <span>· pré-remplis par TMDB, modifiables</span></legend>${genresHtml(f.genres)}</fieldset>
     </div></div>
     <div class="ajout-pied"><button class="btn plat" type="button" data-retour>‹ Changer de film</button>
       <button class="btn primaire" type="button" data-enregistrer style="height:48px;padding:0 24px">${vu ? 'Ajouter à mes films vus' : 'Ajouter à ma watchlist'}</button>
@@ -265,7 +493,7 @@ async function enregistrer(bouton) {
     films = [data, ...films.filter((f) => f.id !== data.id)];
     etape(3, 'C’est ajouté !');
     corps.innerHTML = `<div class="fini"><div><h3>${esc(film.titre)} ${vu ? 'est dans ta collection !' : 'rejoint ta watchlist !'}</h3>
-      <div class="boutons"><button class="btn primaire" type="button" data-fermer style="height:48px">Terminer</button><button class="btn" type="button" data-retour style="height:48px">Ajouter un autre film</button></div></div></div>`;
+      <div class="boutons"><a class="btn primaire" href="#film/${data.id}" data-fermer style="height:48px">Voir la fiche</a><button class="btn" type="button" data-retour style="height:48px">Ajouter un autre film</button></div></div></div>`;
   } catch (err) {
     const p = $('#erreur-ajout');
     p.textContent = 'Le film n’a pas pu être enregistré : ' + (err.message || err); p.hidden = false;
@@ -282,6 +510,7 @@ dlg.addEventListener('click', (e) => {
   if (!b) return;
   const d = b.dataset;
   if ('fermer' in d) dlg.close();
+  else if (d.fiche) { dlg.close(); location.hash = '#film/' + d.fiche; }
   else if (d.id) choisir(d.id);
   else if ('retour' in d) ouvrirRecherche();
   else if ('enregistrer' in d) enregistrer(b);
