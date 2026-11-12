@@ -257,9 +257,19 @@ function htmlFilm(f) {
 async function pageFilm(id) {
   const { data: f, error } = await sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle();
   if (error) throw error;
+  if (f && f.note_rt == null && f.imdb_id && reglages.omdb_key && !pageFilm.essayes.has(f.id)) {
+    // Note absente (clé OMDb pas encore valide à l'ajout, ou OMDb indisponible) : on retente une fois par session.
+    pageFilm.essayes.add(f.id);
+    try {
+      const rt = parseInt((await omdb(f.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value);
+      if (rt >= 0) { f.note_rt = rt; await sb.from('films').update({ note_rt: rt }).eq('id', f.id); }
+    } catch {}
+  }
   fiche = f;
   return f ? htmlFilm(f) : `<div class="titre-page"><p class="sur-titre">Fiche film</p><h1>Ce film n'est plus dans ta collection</h1><a class="btn" href="#accueil" style="align-self:flex-start">Retour à l'accueil</a></div>`;
 }
+
+pageFilm.essayes = new Set();
 
 const fen = $('#fenetre'), fenCorps = $('#fenetre-corps');
 let edition = null; // brouillon de la fenêtre « Modifier »
