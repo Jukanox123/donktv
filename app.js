@@ -218,6 +218,11 @@ function tuile(ico, label, valeur, unite, bas, lien) {
   return lien ? `<a class="tuile" href="${lien}" target="_blank" rel="noopener">${contenu}</a>` : `<div class="tuile">${contenu}</div>`;
 }
 
+const personne = (nom, photo, role) => `<li><span class="photo">${photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(photo)}" alt="" loading="lazy">` : esc(nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
+  <b>${esc(nom)}</b>${role ? `<small>${esc(role)}</small>` : ''}</li>`;
+// TMDB : 1 = femme. Au masculin dès qu'un réalisateur n'est pas une femme (ou genre inconnu).
+const titreReal = (rs) => (rs.every((r) => r.genre === 1) ? 'Réalisatrice' : 'Réalisateur') + (rs.length > 1 ? 's' : '');
+
 function htmlFilm(f) {
   const vu = f.statut === 'vu';
   const visions = f.visionnages.map((v) => v.date).sort();
@@ -228,11 +233,11 @@ function htmlFilm(f) {
   <section class="fiche-hero">
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
-      <div class="fiche-genres">${f.genres.map((g) => `<a href="#genre/${norm(g)}"><img src="${buste(g)}" alt="">${g}</a>`).join('')}</div>
       <h1>${esc(f.titre)}</h1>
+      <div class="fiche-genres">${f.genres.map((g) => `<a href="#genre/${norm(g)}"><img src="${buste(g)}" alt="">${g}</a>`).join('')}</div>
       <p class="fiche-meta">${meta}</p>
       <div class="tuiles">
-        ${vu ? tuile(ICO_ETOILE, 'Ma note', f.note ? fr(f.note) : null, ' /5', f.note ? `<span aria-hidden="true" class="ma-note">${etoilesTxt(f.note)}</span>` : '') : ''}
+        ${vu ? tuile(ICO_ETOILE, 'Ma note', f.note ? fr(f.note) : null, ' /5', (f.note ? `<span aria-hidden="true" class="ma-note">${etoilesTxt(f.note)}</span>` : '') + '<span class="court">Ma note</span>') : ''}
         ${tuile(ICO_RT, 'Critiques', f.note_rt, ' %', 'Rotten Tomatoes ↗', `https://www.rottentomatoes.com/search?search=${encodeURIComponent(f.titre_original || f.titre)}`)}
         ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`)}
       </div>
@@ -250,9 +255,8 @@ function htmlFilm(f) {
       ${f.synopsis ? `<section><p class="sur-titre">L'histoire</p><h2 class="section">Synopsis</h2><p class="synopsis">${esc(f.synopsis)}</p></section>` : ''}
       ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
         <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path d="M33 26l23 14-23 14z" fill="#1A2730"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
-      ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => `<li>
-        <span class="photo">${a.photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(a.photo)}" alt="" loading="lazy">` : esc(a.nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
-        <b>${esc(a.nom)}</b><small>${esc(a.role)}</small></li>`).join('')}</ul></section>` : ''}
+      ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '')).join('')}</ul></section>` : ''}
+      ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role)).join('')}</ul></section>` : ''}
     </div>
     <aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
       <b>${dateLongue(d)}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
@@ -271,12 +275,24 @@ async function pageFilm(id) {
       if (rt >= 0) { f.note_rt = rt; await sb.from('films').update({ note_rt: rt }).eq('id', f.id); }
     } catch {}
   }
-  if (f) f.tops = (await sb.from('tops').select('liste,position').eq('film_id', f.id)).data || [];
+  if (f) {
+    f.tops = (await sb.from('tops').select('liste,position').eq('film_id', f.id)).data || [];
+    f.reals = await realisateurs(f);
+  }
   fiche = f;
   return f ? htmlFilm(f) : `<div class="titre-page"><p class="sur-titre">Fiche film</p><h1>Ce film n'est plus dans ta collection</h1><a class="btn" href="#accueil" style="align-self:flex-start">Retour à l'accueil</a></div>`;
 }
 
 pageFilm.essayes = new Set();
+
+// Photo et genre des réalisateurs : pas stockés en base, lus sur TMDB (sinon, les noms seuls).
+const cacheReals = new Map();
+async function realisateurs(f) {
+  if (!cacheReals.has(f.tmdb_id) && reglages.tmdb_token) try {
+    cacheReals.set(f.tmdb_id, (await tmdb(`/movie/${f.tmdb_id}/credits`)).crew.filter((c) => c.job === 'Director').map((c) => ({ nom: c.name, photo: c.profile_path, genre: c.gender })));
+  } catch {}
+  return cacheReals.get(f.tmdb_id) || f.realisateurs.map((nom) => ({ nom }));
+}
 
 const fen = $('#fenetre'), fenCorps = $('#fenetre-corps');
 let edition = null; // brouillon de la fenêtre « Modifier »
@@ -298,13 +314,18 @@ function afficherEdition() {
   <div class="edition">
     ${vu ? `<div class="avis"><div><span class="etiquette" id="edit-note">Ma note</span>${etoilesHtml(d.note, 'edit-note')}</div>${coeurHtml(d.coeur)}</div>` : ''}
     <fieldset><legend>Genres</legend>${genresHtml(d.genres)}</fieldset>
-    ${vu ? `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
-        <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v}" max="${aujourdhui()}"></label>
-        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>`).join('')}
-      <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button></fieldset>` : ''}
+    ${vu ? visionsHtml() : ''}
   </div>
   <div class="ajout-pied"><p class="erreur" id="erreur-edition" role="alert" hidden></p><span></span>
     <div class="boutons"><button class="btn" type="button" data-fermer>Annuler</button><button class="btn primaire" type="button" data-enregistrer-edition>Enregistrer</button></div></div>`;
+}
+
+function visionsHtml() {
+  const d = edition;
+  return `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
+        <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v}" max="${aujourdhui()}"></label>
+        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>`).join('')}
+      <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button></fieldset>`;
 }
 
 function majListe(id, patch) {
@@ -314,7 +335,9 @@ function majListe(id, patch) {
 
 async function enregistrerEdition(b) {
   const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
-  if (vu && d.visions.some((v) => !v)) { err.textContent = 'Choisis une date pour chaque visionnage.'; err.hidden = false; return; }
+  const manque = vu && !d.note ? 'Choisis une note avant d’enregistrer.' : !d.genres.length ? 'Choisis au moins un genre avant d’enregistrer.'
+    : vu && d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '';
+  if (manque) { err.textContent = manque; err.hidden = false; return; }
   b.disabled = true;
   try {
     const patch = { statut: d.statut, note: vu && d.note ? d.note : null, coup_de_coeur: vu && d.coeur, genres: d.genres };
@@ -351,7 +374,6 @@ async function ouvrirSuppression() {
     : 'Il sera retiré de ta watchlist.';
   fen.classList.add('petit');
   fenCorps.innerHTML = `<div class="confirmation" role="alertdialog" aria-labelledby="del-titre" aria-describedby="del-texte">
-    <span class="ico-danger" aria-hidden="true">${ICO_POUBELLE}</span>
     <div><h2 id="del-titre">Supprimer ${esc(fiche.titre)} ?</h2><p id="del-texte" class="muted">${texte}</p></div>
     <div class="boutons"><button class="btn" type="button" data-fermer autofocus>Annuler</button><button class="btn danger" type="button" data-confirmer-suppression>Supprimer</button></div></div>`;
   fen.showModal();
@@ -379,17 +401,30 @@ function supprimerFilm() {
 }
 document.addEventListener('visibilitychange', () => document.hidden && suppressionEnAttente?.());
 
-async function ajouterRevisionnage(b) {
+function ouvrirRevisionnage() {
+  edition = null;
+  fen.classList.add('petit');
+  fenCorps.innerHTML = `<div class="confirmation"><div><h2>Je l’ai revu</h2><p class="muted">Quand as-tu revu ${esc(fiche.titre)} ?</p></div>
+    <label class="champ"><span>Date</span><input type="date" id="date-revu" value="${aujourdhui()}" max="${aujourdhui()}" required></label>
+    <p class="erreur" id="erreur-revu" role="alert" hidden></p>
+    <div class="boutons"><button class="btn" type="button" data-fermer>Annuler</button><button class="btn primaire" type="button" data-enregistrer-revu>Enregistrer</button></div></div>`;
+  fen.showModal();
+}
+
+async function enregistrerRevisionnage(b) {
+  const date = $('#date-revu').value, err = $('#erreur-revu');
+  if (!date || date > aujourdhui()) { err.textContent = 'Choisis une date passée ou celle d’aujourd’hui.'; err.hidden = false; return; }
   b.disabled = true;
-  const { error } = await sb.from('visionnages').insert({ film_id: fiche.id, date: aujourdhui() });
-  if (error) { b.disabled = false; return toast('Revisionnage non enregistré : ' + error.message); }
-  toast('Revisionnage ajouté pour aujourd’hui.');
+  const { error } = await sb.from('visionnages').insert({ film_id: fiche.id, date });
+  if (error) { b.disabled = false; err.textContent = 'Revisionnage non enregistré : ' + error.message; err.hidden = false; return; }
+  fen.close();
+  toast(`Revisionnage ajouté pour le ${dateLongue(date)}.`);
   route();
 }
 
 $('#page').addEventListener('click', (e) => {
   const a = e.target.closest('[data-action]')?.dataset.action;
-  if (a === 'revu') ajouterRevisionnage(e.target.closest('button'));
+  if (a === 'revu') ouvrirRevisionnage();
   else if (a === 'vu') ouvrirEdition(true);
   else if (a === 'modifier') ouvrirEdition(false);
   else if (a === 'tops') ouvrirTopsFiche().catch((err) => toast(err.message));
@@ -405,13 +440,12 @@ fen.addEventListener('click', (e) => {
   else if ('confirmerSuppression' in d) supprimerFilm();
   else if ('enregistrerEdition' in d) enregistrerEdition(b);
   else {
-    if (d.note) edition.note = Number(d.note) === edition.note ? 0 : Number(d.note);
-    else if ('coeur' in d) edition.coeur = !edition.coeur;
-    else if (d.genre) edition.genres = edition.genres.includes(d.genre) ? edition.genres.filter((x) => x !== d.genre) : [...edition.genres, d.genre];
-    else if (d.retirer) edition.visions.splice(Number(d.retirer), 1);
-    else if ('ajouterVision' in d) edition.visions.push(aujourdhui());
-    else return;
-    afficherEdition();
+    if ('enregistrerRevu' in d) return enregistrerRevisionnage(b);
+    if (!edition) return;
+    if (d.note) { edition.note = Number(d.note) === edition.note ? 0 : Number(d.note); $('.note', fenCorps).outerHTML = etoilesHtml(edition.note, 'edit-note'); }
+    else if ('coeur' in d) b.setAttribute('aria-pressed', edition.coeur = !edition.coeur);
+    else if (d.genre) { const g = edition.genres; b.setAttribute('aria-pressed', !g.includes(d.genre)); edition.genres = g.includes(d.genre) ? g.filter((x) => x !== d.genre) : [...g, d.genre]; }
+    else if (d.retirer || 'ajouterVision' in d) { d.retirer ? edition.visions.splice(Number(d.retirer), 1) : edition.visions.push(aujourdhui()); $('.visions', fenCorps).outerHTML = visionsHtml(); }
   }
 });
 fen.addEventListener('input', (e) => { if (e.target.dataset.vision) edition.visions[Number(e.target.dataset.vision)] = e.target.value; });
