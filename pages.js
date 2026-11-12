@@ -599,7 +599,7 @@ async function pageAccueilPleine() {
     ['Note moyenne', notes.length ? fr1(moyenne(notes)) : '–', '/ 5', `sur ${pluriel(notes.length, 'film noté', 'films notés')}`], ['À voir', aVoir.length, '', 'dans ta watchlist']];
   return `<section class="hero accueil-hero"><div class="hero-texte"><p class="sur-titre">${jourTxt}</p><h1>Quel film viens-tu de voir ?</h1>
       <p><span class="long">Tape son titre : affiche, synopsis et casting se remplissent tout seuls. Il ne te reste qu'à le noter.</span><span class="court">Tape son titre, le reste se remplit tout seul.</span></p>
-      <div class="boutons"><button class="btn primaire grand" type="button" data-ajout>Ajouter un film vu</button><a class="btn grand" href="#a-voir">Ma watchlist · ${aVoir.length}</a></div></div></section>
+      <div class="boutons"><button class="btn primaire grand" type="button" data-ajout>Ajouter un film</button><a class="btn grand" href="#a-voir">Ma watchlist · ${aVoir.length}</a></div></div></section>
   <section>${titreSection('', 'Ton cinéma en chiffres', '#stats', 'Toutes les statistiques')}
     <div class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span><span class="muted">${s}</span></div>`).join('')}</div></section>
   ${souvenir ? `<section class="souvenir"><a href="#film/${souvenir.f.id}" tabindex="-1" aria-hidden="true">${affiche(souvenir.f.affiche)}</a>
@@ -615,7 +615,7 @@ async function pageAccueilPleine() {
       <div><span class="chiffre">${rp.note ? fr1(rp.note) : '–'}</span><span>note moyenne</span></div></div></section>` : ''}
   ${aVoir.length ? `<section>${titreSection('Watchlist', 'À voir ensuite', '#a-voir', 'Toute la watchlist')}
     <div class="rangee">${[...aVoir].sort((a, b) => b.ajoute_le.localeCompare(a.ajoute_le)).slice(0, 6).map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span><span>ajouté ${ilYa(f.ajout)}</span>`, '<span class="badge">À voir</span>')).join('')}</div></section>` : ''}
-  ${sorties.length ? `<section><div class="section-tete"><div><p class="sur-titre">Dans ta watchlist</p><h2 class="section">Bientôt au cinéma</h2></div><span class="muted">dates de sortie en France</span></div>
+  ${sorties.length ? `<section><div class="section-tete"><div><p class="sur-titre">Dans ta watchlist</p><h2 class="section">Bientôt au cinéma en France</h2></div></div>
     <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml({ ...f, genres: [] }, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>`)}
       <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}${f.genres[0] ? ' · ' + f.genres[0] : ''}</span></span></a>`; }).join('')}</div></section>` : ''}`;
 }

@@ -94,7 +94,7 @@ function pageAccueil() {
   return `<section class="hero"><div class="hero-texte">
       <p class="sur-titre">Premier lancement</p><h1>Bienvenue sur DonkTV</h1>
       <p>Ton carnet de cinéma, rien qu'à toi. Commence par un film <span class="long">que tu as </span>vu récemment<span class="long"> : le reste se remplit tout seul</span>.</p>
-      <button class="btn primaire grand" type="button" data-ajout>Ajouter un film vu</button></div></section>
+      <button class="btn primaire grand" type="button" data-ajout>Ajouter un film</button></div></section>
     <section style="display:flex;flex-direction:column;gap:24px"><div><p class="sur-titre">Comment ça marche</p><h2 class="section">Trois étapes, c'est tout</h2></div>
     <ol class="etapes">${ETAPES.map(([bg, ico, titre, texte]) => `<li><span class="ico" style="background:${bg}" aria-hidden="true">
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${ico}"/></svg></span>

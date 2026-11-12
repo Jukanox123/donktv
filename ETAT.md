@@ -11,7 +11,7 @@ Mis à jour le 12 novembre 2026.
 ## Où on en est
 - Spec, maquettes et tests techniques : terminés.
 - Développement : toutes les pages sont en ligne (accueil, collection + calendrier, À voir, fiche film, 11 pages de genre, Mes tops, statistiques + carte du monde, rétrospectives, recherche rapide Ctrl/⌘ K, Mon espace, réglages, installation iPhone, hors connexion).
-- Prochaine étape : retour final de Valentin après ses tests, puis corrections.
+- En cours : corrections suite au retour final de Valentin, page par page, mises en ligne au fil de l'eau. Fait : accueil.
 
 ## À vérifier en vrai (non testé en automatique)
 - Carte du monde des statistiques (bibliothèques chargées depuis jsDelivr).
