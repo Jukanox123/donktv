@@ -83,6 +83,7 @@ const ETAPES = [
 ];
 
 function pageAccueil() {
+  if (films.length) return pageAccueilPleine();
   if (films.length) {
     // shortcut: liste simple en attendant le vrai accueil (KPI, souvenirs, bientôt au cinéma) des maquettes.
     return `<div class="titre-page"><p class="sur-titre">Accueil</p><h1>Tes derniers films</h1></div>
@@ -144,8 +145,13 @@ async function route() {
   } else page.innerHTML = rendu;
   if (page.dataset.vue !== hash) scrollTo(0, 0);
   page.dataset.vue = hash;
+  PAGES[nom]?.apres?.();
+  if (nom === 'accueil') proposerInstallation();
 }
-addEventListener('hashchange', () => uid && route());
+addEventListener('hashchange', () => {
+  for (const d of [fen, $('#recherche')]) if (d.open) d.close(); // une fenêtre ouverte ne survit pas à un changement de page
+  if (uid) route();
+});
 
 $('#page').addEventListener('click', async (e) => {
   const b = e.target.closest('button');
@@ -222,7 +228,7 @@ function htmlFilm(f) {
   <section class="fiche-hero">
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
-      <div class="fiche-genres">${f.genres.map((g) => `<span><img src="${buste(g)}" alt="">${g}</span>`).join('')}</div>
+      <div class="fiche-genres">${f.genres.map((g) => `<a href="#genre/${norm(g)}"><img src="${buste(g)}" alt="">${g}</a>`).join('')}</div>
       <h1>${esc(f.titre)}</h1>
       <p class="fiche-meta">${meta}</p>
       <div class="tuiles">
@@ -233,7 +239,8 @@ function htmlFilm(f) {
       <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
       <div class="fiche-actions">
         <button class="btn clair" type="button" data-action="${vu ? 'revu' : 'vu'}">${vu ? 'Je l’ai revu' : 'Je l’ai vu'}</button>
-        <button class="btn contour" type="button" data-action="modifier">Modifier</button>
+        <button class="btn contour ${vu ? '' : 'large'}" type="button" data-action="modifier">Modifier</button>
+        ${vu ? `<button class="btn contour" type="button" data-action="tops">${ICO_TROPHEE}${libelleTops(f.tops)}</button>` : ''}
         <button class="btn contour carre" type="button" data-action="supprimer" aria-label="Supprimer le film">${ICO_POUBELLE}</button>
       </div>
     </div>
@@ -264,6 +271,7 @@ async function pageFilm(id) {
       if (rt >= 0) { f.note_rt = rt; await sb.from('films').update({ note_rt: rt }).eq('id', f.id); }
     } catch {}
   }
+  if (f) f.tops = (await sb.from('tops').select('liste,position').eq('film_id', f.id)).data || [];
   fiche = f;
   return f ? htmlFilm(f) : `<div class="titre-page"><p class="sur-titre">Fiche film</p><h1>Ce film n'est plus dans ta collection</h1><a class="btn" href="#accueil" style="align-self:flex-start">Retour à l'accueil</a></div>`;
 }
@@ -384,6 +392,7 @@ $('#page').addEventListener('click', (e) => {
   if (a === 'revu') ajouterRevisionnage(e.target.closest('button'));
   else if (a === 'vu') ouvrirEdition(true);
   else if (a === 'modifier') ouvrirEdition(false);
+  else if (a === 'tops') ouvrirTopsFiche().catch((err) => toast(err.message));
   else if (a === 'supprimer') ouvrirSuppression().catch((err) => toast(err.message));
 });
 
@@ -707,6 +716,8 @@ $('#form-connexion').addEventListener('submit', async (e) => {
   b.disabled = false;
   if (error) { err.textContent = error.status === 400 ? 'E-mail ou mot de passe incorrect.' : 'Connexion impossible : ' + error.message; err.hidden = false; }
 });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 async function demarrer() {
   const [r, f] = await Promise.all([
