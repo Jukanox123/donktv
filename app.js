@@ -211,11 +211,16 @@ const genresHtml = (sel) => `<div class="genres">${GENRES.map((g) => `<button ty
 
 let fiche = null; // film affiché, avec ses visionnages
 
-function tuile(ico, label, valeur, unite, bas, lien) {
+// Niveau d'une note extérieure ramenée sur 100 : vert dès 75, jaune dès 60, rouge en dessous.
+const NIVEAUX = [[75, 'haut', 'Très bien noté'], [60, 'moyen', 'Mitigé'], [0, 'bas', 'Mal noté']];
+const niveau = (sur100) => (sur100 == null ? null : NIVEAUX.find(([min]) => sur100 >= min));
+
+function tuile(ico, label, valeur, unite, bas, lien, niv) {
   const contenu = `${ico}<div><span class="tuile-label">${label}</span>${valeur == null
     ? '<span class="tuile-vide">Pas encore de note</span>'
-    : `<span class="chiffre">${valeur}<small>${unite}</small></span>`}<span class="tuile-bas">${bas}</span></div>`;
-  return lien ? `<a class="tuile" href="${lien}" target="_blank" rel="noopener">${contenu}</a>` : `<div class="tuile">${contenu}</div>`;
+    : `<span class="chiffre">${valeur}<small>${unite}</small></span>`}${niv ? `<span class="tuile-niveau">${niv[2]}</span>` : ''}<span class="tuile-bas">${bas}</span></div>`;
+  const cls = `tuile${niv ? ' note-' + niv[1] : ''}`;
+  return lien ? `<a class="${cls}" href="${lien}" target="_blank" rel="noopener">${contenu}</a>` : `<div class="${cls}">${contenu}</div>`;
 }
 
 const personne = (nom, photo, role) => `<li><span class="photo">${photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(photo)}" alt="" loading="lazy">` : esc(nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
@@ -238,8 +243,8 @@ function htmlFilm(f) {
       <p class="fiche-meta">${meta}</p>
       <div class="tuiles">
         ${vu ? tuile(ICO_ETOILE, 'Ma note', f.note ? fr(f.note) : null, ' /5', (f.note ? `<span aria-hidden="true" class="ma-note">${etoilesTxt(f.note)}</span>` : '') + '<span class="court">Ma note</span>') : ''}
-        ${tuile(ICO_RT, 'Critiques', f.note_rt, ' %', 'Rotten Tomatoes ↗', `https://www.rottentomatoes.com/search?search=${encodeURIComponent(f.titre_original || f.titre)}`)}
-        ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`)}
+        ${tuile(ICO_RT, 'Critiques', f.note_rt, ' %', 'Rotten Tomatoes ↗', `https://www.rottentomatoes.com/search?search=${encodeURIComponent(f.titre_original || f.titre)}`, niveau(f.note_rt))}
+        ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`, niveau(f.note_tmdb && f.note_tmdb * 10))}
       </div>
       <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
       <div class="fiche-actions">
@@ -450,6 +455,50 @@ fen.addEventListener('click', (e) => {
 });
 fen.addEventListener('input', (e) => { if (e.target.dataset.vision) edition.visions[Number(e.target.dataset.vision)] = e.target.value; });
 
+/* ---------- Menus déroulants ---------- */
+// Un <select data-menu> reste dans la page (valeur, évènement « change ») mais s'affiche comme un bouton + une liste.
+
+function habillerMenu(sel) {
+  sel.dataset.menu = 'ok'; sel.tabIndex = -1; sel.setAttribute('aria-hidden', 'true');
+  const nom = sel.getAttribute('aria-label') || sel.previousElementSibling?.textContent || '';
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'menu-btn'; b.setAttribute('aria-haspopup', 'listbox'); b.setAttribute('aria-expanded', 'false');
+  const maj = () => { b.innerHTML = `${esc(sel.selectedOptions[0]?.text)}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`; b.setAttribute('aria-label', `${nom} : ${sel.selectedOptions[0]?.text}`); };
+  maj(); sel.after(b);
+  b.addEventListener('click', () => (b.nextElementSibling ? fermerMenu(b) : ouvrirMenu(sel, b, maj)));
+}
+
+function ouvrirMenu(sel, b, maj) {
+  document.querySelectorAll('.menu-liste').forEach((l) => fermerMenu(l.previousElementSibling));
+  const ul = document.createElement('ul');
+  ul.className = 'menu-liste'; ul.setAttribute('role', 'listbox');
+  ul.innerHTML = [...sel.options].map((o, i) => `<li role="option" tabindex="-1" data-i="${i}" aria-selected="${o.selected}">${esc(o.text)}${o.selected ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>' : ''}</li>`).join('');
+  b.after(ul); b.setAttribute('aria-expanded', 'true');
+  ul.children[sel.selectedIndex]?.focus();
+  const choisir = (li) => {
+    fermerMenu(b); b.focus();
+    if (Number(li.dataset.i) === sel.selectedIndex) return;
+    sel.selectedIndex = Number(li.dataset.i); maj();
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+  ul.addEventListener('click', (e) => e.target.closest('li') && choisir(e.target.closest('li')));
+  ul.addEventListener('keydown', (e) => {
+    const li = document.activeElement.closest('li');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); (e.key === 'ArrowDown' ? li?.nextElementSibling : li?.previousElementSibling)?.focus(); }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (li) choisir(li); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermerMenu(b); b.focus(); }
+    else if (e.key === 'Tab') fermerMenu(b);
+  });
+}
+
+function fermerMenu(b) {
+  if (b?.nextElementSibling?.classList.contains('menu-liste')) b.nextElementSibling.remove();
+  b?.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', (e) => { if (!e.target.closest('.menu-btn, .menu-liste')) document.querySelectorAll('.menu-liste').forEach((l) => fermerMenu(l.previousElementSibling)); });
+new MutationObserver(() => document.querySelectorAll('select[data-menu=""]').forEach(habillerMenu)).observe(document.body, { childList: true, subtree: true });
+
 /* ---------- Collection : grille et calendrier ---------- */
 
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -481,7 +530,7 @@ async function pageCollection() {
     <div class="filtres-ligne">
       <label class="champ champ-recherche"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input id="coll-q" type="search" placeholder="Titre, réalisateur, acteur…" aria-label="Rechercher dans la collection" value="${esc(coll.q)}" autocomplete="off"></label>
-      <label class="champ"><span>Trier par</span><select id="coll-tri">${TRIS.map(([v, l]) => `<option value="${v}" ${v === coll.tri ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      <label class="champ"><span>Trier par</span><select id="coll-tri" data-menu>${TRIS.map(([v, l]) => `<option value="${v}" ${v === coll.tri ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     </div>
     <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) =>
       `<button type="button" data-filtre-genre="${g}" aria-pressed="${coll.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div>
@@ -570,7 +619,7 @@ function htmlCal() {
   return `<section class="carte cal-mois" aria-labelledby="mois-titre">
     <div class="cal-tete"><div class="cal-nav"><button class="btn carre" type="button" data-mois="-1" aria-label="Mois précédent">${FLECHE('g')}</button>
       <h2 id="mois-titre">${nomMois}</h2><button class="btn carre" type="button" data-mois="1" aria-label="Mois suivant">${FLECHE('d')}</button></div>
-      <p class="cal-resume"><span><strong>${duMois.length}</strong> ${duMois.length > 1 ? 'films' : 'film'}</span><span><strong>${heures} h</strong> devant l'écran</span><span><strong>${jours.length}</strong> ${jours.length > 1 ? 'jours' : 'jour'} avec film</span></p></div>
+      <p class="cal-resume"><span><strong>${duMois.length}</strong> ${duMois.length > 1 ? 'films' : 'film'}</span><span><strong>${heures} h</strong> devant l'écran</span><span><strong>${jours.length}</strong> ${jours.length > 1 ? 'jours' : 'jour'} de cinéma</span></p></div>
     <div class="cal-grille cal-semaine" aria-hidden="true">${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((j) => `<span>${j}</span>`).join('')}</div>
     <div class="cal-grille">${cases.join('')}</div></section>
   <aside class="carte cal-detail" aria-live="polite">${cal.jour ? `<div><span class="sur-titre">${pluriel(vsJour.length, 'film vu', 'films vus')}</span>

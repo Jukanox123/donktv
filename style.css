@@ -213,6 +213,13 @@ a.tuile:hover { background: rgba(243,238,221,.12); }
 .tuile .chiffre { font-size: 30px; line-height: 1; letter-spacing: -1px; }
 .tuile .chiffre small { font: 500 15px 'Roboto', system-ui, sans-serif; letter-spacing: 0; color: #C9D6E0; }
 .tuile-vide { font-size: 15px; font-weight: 700; }
+.tuile-niveau { align-self: flex-start; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: rgba(var(--niv), .22); color: rgb(var(--niv)); }
+.tuile.note-haut { --niv: 156,199,122; }
+.tuile.note-moyen { --niv: 242,184,75; }
+.tuile.note-bas { --niv: 240,138,126; }
+.tuile[class*=note-] { background: rgba(var(--niv), .12); border-color: rgba(var(--niv), .5); }
+a.tuile[class*=note-]:hover { background: rgba(var(--niv), .2); }
+.tuile[class*=note-] .chiffre { color: rgb(var(--niv)); }
 .tuile-bas { font-size: 13px; color: #C9D6E0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ma-note { font-size: 14px; letter-spacing: 2px; color: #F2B84B; }
 .fiche-etiquettes { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -284,6 +291,17 @@ dialog.petit { width: min(460px, calc(100% - 32px)); margin: auto; }
 .champ input, .champ select { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; height: auto; padding: 0; }
 .champ select { font-weight: 700; }
 .champ:focus-within { border-color: var(--accent); }
+.champ:has(.menu-btn) { position: relative; min-width: max-content; }
+.champ select[data-menu] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.menu-btn { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 100%; border: 0; padding: 0; background: transparent; color: var(--text); font: 700 15px 'Roboto', system-ui, sans-serif; cursor: pointer; text-align: left; white-space: nowrap; }
+.menu-btn svg { flex: none; color: var(--muted); transition: transform .15s; }
+.menu-btn[aria-expanded=true] svg { transform: rotate(180deg); }
+.menu-liste { position: absolute; z-index: 20; top: calc(100% + 6px); left: -1px; min-width: calc(100% + 2px); max-height: 400px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); }
+.menu-liste li { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 10px; border-radius: 6px; font-size: 15px; white-space: nowrap; cursor: pointer; color: var(--text); outline: 0; }
+.menu-liste li:hover, .menu-liste li:focus { background: var(--chip); }
+.menu-liste li[aria-selected=true] { background: var(--ok-bg); font-weight: 700; }
+.menu-liste svg { color: var(--accent); flex: none; }
 .puces { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
 .puces::-webkit-scrollbar { display: none; }
 .puces button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px; border-radius: 8px; font: 500 14px 'Roboto', system-ui, sans-serif;
@@ -685,6 +703,7 @@ dialog.feuille { width: min(520px, 100%); }
   .tuile .chiffre small { font-size: 12px; }
   .tuile-label, .ma-note { display: none; }
   .tuile-vide, .tuile-bas { font-size: 12px; white-space: normal; }
+  .tuile-niveau { font-size: 11px; padding: 2px 6px; white-space: nowrap; }
   .fiche-etiquettes span { height: 32px; font-size: 13px; }
   .fiche-actions { display: grid; grid-template-columns: 1fr 48px; gap: 8px; }
   .fiche-actions .btn.clair { grid-column: 1 / -1; height: 50px; font-size: 16px; }

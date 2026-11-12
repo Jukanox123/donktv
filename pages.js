@@ -59,7 +59,7 @@ function decouper(liste, page, parPage) {
 }
 
 const champRecherche = (id, valeur, label) => `<label class="champ champ-recherche">${ICO_LOUPE}<input id="${id}" type="search" placeholder="Titre, réalisateur, acteur…" aria-label="${label}" value="${esc(valeur)}" autocomplete="off"></label>`;
-const champTri = (id, options, valeur) => `<label class="champ"><span>Trier par</span><select id="${id}">${options.map(([v, l]) => `<option value="${v}" ${v === valeur ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+const champTri = (id, options, valeur) => `<label class="champ"><span>Trier par</span><select id="${id}" data-menu>${options.map(([v, l]) => `<option value="${v}" ${v === valeur ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
 const videMascotte = (titre, texte, bouton) => `<div class="vide-mascotte"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV"><div><h2>${titre}</h2><p class="muted">${texte}</p>${bouton}</div></div>`;
 
 const TRIS_TEXTE = { titre: (a, b) => a.titre.localeCompare(b.titre, 'fr') };
@@ -278,7 +278,7 @@ async function ouvrirTopsFiche() {
       <span class="top-ico">${l === 'tous' ? ICO_TROPHEE : `<img src="${buste(l)}" alt="">`}</span>
       <div><b>${nomTop(l)}</b><small>${moi ? `Classé N°${moi.position}` : `Pas encore classé · ${n} / ${taille} places`}</small>
         ${plein ? `<small class="attention">Top plein : « ${esc(rangs.at(-1).films?.titre || '')} » sortira du classement.</small>` : ''}</div>
-      <label class="champ place"><span>Place</span><select data-place aria-label="Place dans le ${nomTop(l)}">${Array.from({ length: max }, (_, k) => `<option ${k + 1 === (moi ? moi.position : max) ? 'selected' : ''}>${k + 1}</option>`).join('')}</select></label>
+      <label class="champ place"><span>Place</span><select data-place data-menu aria-label="Place dans le ${nomTop(l)}">${Array.from({ length: max }, (_, k) => `<option ${k + 1 === (moi ? moi.position : max) ? 'selected' : ''}>${k + 1}</option>`).join('')}</select></label>
       <button class="btn ${moi ? '' : 'primaire'}" type="button" ${moi ? 'data-top-fiche-retirer' : 'data-top-fiche-ajouter'}>${moi ? 'Retirer' : 'Ajouter'}</button></div>`;
   }).join('')}</div>
   <div class="ajout-pied"><a class="lien" href="#tops" data-fermer>Voir tous mes tops</a><button class="btn primaire" type="button" data-fermer>Terminé</button></div>`;
