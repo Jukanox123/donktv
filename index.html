@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DonkTV</title>
+<meta name="theme-color" content="#F6F1E4">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="DonkTV">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="img/icone-180.png">
+<link rel="icon" href="img/icone-180.png">
+<script>try { const t = localStorage.getItem('donktv-theme'); if (t && t !== 'auto') document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<section id="connexion" class="connexion" hidden>
+  <form id="form-connexion" class="carte">
+    <span class="logo" role="img" aria-label="DonkTV"></span>
+    <h1>Connexion</h1>
+    <label>Adresse e-mail<input id="email" type="email" autocomplete="username" required></label>
+    <label>Mot de passe<input id="mdp" type="password" autocomplete="current-password" required></label>
+    <p id="erreur-connexion" class="erreur" role="alert" hidden></p>
+    <button class="btn primaire" type="submit">Se connecter</button>
+  </form>
+</section>
+
+<div id="app" hidden>
+  <header class="entete">
+    <div class="entete-in">
+      <a href="#accueil" class="logo-lien"><span class="logo" role="img" aria-label="DonkTV"></span></a>
+      <nav class="nav-haut" aria-label="Navigation principale">
+        <a href="#accueil">Accueil</a><a href="#collection">Collection</a><a href="#a-voir">À voir</a>
+        <a href="#tops">Mes tops</a><a href="#stats">Statistiques</a><a href="#retros">Rétrospectives</a>
+      </nav>
+      <span class="pousse"></span>
+      <a class="btn carre nav-haut" href="#reglages" aria-label="Réglages"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      <button class="btn primaire nav-haut" type="button" data-ajout><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Ajouter un film</button>
+    </div>
+  </header>
+
+  <main id="page"></main>
+
+  <nav class="nav-bas" aria-label="Navigation principale">
+    <a href="#accueil"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10l8-6 8 6v10H4zM10 20v-5h4v5"/></svg>Accueil</a>
+    <a href="#collection"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4zM8 4v16M16 4v16M4 8h4M4 12h4M4 16h4M16 8h4M16 12h4M16 16h4"/></svg>Films</a>
+    <button type="button" class="plus" data-ajout aria-label="Ajouter un film"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    <a href="#stats"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>Stats</a>
+    <a href="#reglages"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 12.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6.6 18.4a6 6 0 0 1 10.8 0"/></svg>Mon espace</a>
+  </nav>
+</div>
+
+<dialog id="ajout" aria-labelledby="ajout-titre">
+  <div class="ajout-tete">
+    <div class="ajout-titres"><span id="ajout-etape" class="sur-titre"></span><h2 id="ajout-titre"></h2></div>
+    <div class="progression" aria-hidden="true"><span></span><span></span><span></span></div>
+    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div id="ajout-corps"></div>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
