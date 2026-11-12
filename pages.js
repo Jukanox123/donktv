@@ -278,7 +278,7 @@ async function ouvrirTopsFiche() {
       <span class="top-ico">${l === 'tous' ? ICO_TROPHEE : `<img src="${buste(l)}" alt="">`}</span>
       <div><b>${nomTop(l)}</b><small>${moi ? `Classé N°${moi.position}` : `Pas encore classé · ${n} / ${taille} places`}</small>
         ${plein ? `<small class="attention">Top plein : « ${esc(rangs.at(-1).films?.titre || '')} » sortira du classement.</small>` : ''}</div>
-      <label class="champ place"><span>Place</span><select data-place data-menu aria-label="Place dans le ${nomTop(l)}">${Array.from({ length: max }, (_, k) => `<option ${k + 1 === (moi ? moi.position : max) ? 'selected' : ''}>${k + 1}</option>`).join('')}</select></label>
+      <label class="champ place"><span>Place</span><select data-place data-menu ${moi && n === 1 ? 'disabled' : ''} aria-label="Place dans le ${nomTop(l)}">${Array.from({ length: max }, (_, k) => `<option ${k + 1 === (moi ? moi.position : max) ? 'selected' : ''}>${k + 1}</option>`).join('')}</select></label>
       <button class="btn ${moi ? '' : 'primaire'}" type="button" ${moi ? 'data-top-fiche-retirer' : 'data-top-fiche-ajouter'}>${moi ? 'Retirer' : 'Ajouter'}</button></div>`;
   }).join('')}</div>
   <div class="ajout-pied"><a class="lien" href="#tops" data-fermer>Voir tous mes tops</a><button class="btn primaire" type="button" data-fermer>Terminé</button></div>`;

@@ -299,6 +299,15 @@ async function realisateurs(f) {
   return cacheReals.get(f.tmdb_id) || f.realisateurs.map((nom) => ({ nom }));
 }
 
+// Affiche chaque message sous sa section et amène le premier à l'écran ; renvoie true si rien ne manque.
+function valider(manques) {
+  manques.forEach(([id, msg]) => { const p = $('#' + id); p.textContent = msg; p.hidden = !msg; });
+  const premier = manques.find(([, msg]) => msg);
+  if (premier) $('#' + premier[0]).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  return !premier;
+}
+const MANQUE_NOTE = 'Choisis une note.', MANQUE_GENRE = 'Choisis au moins un genre.';
+
 const fen = $('#fenetre'), fenCorps = $('#fenetre-corps');
 let edition = null; // brouillon de la fenêtre « Modifier »
 
@@ -317,8 +326,8 @@ function afficherEdition() {
     <div class="ajout-titres"><span class="sur-titre">${esc(fiche.titre)}</span><h2>${fiche.statut === 'vu' ? 'Modifier le film' : vu ? 'Ton avis' : 'Modifier le film'}</h2></div>
     <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="edition">
-    ${vu ? `<div class="avis"><div><span class="etiquette" id="edit-note">Ma note</span>${etoilesHtml(d.note, 'edit-note')}</div>${coeurHtml(d.coeur)}</div>` : ''}
-    <fieldset><legend>Genres</legend>${genresHtml(d.genres)}</fieldset>
+    ${vu ? `<div class="avis"><div><span class="etiquette" id="edit-note">Ma note</span>${etoilesHtml(d.note, 'edit-note')}<p class="erreur" id="err-edit-note" role="alert" hidden></p></div>${coeurHtml(d.coeur)}</div>` : ''}
+    <fieldset><legend>Genres</legend>${genresHtml(d.genres)}<p class="erreur" id="err-edit-genre" role="alert" hidden></p></fieldset>
     ${vu ? visionsHtml() : ''}
   </div>
   <div class="ajout-pied"><p class="erreur" id="erreur-edition" role="alert" hidden></p><span></span>
@@ -330,7 +339,7 @@ function visionsHtml() {
   return `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
         <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v}" max="${aujourdhui()}"></label>
         <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>`).join('')}
-      <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button></fieldset>`;
+      <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button><p class="erreur" id="err-edit-visions" role="alert" hidden></p></fieldset>`;
 }
 
 function majListe(id, patch) {
@@ -340,9 +349,8 @@ function majListe(id, patch) {
 
 async function enregistrerEdition(b) {
   const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
-  const manque = vu && !d.note ? 'Choisis une note avant d’enregistrer.' : !d.genres.length ? 'Choisis au moins un genre avant d’enregistrer.'
-    : vu && d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '';
-  if (manque) { err.textContent = manque; err.hidden = false; return; }
+  if (!valider([['err-edit-genre', d.genres.length ? '' : MANQUE_GENRE],
+    ...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
   b.disabled = true;
   try {
     const patch = { statut: d.statut, note: vu && d.note ? d.note : null, coup_de_coeur: vu && d.coeur, genres: d.genres };
@@ -447,9 +455,9 @@ fen.addEventListener('click', (e) => {
   else {
     if ('enregistrerRevu' in d) return enregistrerRevisionnage(b);
     if (!edition) return;
-    if (d.note) { edition.note = Number(d.note) === edition.note ? 0 : Number(d.note); $('.note', fenCorps).outerHTML = etoilesHtml(edition.note, 'edit-note'); }
+    if (d.note) { edition.note = Number(d.note) === edition.note ? 0 : Number(d.note); $('.note', fenCorps).outerHTML = etoilesHtml(edition.note, 'edit-note'); $('#err-edit-note').hidden = !!edition.note; }
     else if ('coeur' in d) b.setAttribute('aria-pressed', edition.coeur = !edition.coeur);
-    else if (d.genre) { const g = edition.genres; b.setAttribute('aria-pressed', !g.includes(d.genre)); edition.genres = g.includes(d.genre) ? g.filter((x) => x !== d.genre) : [...g, d.genre]; }
+    else if (d.genre) { const g = edition.genres; b.setAttribute('aria-pressed', !g.includes(d.genre)); edition.genres = g.includes(d.genre) ? g.filter((x) => x !== d.genre) : [...g, d.genre]; if (edition.genres.length) $('#err-edit-genre').hidden = true; }
     else if (d.retirer || 'ajouterVision' in d) { d.retirer ? edition.visions.splice(Number(d.retirer), 1) : edition.visions.push(aujourdhui()); $('.visions', fenCorps).outerHTML = visionsHtml(); }
   }
 });
@@ -464,6 +472,7 @@ function habillerMenu(sel) {
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'menu-btn'; b.setAttribute('aria-haspopup', 'listbox'); b.setAttribute('aria-expanded', 'false');
   const maj = () => { b.innerHTML = `${esc(sel.selectedOptions[0]?.text)}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`; b.setAttribute('aria-label', `${nom} : ${sel.selectedOptions[0]?.text}`); };
+  b.disabled = sel.disabled;
   maj(); sel.after(b);
   b.addEventListener('click', () => (b.nextElementSibling ? fermerMenu(b) : ouvrirMenu(sel, b, maj)));
 }
@@ -726,11 +735,11 @@ function afficherDetails() {
       <fieldset><legend>Statut</legend><div class="bascule">
         <button type="button" data-statut="vu" aria-pressed="${vu}">Je l’ai vu</button><button type="button" data-statut="a_voir" aria-pressed="${!vu}">À voir</button></div></fieldset>
       ${vu ? `<div class="avis">
-        <div><span class="etiquette" id="note-label">Ta note</span>${etoilesHtml(note, 'note-label')}</div>
+        <div><span class="etiquette" id="note-label">Ta note</span>${etoilesHtml(note, 'note-label')}<p class="erreur" id="err-ajout-note" role="alert" hidden></p></div>
         ${coeurHtml(coeur)}
         <label><span class="etiquette">Vu le</span><input type="date" id="date-vu" value="${date}" max="${new Date().toLocaleDateString('sv')}"></label>
       </div>` : '<p class="info">Il rejoindra ta watchlist. Tu pourras le noter le jour où tu le verras.</p>'}
-      <fieldset><legend>Genres <span>· pré-remplis par TMDB, modifiables</span></legend>${genresHtml(f.genres)}</fieldset>
+      <fieldset><legend>Genres <span>· pré-remplis par TMDB, modifiables</span></legend>${genresHtml(f.genres)}<p class="erreur" id="err-ajout-genre" role="alert" hidden></p></fieldset>
     </div></div>
     <div class="ajout-pied"><button class="btn plat" type="button" data-retour>‹ Changer de film</button>
       <button class="btn primaire" type="button" data-enregistrer style="height:48px;padding:0 24px">${vu ? 'Ajouter à mes films vus' : 'Ajouter à ma watchlist'}</button>
@@ -739,6 +748,7 @@ function afficherDetails() {
 
 async function enregistrer(bouton) {
   const { film, statut, note, coeur, date } = saisie, vu = statut === 'vu';
+  if (!valider([...(vu ? [['err-ajout-note', note ? '' : MANQUE_NOTE]] : []), ['err-ajout-genre', film.genres.length ? '' : MANQUE_GENRE]])) return;
   bouton.disabled = true;
   try {
     let note_rt = null;

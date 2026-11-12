@@ -46,6 +46,7 @@ img { max-width: 100%; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .muted { color: var(--muted); }
 .erreur { color: var(--danger); font-size: 15px; }
+.avis .erreur, fieldset .erreur { margin-top: 8px; font-size: 14px; font-weight: 500; }
 .sur-titre { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2.4px; color: var(--accent); }
 .logo { display: block; height: 32px; aspect-ratio: 639 / 200; background: var(--logo) center / contain no-repeat; }
 
@@ -294,6 +295,8 @@ dialog.petit { width: min(460px, calc(100% - 32px)); margin: auto; }
 .champ:has(.menu-btn) { position: relative; min-width: max-content; }
 .champ select[data-menu] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 .menu-btn { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 100%; border: 0; padding: 0; background: transparent; color: var(--text); font: 700 15px 'Roboto', system-ui, sans-serif; cursor: pointer; text-align: left; white-space: nowrap; }
+.menu-btn:disabled { cursor: default; color: var(--muted); }
+.champ:has(.menu-btn:disabled) { opacity: .6; }
 .menu-btn svg { flex: none; color: var(--muted); transition: transform .15s; }
 .menu-btn[aria-expanded=true] svg { transform: rotate(180deg); }
 .menu-liste { position: absolute; z-index: 20; top: calc(100% + 6px); left: -1px; min-width: calc(100% + 2px); max-height: 400px; overflow-y: auto; margin: 0; padding: 6px; list-style: none;
@@ -762,6 +765,8 @@ dialog.feuille { width: min(520px, 100%); }
   .entete-in .pousse { flex: 1; }
   .fiche-actions { grid-template-columns: 1fr 1fr 48px; }
   .fiche-actions .btn.large { grid-column: span 2; }
+  .fiche-actions { grid-template-columns: auto minmax(0, 1fr) 48px; }
+  .fiche-actions .btn { white-space: nowrap; padding: 0 14px; }
   .court { display: inline; }
   .hero .court { display: inline; }
   .section-tete { margin-bottom: 12px; }
