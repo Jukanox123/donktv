@@ -261,6 +261,89 @@ dialog.petit { width: min(460px, calc(100% - 32px)); margin: auto; }
 .toast { display: flex; align-items: center; gap: 16px; }
 .toast button { height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid currentColor; background: transparent; color: inherit; font: 700 14px 'Roboto', system-ui, sans-serif; cursor: pointer; }
 
+/* Collection */
+.coll-tete { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.coll-tete-droite { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
+.coll-tete-droite strong { color: var(--text); }
+.bascule-liens { background: var(--surface); }
+.bascule-liens a { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 700; color: var(--text); }
+.bascule-liens a[aria-current] { background: var(--active); color: var(--active-text); }
+.filtres { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); margin: -16px calc(-1 * clamp(20px, 5vw, 64px)); padding: 16px clamp(20px, 5vw, 64px);
+  border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+.filtres-ligne { display: flex; flex-wrap: wrap; gap: 12px; }
+.champ { flex: 1 1 240px; display: flex; align-items: center; gap: 10px; padding: 0 14px; height: 46px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); min-width: 0; }
+.champ-recherche { flex: 999 1 280px; }
+.champ span { font-size: 15px; color: var(--muted); white-space: nowrap; }
+.champ input, .champ select { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; height: auto; padding: 0; }
+.champ select { font-weight: 700; }
+.champ:focus-within { border-color: var(--accent); }
+.puces { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+.puces::-webkit-scrollbar { display: none; }
+.puces button { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 6px; border-radius: 8px; font: 500 14px 'Roboto', system-ui, sans-serif;
+  cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+.puces button[data-filtre-genre=""] { padding-left: 14px; }
+.puces button[aria-pressed=true] { background: var(--chip); border-color: var(--accent); font-weight: 700; }
+.puces img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+#coll-resultats { display: flex; flex-direction: column; gap: 24px; margin-top: -16px; }
+.compteur { font-size: 15px; }
+.grille-films { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 32px 20px; }
+.carte-film { display: flex; flex-direction: column; gap: 8px; text-decoration: none; color: var(--text); min-width: 0; }
+.carte-film .poster { position: relative; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: var(--chip); box-shadow: 0 10px 22px -14px rgba(20,40,28,.5);
+  margin-bottom: 4px; transition: transform .45s cubic-bezier(.22,1,.36,1), box-shadow .45s; }
+.carte-film:hover .poster, .carte-film:focus-visible .poster { transform: translateY(-6px); box-shadow: 0 22px 36px -18px rgba(20,40,28,.55); }
+.poster > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.coeur-carte { position: absolute; top: 10px; right: 10px; }
+.bustes { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; padding-left: 8px; }
+.bustes > span[role=img] { width: 36px; height: 36px; margin-left: -8px; border-radius: 50%; overflow: hidden; border: 2px solid #FFFDF7; background: #E7EFDB; box-shadow: 0 4px 10px -4px rgba(0,0,0,.5); }
+.bustes img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bustes .plus { height: 26px; min-width: 26px; padding: 0 6px; margin-left: 4px; border-radius: 999px; background: #FFFDF7; color: #1F3327; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.carte-film b { font-size: 15px; line-height: 1.3; }
+.carte-bas { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--muted); }
+.carte-bas strong { color: var(--text); }
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; }
+.pagination .btn[aria-current] { background: var(--active); color: var(--active-text); border-color: var(--active); }
+.vide-mascotte { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 40px; padding: 48px 24px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.vide-mascotte > img { width: 140px; height: 260px; object-fit: contain; object-position: center bottom; }
+.vide-mascotte > div { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 380px; }
+.vide-mascotte h2 { font-size: 32px; letter-spacing: -1px; line-height: 1.1; }
+
+/* Calendrier */
+.cal { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.cal-mois { flex: 999 1 640px; min-width: 0; padding: clamp(20px, 2.6vw, 32px); }
+.cal-tete { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+.cal-nav { display: flex; align-items: center; gap: 12px; }
+.cal-nav h2 { font-size: 30px; letter-spacing: -1px; line-height: 1; min-width: 210px; text-align: center; }
+.cal-resume { display: flex; flex-wrap: wrap; gap: 4px 20px; font-size: 15px; color: var(--muted); }
+.cal-resume strong { color: var(--text); }
+.cal-grille { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.cal-semaine span { padding-left: 4px; font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 1.6px; color: var(--muted); }
+.cal-grille > * { aspect-ratio: 3 / 4; min-width: 0; }
+.cal-vide { border-radius: 10px; background: var(--chip); opacity: .6; padding: 8px 10px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.cal-jour { position: relative; padding: 0; border: 0; border-radius: 10px; overflow: hidden; cursor: pointer; display: flex; gap: 2px; background: var(--card);
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s; }
+.cal-jour:hover { transform: translateY(-3px); box-shadow: 0 14px 26px -16px rgba(20,40,28,.55); }
+.cal-jour[aria-pressed=true] { outline: 3px solid var(--active); outline-offset: 2px; }
+.cal-affiche { flex: 1; min-width: 0; height: 100%; background: #3E5F7A; }
+.cal-affiche img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cal-plus { flex: 1; display: flex; align-items: center; justify-content: center; background: #1F3327; color: #FFFDF7; font: 700 15px 'Fraunces', Georgia, serif; }
+.cal-num { position: absolute; top: 6px; left: 6px; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 6px; background: rgba(255,253,247,.94); color: #1F3327;
+  font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.cal-revu { position: absolute; bottom: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,253,247,.94); color: #1F3327; display: inline-flex; align-items: center; justify-content: center; }
+.cal-jour .coeur-carte { top: 7px; right: 6px; width: 24px; height: 24px; }
+.cal-detail { flex: 1 1 320px; padding: 28px; }
+.cal-detail .sur-titre { font-size: 12px; font-weight: 500; letter-spacing: 1.8px; color: var(--muted); }
+.cal-detail h2 { font-size: 26px; letter-spacing: -.5px; line-height: 1.15; }
+.cal-detail ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 14px; }
+.cal-detail a { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; align-items: center; text-decoration: none; color: var(--text); }
+.cal-detail .affiche { width: 64px; border-radius: 8px; }
+.cal-detail a > span:last-child { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cal-detail b { font-size: 16px; line-height: 1.3; }
+.cal-detail small { font-size: 14px; color: var(--muted); }
+.etoile-txt { color: var(--star); }
+.pastilles { display: flex; flex-wrap: wrap; gap: 6px; }
+.pastilles span { padding: 2px 8px; border-radius: 6px; background: var(--chip); font-size: 12px; font-weight: 700; }
+.pastilles .pastille-coeur { background: var(--heart-bg); }
+
 @media (max-width: 760px) {
   body { font-size: 16px; }
   .nav-haut { display: none !important; }
@@ -328,6 +411,48 @@ dialog.petit { width: min(460px, calc(100% - 32px)); margin: auto; }
   .histo { flex-basis: 100%; padding: 20px; }
   .edition { padding: 20px; }
   dialog.petit { height: fit-content; max-height: calc(100% - 32px); width: calc(100% - 32px); margin: auto; border-radius: 16px; }
+  .coll-tete { gap: 16px; }
+  .coll-tete .titre-page { display: none; }
+  .coll-tete-droite { width: 100%; justify-content: space-between; }
+  .coll-tete-droite > p { display: none; }
+  .bascule-liens { width: 100%; }
+  .bascule-liens a { flex: 1; justify-content: center; }
+  .filtres { margin: -12px -20px; padding: 12px 20px; gap: 10px; }
+  .filtres-ligne { gap: 8px; }
+  .champ { flex-basis: 100%; height: 44px; }
+  #coll-resultats { margin-top: -12px; gap: 16px; }
+  .grille-films { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 10px; }
+  .carte-film { gap: 4px; }
+  .carte-film b { font-size: 13px; }
+  .carte-bas { font-size: 12px; justify-content: flex-start; }
+  .carte-bas span:not(:empty)::after { content: " ·"; }
+  .coeur-carte { top: 6px; right: 6px; width: 22px; height: 22px; }
+  .bustes { right: 6px; bottom: 6px; }
+  .bustes > span[role=img] { width: 26px; height: 26px; }
+  .bustes .plus { display: none; }
+  .pagination .long { display: none; }
+  .vide-mascotte { gap: 16px; padding: 28px 20px; text-align: center; }
+  .vide-mascotte > img { width: 110px; height: 200px; }
+  .vide-mascotte > div { align-items: center; }
+  .vide-mascotte h2 { font-size: 24px; }
+  .cal { gap: 16px; }
+  .cal-mois { padding: 16px; flex-basis: 100%; }
+  .cal-tete { flex-direction: column; gap: 8px; }
+  .cal-nav { width: 100%; justify-content: space-between; }
+  .cal-nav h2 { font-size: 24px; min-width: 0; }
+  .cal-resume { justify-content: center; font-size: 13px; gap: 4px 12px; }
+  .cal-grille { gap: 4px; }
+  .cal-semaine span { padding: 0; text-align: center; font-size: 11px; letter-spacing: 0; }
+  .cal-vide { padding: 4px; font-size: 11px; border-radius: 6px; }
+  .cal-jour { border-radius: 6px; }
+  .cal-jour[aria-pressed=true] { outline-width: 2px; }
+  .cal-num { top: 3px; left: 3px; min-width: 18px; height: 18px; padding: 0 3px; font-size: 11px; border-radius: 4px; }
+  .cal-revu { bottom: 3px; right: 3px; width: 18px; height: 18px; }
+  .cal-revu svg { width: 10px; height: 10px; }
+  .cal-jour .coeur-carte { display: none; }
+  .cal-plus { font-size: 12px; }
+  .cal-detail { flex-basis: 100%; padding: 20px; }
+  .cal-detail h2 { font-size: 22px; }
   .fini { flex: 1; align-items: flex-end; justify-content: stretch; padding: 24px 20px; background-position: 20% 50%; }
   .fini > div { width: 100%; background: rgba(250,240,220,.92); padding: 16px; border-radius: 14px; }
 }

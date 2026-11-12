@@ -128,21 +128,20 @@ function pageReglages() {
   </div>`;
 }
 
-const PAGES = { accueil: pageAccueil, reglages: pageReglages };
+const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
 
 async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
-  const actif = nom === 'film' ? 'collection' : nom;
+  const actif = { film: 'collection', calendrier: 'collection' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  if (nom !== 'film') {
-    page.innerHTML = (PAGES[nom] || (() => `<div class="titre-page"><p class="sur-titre">En construction</p><h1>Cette page arrive bientôt</h1><p class="muted">Elle sera ajoutée dans une prochaine étape du développement.</p></div>`))();
-  } else {
-    if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement de la fiche…</p>';
+  const rendu = (PAGES[nom] || (() => `<div class="titre-page"><p class="sur-titre">En construction</p><h1>Cette page arrive bientôt</h1><p class="muted">Elle sera ajoutée dans une prochaine étape du développement.</p></div>`))(id);
+  if (rendu instanceof Promise) {
+    if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement…</p>';
     let html;
-    try { html = await pageFilm(id); } catch (err) { html = `<p class="vide erreur">Fiche introuvable : ${esc(err.message)}</p>`; }
+    try { html = await rendu; } catch (err) { html = `<p class="vide erreur">Chargement impossible : ${esc(err.message)}</p>`; }
     if (location.hash !== hash) return; // on a changé de page pendant le chargement
     page.innerHTML = html;
-  }
+  } else page.innerHTML = rendu;
   if (page.dataset.vue !== hash) scrollTo(0, 0);
   page.dataset.vue = hash;
 }
@@ -407,6 +406,169 @@ fen.addEventListener('click', (e) => {
   }
 });
 fen.addEventListener('input', (e) => { if (e.target.dataset.vision) edition.visions[Number(e.target.dataset.vision)] = e.target.value; });
+
+/* ---------- Collection : grille et calendrier ---------- */
+
+const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const pluriel = (n, mot, motP = mot + 's') => `${n} ${n > 1 ? motP : mot}`;
+const ICO_COEUR_CARTE = '<svg role="img" aria-label="Coup de cœur" class="coeur-carte" width="28" height="28" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#FFFDF7"/><path d="M12 18s-6-3.6-6-8a3.3 3.3 0 0 1 6-1.9A3.3 3.3 0 0 1 18 10c0 4.4-6 8-6 8z" fill="#D2483B"/></svg>';
+const ICO_REVU = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>';
+const FLECHE = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d === 'g' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'}"/></svg>`;
+
+const coll = { q: '', tri: 'date', genre: '', page: 1, films: [] };
+const TRIS = [['date', 'Date de visionnage'], ['note', 'Note'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['real', 'Réalisateur'], ['acteur', 'Acteur'], ['duree', 'Durée'], ['coeur', 'Coups de cœur']];
+
+function entete(vue, compteur = '') {
+  const lien = (v, label, ico) => `<a href="#${v}" ${v === vue ? 'aria-current="page"' : ''}>${ico}${label}</a>`;
+  return `<div class="coll-tete"><div class="titre-page"><p class="sur-titre">Collection</p><h1>Mes films</h1></div>
+    <div class="coll-tete-droite">${compteur}<nav class="bascule bascule-liens" aria-label="Affichage">
+      ${lien('collection', 'Grille', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>')}
+      ${lien('calendrier', 'Calendrier', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>')}
+    </nav></div></div>`;
+}
+
+async function pageCollection() {
+  const { data, error } = await sb.from('films').select('id,titre,annee,affiche,note,coup_de_coeur,genres,realisateurs,acteurs,duree,ajoute_le,visionnages(date)').eq('statut', 'vu');
+  if (error) throw error;
+  coll.films = data.map((f) => ({ ...f, note: f.note == null ? null : Number(f.note),
+    dernier: f.visionnages.map((v) => v.date).sort().at(-1) || f.ajoute_le.slice(0, 10),
+    cherche: norm([f.titre, ...f.realisateurs, ...f.acteurs.map((a) => a.nom)].join(' ')) }));
+  return entete('collection', `<p class="muted"><strong>${coll.films.length}</strong> ${coll.films.length > 1 ? 'films vus' : 'film vu'}</p>`) + `
+  <div class="filtres">
+    <div class="filtres-ligne">
+      <label class="champ champ-recherche"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="coll-q" type="search" placeholder="Titre, réalisateur, acteur…" aria-label="Rechercher dans la collection" value="${esc(coll.q)}" autocomplete="off"></label>
+      <label class="champ"><span>Trier par</span><select id="coll-tri">${TRIS.map(([v, l]) => `<option value="${v}" ${v === coll.tri ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    </div>
+    <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) =>
+      `<button type="button" data-filtre-genre="${g}" aria-pressed="${coll.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div>
+  </div>
+  <div id="coll-resultats">${htmlResultats()}</div>`;
+}
+
+function filmsFiltres() {
+  const q = norm(coll.q.trim()), fin = '￿', txt = (a, b) => a.localeCompare(b, 'fr');
+  const parDate = (a, b) => b.dernier.localeCompare(a.dernier);
+  const tri = {
+    date: parDate,
+    note: (a, b) => (b.note ?? -1) - (a.note ?? -1) || parDate(a, b),
+    genre: (a, b) => txt(a.genres[0] || fin, b.genres[0] || fin) || parDate(a, b),
+    annee: (a, b) => (b.annee ?? 0) - (a.annee ?? 0),
+    real: (a, b) => txt(a.realisateurs[0] || fin, b.realisateurs[0] || fin),
+    acteur: (a, b) => txt(a.acteurs[0]?.nom || fin, b.acteurs[0]?.nom || fin),
+    duree: (a, b) => (b.duree ?? 0) - (a.duree ?? 0),
+    coeur: (a, b) => b.coup_de_coeur - a.coup_de_coeur || parDate(a, b),
+  }[coll.tri];
+  return coll.films.filter((f) => (!coll.genre || f.genres.includes(coll.genre)) && (!q || f.cherche.includes(q))).sort(tri);
+}
+
+function htmlResultats() {
+  if (!coll.films.length) return `<div class="vide-mascotte"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
+    <div><h2>Ta collection est vide</h2><p class="muted">Ajoute un film que tu as vu : il apparaîtra ici avec ta note.</p><button class="btn primaire" type="button" data-ajout>Ajouter un film</button></div></div>`;
+  const parPage = matchMedia('(max-width: 760px)').matches ? 12 : 10;
+  const l = filmsFiltres(), n = l.length, nbPages = Math.max(1, Math.ceil(n / parPage));
+  coll.page = Math.min(coll.page, nbPages);
+  const p = coll.page, debut = (p - 1) * parPage;
+  if (!n) return `<div class="vide-mascotte"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
+    <div><h2>Aucun film trouvé</h2><p class="muted">Baudet a fouillé partout, rien ne correspond à ces filtres.</p><button class="btn primaire" type="button" data-reinitialiser>Réinitialiser les filtres</button></div></div>`;
+  // Pages affichées : la première, la dernière et les voisines de la page courante.
+  const numeros = [...new Set([1, p - 1, p, p + 1, nbPages])].filter((x) => x >= 1 && x <= nbPages).sort((a, b) => a - b);
+  return `<p class="muted compteur" aria-live="polite">${nbPages > 1 ? `Films ${debut + 1} à ${Math.min(debut + parPage, n)} sur ${n}` : pluriel(n, 'film')}</p>
+  <div class="grille-films">${l.slice(debut, debut + parPage).map((f) => {
+    const g = f.genres;
+    return `<a class="carte-film" href="#film/${f.id}" aria-label="${esc(f.titre)}${f.annee ? ', ' + f.annee : ''}${f.note ? ', noté ' + fr(f.note) + ' sur 5' : ''}">
+      <span class="poster">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}${f.coup_de_coeur ? ICO_COEUR_CARTE : ''}
+        <span class="bustes">${g.slice(0, 2).map((x) => `<span title="${x}" role="img" aria-label="Genre : ${x}"><img src="${buste(x)}" alt=""></span>`).join('')}${g.length > 2 ? `<span class="plus" title="${g.slice(2).join(', ')}">+${g.length - 2}</span>` : ''}</span></span>
+      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${f.annee ?? ''}</span><strong>${f.note ? '★ ' + fr(f.note) : 'À noter'}</strong></span></a>`;
+  }).join('')}</div>
+  ${nbPages > 1 ? `<nav class="pagination" aria-label="Pagination">
+    <button class="btn" type="button" data-page="${p - 1}" ${p === 1 ? 'disabled' : ''} aria-label="Page précédente">${FLECHE('g')}<span class="long">Précédent</span></button>
+    ${numeros.map((x, i) => `${i && x - numeros[i - 1] > 1 ? '<span class="muted">…</span>' : ''}<button class="btn carre" type="button" data-page="${x}" aria-label="Page ${x}" ${x === p ? 'aria-current="page"' : ''}>${x}</button>`).join('')}
+    <button class="btn" type="button" data-page="${p + 1}" ${p === nbPages ? 'disabled' : ''} aria-label="Page suivante"><span class="long">Suivant</span>${FLECHE('d')}</button></nav>` : ''}`;
+}
+
+const majResultats = () => { const r = $('#coll-resultats'); if (r) r.innerHTML = htmlResultats(); };
+
+/* Calendrier */
+
+const cal = { mois: null, jour: null, visions: [] };
+
+async function pageCalendrier() {
+  const { data, error } = await sb.from('visionnages').select('date,film_id,films(id,titre,affiche,note,coup_de_coeur,duree)');
+  if (error) throw error;
+  const premier = {};
+  data.forEach((v) => { if (!premier[v.film_id] || v.date < premier[v.film_id]) premier[v.film_id] = v.date; });
+  cal.visions = data.filter((v) => v.films).map((v) => ({ ...v, revu: v.date > premier[v.film_id] }));
+  cal.mois ??= aujourdhui().slice(0, 7);
+  return entete('calendrier') + `<div id="cal" class="cal">${htmlCal()}</div>`;
+}
+
+function htmlCal() {
+  const [y, m] = cal.mois.split('-').map(Number), nbJours = new Date(y, m, 0).getDate();
+  const decalage = (new Date(y, m - 1, 1).getDay() + 6) % 7; // lundi en premier
+  const duMois = cal.visions.filter((v) => v.date.startsWith(cal.mois)), parJour = {};
+  duMois.forEach((v) => (parJour[Number(v.date.slice(8))] ??= []).push(v));
+  const jours = Object.keys(parJour).map(Number);
+  if (!parJour[cal.jour]) cal.jour = jours.length ? Math.max(...jours) : null;
+  const heures = Math.round(duMois.reduce((s, v) => s + (v.films.duree || 0), 0) / 60);
+  const nomMois = MOIS[m - 1].replace(/^./, (c) => c.toUpperCase()) + ' ' + y;
+  const nomJour = (d) => new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long' });
+  const img = (v) => `<span class="cal-affiche">${v.films.affiche ? `<img src="https://image.tmdb.org/t/p/w185${esc(v.films.affiche)}" alt="">` : ''}</span>`;
+  const cases = [];
+  for (let i = 0; i < Math.ceil((decalage + nbJours) / 7) * 7; i++) {
+    const d = i - decalage + 1, vs = parJour[d];
+    if (d < 1 || d > nbJours) cases.push('<span></span>');
+    else if (!vs) cases.push(`<span class="cal-vide">${d}</span>`);
+    else cases.push(`<button type="button" class="cal-jour" data-jour="${d}" aria-pressed="${d === cal.jour}" aria-label="${nomJour(d)} ${d} ${MOIS[m - 1]} : ${esc(vs.map((v) => v.films.titre).join(', '))}">
+      ${vs.length <= 3 ? vs.map(img).join('') : img(vs[0]) + img(vs[1]) + `<span class="cal-plus">+${vs.length - 2}</span>`}
+      <span class="cal-num">${d}</span>${vs.some((v) => v.revu) ? `<span class="cal-revu" title="Revisionnage">${ICO_REVU}</span>` : ''}${vs.length === 1 && vs[0].films.coup_de_coeur ? ICO_COEUR_CARTE : ''}</button>`);
+  }
+  const vsJour = parJour[cal.jour] || [];
+  return `<section class="carte cal-mois" aria-labelledby="mois-titre">
+    <div class="cal-tete"><div class="cal-nav"><button class="btn carre" type="button" data-mois="-1" aria-label="Mois précédent">${FLECHE('g')}</button>
+      <h2 id="mois-titre">${nomMois}</h2><button class="btn carre" type="button" data-mois="1" aria-label="Mois suivant">${FLECHE('d')}</button></div>
+      <p class="cal-resume"><span><strong>${duMois.length}</strong> ${duMois.length > 1 ? 'films' : 'film'}</span><span><strong>${heures} h</strong> devant l'écran</span><span><strong>${jours.length}</strong> ${jours.length > 1 ? 'jours' : 'jour'} avec film</span></p></div>
+    <div class="cal-grille cal-semaine" aria-hidden="true">${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((j) => `<span>${j}</span>`).join('')}</div>
+    <div class="cal-grille">${cases.join('')}</div></section>
+  <aside class="carte cal-detail" aria-live="polite">${cal.jour ? `<div><span class="sur-titre">${pluriel(vsJour.length, 'film vu', 'films vus')}</span>
+      <h2>${nomJour(cal.jour).replace(/^./, (c) => c.toUpperCase())} ${cal.jour === 1 ? '1er' : cal.jour} ${MOIS[m - 1]}</h2></div>
+    <ul>${vsJour.map((v) => `<li><a href="#film/${v.films.id}">${affiche(v.films.affiche)}<span><b>${esc(v.films.titre)}</b>
+      <small>${v.films.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(Number(v.films.note))}` : 'Pas noté'}${v.films.duree ? ' · ' + duree(v.films.duree) : ''}</small>
+      <span class="pastilles">${v.films.coup_de_coeur ? '<span class="pastille-coeur">Coup de cœur</span>' : ''}${v.revu ? '<span>Revisionnage</span>' : ''}</span></span></a></li>`).join('')}</ul>`
+    : `<h2>Aucun film en ${MOIS[m - 1]}</h2><p class="muted">Les films vus ce mois-ci apparaîtront dans les cases des jours.</p>`}</aside>`;
+}
+
+$('#page').addEventListener('input', (e) => {
+  if (e.target.id === 'coll-q') { coll.q = e.target.value; coll.page = 1; majResultats(); }
+});
+$('#page').addEventListener('change', (e) => {
+  if (e.target.id === 'coll-tri') { coll.tri = e.target.value; coll.page = 1; majResultats(); }
+});
+$('#page').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const d = b.dataset;
+  if (d.filtreGenre != null) {
+    coll.genre = d.filtreGenre; coll.page = 1;
+    document.querySelectorAll('[data-filtre-genre]').forEach((x) => x.setAttribute('aria-pressed', x === b));
+    majResultats();
+  } else if ('reinitialiser' in d) {
+    Object.assign(coll, { q: '', genre: '', page: 1 });
+    $('#coll-q').value = '';
+    document.querySelectorAll('[data-filtre-genre]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.filtreGenre === ''));
+    majResultats();
+  } else if (d.page) {
+    coll.page = Number(d.page); majResultats();
+    $('.filtres').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  } else if (d.mois) {
+    const [y, m] = cal.mois.split('-').map(Number), x = new Date(y, m - 1 + Number(d.mois), 1);
+    cal.mois = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`; cal.jour = null;
+    $('#cal').innerHTML = htmlCal();
+  } else if (d.jour) {
+    cal.jour = Number(d.jour); $('#cal').innerHTML = htmlCal();
+    $(`[data-jour="${d.jour}"]`)?.focus();
+  }
+});
 
 /* ---------- Ajouter un film ---------- */
 
