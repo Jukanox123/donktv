@@ -45,7 +45,7 @@ async function tmdb(chemin, params = {}, cle = reglages.tmdb_token) {
 async function omdb(imdbId, cle = reglages.omdb_key) {
   const r = await fetch(`https://www.omdbapi.com/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(cle)}`);
   const j = await r.json().catch(() => ({}));
-  if (j.Response !== 'True') throw new Error(r.status === 401 ? 'OMDb refuse cette clé.' : 'OMDb : ' + (j.Error || `erreur ${r.status}`));
+  if (j.Response !== 'True') throw new Error(j.Error === 'Invalid API key!' ? 'OMDb refuse cette clé : vérifie qu’elle est activée (lien dans le mail d’OMDb).' : 'OMDb : ' + (j.Error || `erreur ${r.status}`));
   return j;
 }
 
@@ -144,7 +144,10 @@ $('#page').addEventListener('click', async (e) => {
       i.type = i.type === 'password' ? 'text' : 'password';
       b.textContent = i.type === 'password' ? 'Afficher' : 'Masquer';
     } else if ('tester' in b.dataset) {
-      const bloc = b.closest('.cle'), k = CLES.find((c) => c.champ === bloc.dataset.cle), etat = $('.etat', bloc), v = $('input', bloc).value.trim();
+      const bloc = b.closest('.cle'), k = CLES.find((c) => c.champ === bloc.dataset.cle), etat = $('.etat', bloc);
+      // Le mail d'OMDb donne un lien d'exemple : on en extrait la clé si c'est lui qui a été collé.
+      const v = $('input', bloc).value.trim().replace(/^.*[?&]apikey=([^&\s]+).*$/i, '$1');
+      $('input', bloc).value = v;
       if (!v) return toast('Colle d’abord ta clé.');
       b.disabled = true;
       try {
