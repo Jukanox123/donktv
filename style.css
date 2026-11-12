@@ -511,6 +511,10 @@ kbd { font: 500 12px 'Roboto', system-ui, sans-serif; padding: 2px 6px; border-r
 .initiales { width: 36px; height: 36px; border-radius: 50%; background: var(--chip); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; font: 700 14px 'Fraunces', Georgia, serif; }
 img.initiales { object-fit: cover; flex: none; }
 .hm-defile { overflow-x: auto; }
+.hm-mini { display: none; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 12px; font-size: 12px; color: var(--muted); }
+.hm-mini > div { display: flex; flex-direction: column; gap: 4px; }
+.hm-mini-cases { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.hm-mini-cases span { aspect-ratio: 1; border-radius: 2px; }
 .hm { display: grid; grid-template-columns: 34px max-content; gap: 6px 8px; font-size: 11px; color: var(--muted); }
 .hm-mois, .hm-cases { display: grid; grid-template-columns: repeat(var(--semaines), 13px); gap: 3px; }
 .hm-mois span { white-space: nowrap; }
@@ -825,6 +829,9 @@ dialog.feuille { width: min(520px, 100%); }
   .etiquettes span:nth-child(2n) { visibility: hidden; }
   .stat-genres, .carte-monde { grid-template-columns: 1fr; gap: 18px; }
   .genre-prefere { min-height: 220px; order: -1; }
+  .genre-prefere .sur-titre { align-self: flex-start; margin-bottom: 6px; padding: 3px 8px; border-radius: 6px; background: #F3EEDD; color: #3A2A14; }
+  .hm-defile { display: none; }
+  .hm-mini { display: grid; }
   .hbarres li { grid-template-columns: 30px minmax(60px, 110px) minmax(0, 1fr) auto; gap: 8px; font-size: 14px; }
   .retro-hero { margin: 0 -20px; border-radius: 0 0 24px 24px; min-height: 0; }
   .retro-hero-in { padding: 20px; }

@@ -389,6 +389,13 @@ function htmlStats() {
     const premier = Array.from({ length: 7 }, (_, k) => ajoutJours(departHm, w * 7 + k)).find((d) => d.endsWith('-01') && d.startsWith(an));
     return `<span>${premier ? MOIS_COURT[Number(premier.slice(5, 7)) - 1] : ''}</span>`;
   });
+  // Mobile : l'année en 12 mini-calendriers (lundi en premier) pour tout voir sans défiler.
+  const miniMois = MOIS.map((nomM, i) => {
+    const p = `${an}-${String(i + 1).padStart(2, '0')}`, n = new Date(an, i + 1, 0).getDate(), vide = (new Date(an, i, 1).getDay() + 6) % 7;
+    return `<div><span>${MOIS_COURT[i]}</span><div class="hm-mini-cases">${'<i></i>'.repeat(vide)}${Array.from({ length: n }, (_, k) => {
+      const d = `${p}-${String(k + 1).padStart(2, '0')}`, t = parJour[d] || [];
+      return `<span class="hm-${Math.min(t.length, 4)}"></span>`; }).join('')}</div></div>`;
+  });
   const joursVus = Object.keys(parJour).sort();
   let serie = 0, record = 0, prec = null;
   joursVus.forEach((d) => { serie = prec && joursEntre(prec, d) === 1 ? serie + 1 : 1; record = Math.max(record, serie); prec = d; });
@@ -433,6 +440,7 @@ function htmlStats() {
     <div class="hm-defile"><div class="hm" style="--semaines:${nbSemaines}"><span></span><div class="hm-mois" aria-hidden="true">${etiquettesSem.join('')}</div>
       <div class="hm-jours" aria-hidden="true"><span></span><span>mar.</span><span></span><span>jeu.</span><span></span><span>sam.</span><span></span></div>
       <div class="hm-cases" role="img" aria-label="${joursVus.length} jours de cinéma en ${an}">${cases.join('')}</div></div></div>
+    <div class="hm-mini" role="img" aria-label="${joursVus.length} jours de cinéma en ${an}">${miniMois.join('')}</div>
     <div class="hm-bas"><div class="hm-chiffres"><div><span class="chiffre">${joursVus.length}</span><span class="muted">jours de cinéma</span></div>
       <div><span class="chiffre">${pluriel(record, 'jour')}</span><span class="muted">plus longue série</span></div><div><span class="chiffre">${majuscule(jourFav.slice(3))}</span><span class="muted">ton jour préféré pour un film</span></div></div>
       <div class="hm-legende" aria-hidden="true"><span>Aucun</span>${[0, 1, 2, 3, 4].map((n) => `<span class="hm-${n}"></span>`).join('')}<span>4 films et +</span></div></div></section>
