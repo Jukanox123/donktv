@@ -312,12 +312,13 @@ function maxRond(m) {
 // « +3 ce mois-ci » en vert, « −2 … » en rouge, « 0 … » neutre.
 const evol = (n, suite) => `<span class="${n > 0 ? 'hausse' : n < 0 ? 'baisse' : 'muted'}">${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n)} ${suite}</span>`;
 
-function barres(items, unite = '') {
+function barres(items, unite = '', defile = false) {
   const max = maxRond(Math.max(0, ...items.map((i) => i.v))), ticks = [4, 3, 2, 1, 0].map((k) => (max * k) / 4);
-  return `<div class="graph"><div class="axe" aria-hidden="true">${ticks.map((t) => `<span>${t}${unite}</span>`).join('')}</div>
+  // defile : barres de largeur minimale, la zone et l'axe des abscisses défilent ensemble, l'axe des ordonnées reste fixe.
+  return `<div class="graph${defile ? ' graph-defile' : ''}"><div class="axe" aria-hidden="true">${ticks.map((t) => `<span>${t}${unite}</span>`).join('')}</div>${defile ? `<div class="defile"><div style="--n:${items.length}">` : ''}
     <div class="zone"><div class="lignes" aria-hidden="true">${ticks.map(() => '<span></span>').join('')}</div>
     ${items.map((i) => `<div class="col" title="${esc(i.tip)}"><span class="tip">${esc(i.tip)}</span><div class="barre ${i.fort ? 'fort' : ''}" style="height:${(i.v / max) * 100}%"></div></div>`).join('')}</div>
-    <span></span><div class="etiquettes" aria-hidden="true">${items.map((i) => `<span>${i.label}</span>`).join('')}</div></div>`;
+    ${defile ? '' : '<span></span>'}<div class="etiquettes" aria-hidden="true">${items.map((i) => `<span>${i.label}</span>`).join('')}</div>${defile ? '</div></div>' : ''}</div>`;
 }
 
 const lignesH = (rows) => `<ol class="hbarres">${rows.map((r) => `<li>${r.ico || ''}<span class="hb-nom">${r.nom}</span><span class="hb-piste" title="${esc(r.tip || '')}"><span style="width:${r.pct}%"></span></span><span class="hb-val">${r.val}</span></li>`).join('')}</ol>`;
@@ -334,8 +335,14 @@ function photosReals(noms) {
   Promise.all(manquants.map((n) => tmdb('/search/person', { query: n }).then((r) => {
     const p = r.results?.find((x) => x.known_for_department === 'Directing' && x.profile_path) || r.results?.find((x) => x.profile_path);
     if (p) st.photos[n] = p.profile_path;
-  }).catch(() => {}))).then(() => { if (location.hash.startsWith('#stats')) majStats(); });
+  }).catch(() => {}))).then(() => {
+    if (location.hash.startsWith('#stats')) majStats();
+    else if (location.hash.startsWith('#retro')) $('#page').innerHTML = htmlRetro();
+  });
 }
+
+const portrait = (nom) => (st.photos[nom] ? `<img class="initiales" src="https://image.tmdb.org/t/p/w185${esc(st.photos[nom])}" alt="" loading="lazy">`
+  : `<span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>`);
 
 async function pageStats() {
   st.films = (await chargerFilms()).filter((f) => f.statut === 'vu' && f.visions.length);
@@ -382,7 +389,7 @@ function htmlStats() {
     const d = ajoutJours(departHm, i);
     if (d < jan1 || d > dec31) return '<span class="hm-hors"></span>';
     const t = parJour[d] || [], niv = Math.min(t.length, 4);
-    return `<span class="hm-${niv}" title="${esc(dateLongue(d) + (t.length ? ' : ' + t.join(', ') : ' : aucun film'))}"></span>`;
+    return `<span class="hm-${niv}"></span>`;
   });
   // Le nom du mois s'affiche au-dessus de la semaine qui contient son 1er jour.
   const etiquettesSem = Array.from({ length: nbSemaines }, (_, w) => {
@@ -410,7 +417,7 @@ function htmlStats() {
     const rows = Object.entries(compte).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr')).slice(0, 5);
     const m = rows[0]?.[1] || 1;
     if (cle === 'real') photosReals(rows.map(([nom]) => nom));
-    return rows.length ? lignesH(rows.map(([nom, n]) => ({ ico: st.photos[nom] ? `<img class="initiales" src="https://image.tmdb.org/t/p/w92${esc(st.photos[nom])}" alt="" loading="lazy">` : `<span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>`, nom: esc(nom), pct: (n / m) * 100, val: pluriel(n, 'film') })))
+    return rows.length ? lignesH(rows.map(([nom, n]) => ({ ico: portrait(nom), nom: esc(nom), pct: (n / m) * 100, val: pluriel(n, 'film') })))
       : `<p class="muted">Aucun film ${periode === 'mois' ? 'ce mois-ci' : 'cette année'}.</p>`;
   };
   const seg = (attr, val, opts) => `<div class="bascule" role="group">${opts.map(([v, l]) => `<button type="button" ${attr}="${v}" aria-pressed="${v === val}">${l}</button>`).join('')}</div>`;
@@ -463,7 +470,7 @@ function htmlStats() {
   <section class="carte stat"><div class="stat-tete"><h2>Acteurs les plus vus</h2>${seg('data-periode-acteur', st.periodeActeur, periodes)}</div>${classement('acteur', st.periodeActeur)}</section>
 
   <section class="carte stat large"><div class="stat-tete"><h2>Par année de sortie</h2>${anMax.v > 0 ? `<span class="muted">${anMax.a} domine · ${pluriel(anMax.v, 'film')}</span>` : ''}</div>
-    ${barres(parAn.map((x) => ({ v: x.v, label: parAn.length > 12 ? `’${String(x.a).slice(2)}` : x.a, tip: `${x.a} : ${pluriel(x.v, 'film')}`, fort: x === anMax })))}</section>
+    ${barres(parAn.map((x) => ({ v: x.v, label: x.a, tip: `${x.a} : ${pluriel(x.v, 'film')}`, fort: x === anMax })), '', true)}</section>
   </div>`;
 }
 
@@ -560,10 +567,11 @@ function htmlRetro() {
   const top = [...r.distincts].sort((a, b) => (b.note ?? 0) - (a.note ?? 0) || b.coup_de_coeur - a.coup_de_coeur).slice(0, 3);
   const phare = (cle) => {
     const c = {};
-    r.distincts.forEach((f) => (cle === 'real' ? f.realisateurs : f.acteurs.slice(0, 5).map((a) => a.nom)).forEach((x) => (c[x] = (c[x] || 0) + 1)));
-    return Object.entries(c).sort((a, b) => b[1] - a[1])[0];
+    r.distincts.forEach((f) => (cle === 'real' ? f.realisateurs : f.acteurs.slice(0, 5).map((a) => { if (a.photo) st.photos[a.nom] ??= a.photo; return a.nom; })).forEach((x) => (c[x] = (c[x] || 0) + 1)));
+    return Object.entries(c).sort((a, b) => b[1] - a[1]).slice(0, 3);
   };
-  const phares = [['Réalisateur phare', phare('real')], ['Acteur phare', phare('acteur')]].filter((x) => x[1]);
+  const phares = [['Réalisateurs', phare('real')], ['Acteurs', phare('acteur')]].filter((x) => x[1].length);
+  if (phares[0]?.[0] === 'Réalisateurs') photosReals(phares[0][1].map(([nom]) => nom));
   // Rythme : jours de la semaine, semaines du mois ou mois de l'année.
   let rythme;
   if (P === 'semaine') rythme = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'].map((l, i) => { const d = ajoutJours(debut, i), n = r.vs.filter((v) => v.d === d).length; return { v: n, label: l, tip: `${majuscule(dateLongue(d))} : ${pluriel(n, 'film')}` }; });
@@ -574,7 +582,6 @@ function htmlRetro() {
     const dernier = D === 0 ? Number(aujourdhui().slice(5, 7)) : 12;
     rythme = Array.from({ length: dernier }, (_, i) => { const m = `${debut.slice(0, 4)}-${String(i + 1).padStart(2, '0')}`, n = r.vs.filter((v) => v.d.startsWith(m)).length; return { v: n, label: MOIS_COURT[i], tip: `${majuscule(MOIS[i])} : ${pluriel(n, 'film')}` }; });
   }
-  const pic = rythme.reduce((a, b) => (b.v > a.v ? b : a), { v: 0 });
   const mur = (r.distincts.length >= 4 ? r.distincts : rt.films).filter((f) => f.affiche);
   const colonnes = Array.from({ length: 12 }, (_, i) => `<div class="mur-col" style="animation-delay:${-i * 1.7}s">${Array.from({ length: 8 }, (_, j) => { const f = mur[(i * 3 + j * 5) % (mur.length || 1)]; return `<span>${f ? `<img src="https://image.tmdb.org/t/p/w185${esc(f.affiche)}" alt="" loading="lazy">` : ''}</span>`; }).join('')}</div>`).join('');
 
@@ -593,11 +600,8 @@ function htmlRetro() {
     ${genres.length ? `<section class="retro-genre"><img src="img/decor-${slugGenre(genres[0].g)}.jpg" alt="${esc(GENRE_INFO[genres[0].g][7])}"><div class="retro-genre-voile" aria-hidden="true"></div>
       <div class="retro-genre-texte"><p class="sur-titre">Genre dominant</p><h2>${genres[0].g}</h2>
       ${lignesH(genres.map((x) => ({ ico: `<img class="hb-buste" src="${buste(x.g)}" alt="">`, nom: x.g, pct: (x.n / genres[0].n) * 100, val: x.n })))}</div></section>` : ''}
-    ${phares.length ? `<section class="retro-phares"><p class="sur-titre">Tes têtes d'affiche</p><div>${phares.map(([role, [nom, n]]) => `<div class="carte phare"><span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>
-      <span class="muted">${role}</span><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div>`).join('')}</div></section>` : ''}
-    <section class="carte stat"><div class="stat-tete"><div><p class="sur-titre">Ton rythme</p><h2>${P === 'semaine' ? 'Jour par jour' : P === 'mois' ? 'Semaine par semaine' : 'Mois par mois'}</h2></div>
-      ${pic.v ? `<span class="muted">pic : ${pic.label}</span>` : ''}</div>${barres(rythme)}
-      ${r.revus ? `<p class="revisions">${ICO_REVU} ${pluriel(r.revus, 'revisionnage')} ${ici} : ${esc([...new Set(r.vs.filter((v) => v.revu).map((v) => v.f.titre))].join(', '))}.</p>` : ''}</section>
+    ${phares.length ? `<section class="retro-phares"><p class="sur-titre">Tes têtes d'affiche</p><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol>${liste.map(([nom, n]) => `<li>${portrait(nom)}<div><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
+    <section class="carte stat"><div class="stat-tete"><div><p class="sur-titre">Ton rythme</p><h2>${P === 'semaine' ? 'Jour par jour' : P === 'mois' ? 'Semaine par semaine' : 'Mois par mois'}</h2></div></div>${barres(rythme)}</section>
   </div>` : videMascotte('Rien à raconter… pour l’instant', 'Aucun film vu sur cette période. Change de période avec les flèches, ou ajoute un film.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
 }
 

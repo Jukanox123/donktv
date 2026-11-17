@@ -27,6 +27,8 @@ Mis à jour le 12 novembre 2026.
 
 - Retour du 13 novembre : onglets « Mes films » et « Watchlist » ; plus de sur-titres verts (accueil, Mes films, Watchlist, fiche, Mes tops, Statistiques) ; titres « Mes tops » et « Statistiques » ; synopsis « bientôt disponible » pour un film pas encore sorti ; stats : évolutions en vert / rouge, courbe posée sur l'axe avec films vus du mois au survol, sélecteur d'année masqué s'il n'y en a qu'une (menu de l'app sinon), heatmap mobile en 12 mini-calendriers, « Genre préféré » au-dessus des genres sur mobile avec étiquette crème, carte sans survol, photos des réalisateurs et acteurs, « Par année de sortie » ; tops PC : podium en 3 colonnes égales avec places libres en pointillés.
 
+- Retour du 17 novembre : genres en lecture seule à l'ajout et dans Modifier (plus de « pré-remplis par TMDB, modifiables », plus d'erreur genre) ; stats : portraits carrés à coins arrondis (photos), « Par année de sortie » qui défile avec son axe, heatmap sans survol ; rétro : genre dominant sur un panneau sombre, têtes d'affiche = 3 réalisateurs et 3 acteurs avec photo, rythme sans « pic » ni liste des revisionnages ; plus de débordement à droite sur mobile.
+
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
 - La collection n'affiche que les films vus.

@@ -207,7 +207,8 @@ function etoilesHtml(note, id) {
     <span class="chiffre">${note ? fr(note) + ' / 5' : 'À noter'}</span></div>`;
 }
 const coeurHtml = (on) => `<button class="btn coeur" type="button" data-coeur aria-pressed="${on}"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="none" stroke="#D2483B" stroke-width="1.8"/></svg>Coup de cœur</button>`;
-const genresHtml = (sel) => `<div class="genres">${GENRES.map((g) => `<button type="button" data-genre="${g}" aria-pressed="${sel.includes(g)}"><img src="${buste(g)}" alt="">${g}</button>`).join('')}</div>`;
+// Genres en lecture seule : ceux que TMDB donne au film.
+const genresHtml = (sel) => (sel.length ? `<ul class="genres">${sel.map((g) => `<li><img src="${buste(g)}" alt="">${g}</li>`).join('')}</ul>` : '<p class="muted">Aucun genre de l’app pour ce film.</p>');
 
 let fiche = null; // film affiché, avec ses visionnages
 
@@ -307,7 +308,7 @@ function valider(manques) {
   if (premier) $('#' + premier[0]).scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   return !premier;
 }
-const MANQUE_NOTE = 'Choisis une note.', MANQUE_GENRE = 'Choisis au moins un genre.';
+const MANQUE_NOTE = 'Choisis une note.';
 
 const fen = $('#fenetre'), fenCorps = $('#fenetre-corps');
 let edition = null; // brouillon de la fenêtre « Modifier »
@@ -328,7 +329,7 @@ function afficherEdition() {
     <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="edition">
     ${vu ? `<div class="avis"><div><span class="etiquette" id="edit-note">Ma note</span>${etoilesHtml(d.note, 'edit-note')}<p class="erreur" id="err-edit-note" role="alert" hidden></p></div>${coeurHtml(d.coeur)}</div>` : ''}
-    <fieldset><legend>Genres</legend>${genresHtml(d.genres)}<p class="erreur" id="err-edit-genre" role="alert" hidden></p></fieldset>
+    <fieldset><legend>Genres</legend>${genresHtml(d.genres)}</fieldset>
     ${vu ? visionsHtml() : ''}
   </div>
   <div class="ajout-pied"><p class="erreur" id="erreur-edition" role="alert" hidden></p><span></span>
@@ -350,8 +351,7 @@ function majListe(id, patch) {
 
 async function enregistrerEdition(b) {
   const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
-  if (!valider([['err-edit-genre', d.genres.length ? '' : MANQUE_GENRE],
-    ...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
+  if (!valider([...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
   b.disabled = true;
   try {
     const patch = { statut: d.statut, note: vu && d.note ? d.note : null, coup_de_coeur: vu && d.coeur, genres: d.genres };
@@ -458,7 +458,6 @@ fen.addEventListener('click', (e) => {
     if (!edition) return;
     if (d.note) { edition.note = Number(d.note) === edition.note ? 0 : Number(d.note); $('.note', fenCorps).outerHTML = etoilesHtml(edition.note, 'edit-note'); $('#err-edit-note').hidden = !!edition.note; }
     else if ('coeur' in d) b.setAttribute('aria-pressed', edition.coeur = !edition.coeur);
-    else if (d.genre) { const g = edition.genres; b.setAttribute('aria-pressed', !g.includes(d.genre)); edition.genres = g.includes(d.genre) ? g.filter((x) => x !== d.genre) : [...g, d.genre]; if (edition.genres.length) $('#err-edit-genre').hidden = true; }
     else if (d.retirer || 'ajouterVision' in d) { d.retirer ? edition.visions.splice(Number(d.retirer), 1) : edition.visions.push(aujourdhui()); $('.visions', fenCorps).outerHTML = visionsHtml(); }
   }
 });
@@ -740,7 +739,7 @@ function afficherDetails() {
         ${coeurHtml(coeur)}
         <label><span class="etiquette">Vu le</span><input type="date" id="date-vu" value="${date}" max="${new Date().toLocaleDateString('sv')}"></label>
       </div>` : '<p class="info">Il rejoindra ta watchlist. Tu pourras le noter le jour où tu le verras.</p>'}
-      <fieldset><legend>Genres <span>· pré-remplis par TMDB, modifiables</span></legend>${genresHtml(f.genres)}<p class="erreur" id="err-ajout-genre" role="alert" hidden></p></fieldset>
+      <fieldset><legend>Genres</legend>${genresHtml(f.genres)}</fieldset>
     </div></div>
     <div class="ajout-pied"><button class="btn plat" type="button" data-retour>‹ Changer de film</button>
       <button class="btn primaire" type="button" data-enregistrer style="height:48px;padding:0 24px">${vu ? 'Ajouter à mes films vus' : 'Ajouter à ma watchlist'}</button>
@@ -749,7 +748,7 @@ function afficherDetails() {
 
 async function enregistrer(bouton) {
   const { film, statut, note, coeur, date } = saisie, vu = statut === 'vu';
-  if (!valider([...(vu ? [['err-ajout-note', note ? '' : MANQUE_NOTE]] : []), ['err-ajout-genre', film.genres.length ? '' : MANQUE_GENRE]])) return;
+  if (vu && !valider([['err-ajout-note', note ? '' : MANQUE_NOTE]])) return;
   bouton.disabled = true;
   try {
     let note_rt = null;
@@ -792,7 +791,6 @@ dlg.addEventListener('click', (e) => {
   else if (d.statut) { saisie.statut = d.statut; afficherDetails(); }
   else if (d.note) { saisie.note = Number(d.note) === saisie.note ? 0 : Number(d.note); afficherDetails(); }
   else if ('coeur' in d) { saisie.coeur = !saisie.coeur; afficherDetails(); }
-  else if (d.genre) { const g = saisie.film.genres; saisie.film.genres = g.includes(d.genre) ? g.filter((x) => x !== d.genre) : [...g, d.genre]; afficherDetails(); }
 });
 dlg.addEventListener('input', (e) => {
   if (e.target.id === 'q') { clearTimeout(chercher.t); chercher.t = setTimeout(() => chercher(e.target.value), 300); }
