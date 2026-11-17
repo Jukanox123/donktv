@@ -102,16 +102,14 @@ function htmlAVoir() {
   </div>`).join('')}</div>${paginationHtml(p, nbPages, 'data-av-page')}`;
 }
 
+// Ouvre la fenêtre « Ton avis » de la fiche (note, coup de cœur, date) ; à l'enregistrement, route() recharge la watchlist.
 async function marquerVu(id, b) {
-  const f = av.films.find((x) => x.id === id);
   b.disabled = true;
-  const { error } = await sb.from('films').update({ statut: 'vu' }).eq('id', id);
-  const e2 = error || (await sb.from('visionnages').insert({ film_id: id, date: aujourdhui() })).error;
-  if (e2) { b.disabled = false; return toast('Impossible de marquer le film comme vu : ' + e2.message); }
-  av.vus.push(id);
-  majListe(id, { statut: 'vu' });
-  $('#av-resultats').innerHTML = htmlAVoir();
-  toast(`${f.titre} est passé dans tes films vus.`, { label: 'Le noter', fn: () => { location.hash = '#film/' + id; } });
+  const { data, error } = await sb.from('visionnages').select('id,date').eq('film_id', id);
+  b.disabled = false;
+  if (error) return toast('Impossible d’ouvrir le film : ' + error.message);
+  fiche = { ...av.films.find((x) => x.id === id), visionnages: data };
+  ouvrirEdition(true);
 }
 
 /* ---------- Pages de genre ---------- */
@@ -594,13 +592,13 @@ function htmlRetro() {
       ${r.n ? `<div class="retro-kpis">${kpis.map(([v, u, phrase, c]) => `<div><span class="chiffre">${v}<small>${u}</small></span><span>${phrase}</span>${c ? `<span class="cmp cmp-${c[0]}"><b aria-hidden="true">${fleches[c[0]]}</b>${c[1]}</span>` : ''}</div>`).join('')}</div>` : ''}
     </div></section>
   ${r.n ? `<div class="retro-corps">
-    <section><p class="sur-titre">Le podium</p><h2 class="section">Tes meilleurs films</h2>
+    <section><h2 class="section">Tes meilleurs films</h2>
       <ol class="retro-top">${top.map((f, i) => `<li><span class="rang" aria-hidden="true">${i + 1}</span><a href="#film/${f.id}">${posterHtml({ ...f, genres: [] })}<b>${esc(f.titre)}</b><small>${f.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(f.note)} · ` : ''}${f.annee ?? ''}</small></a></li>`).join('')}</ol></section>
     ${genres.length ? `<section class="retro-genre"><img src="img/decor-${slugGenre(genres[0].g)}.jpg" alt="${esc(GENRE_INFO[genres[0].g][7])}"><div class="retro-genre-voile" aria-hidden="true"></div>
       <div class="retro-genre-texte"><p class="sur-titre">Genre dominant</p><h2>${genres[0].g}</h2>
       ${lignesH(genres.map((x) => ({ ico: `<img class="hb-buste" src="${buste(x.g)}" alt="">`, nom: x.g, pct: (x.n / genres[0].n) * 100, val: x.n })))}</div></section>` : ''}
-    ${phares.length ? `<section class="retro-phares"><p class="sur-titre">Tes têtes d'affiche</p><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol>${liste.map(([nom, n]) => `<li>${portrait(nom)}<div><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
-    <section class="carte stat"><div class="stat-tete"><div><p class="sur-titre">Ton rythme</p><h2>${P === 'semaine' ? 'Jour par jour' : P === 'mois' ? 'Semaine par semaine' : 'Mois par mois'}</h2></div></div>${barres(rythme)}</section>
+    ${phares.length ? `<section class="retro-phares"><h2 class="section">Tes têtes d’affiche</h2><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol>${liste.map(([nom, n]) => `<li>${portrait(nom)}<div><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
+    <section class="carte stat"><div class="stat-tete"><div><p class="sur-titre">Ton rythme par ${P === 'semaine' ? 'jour' : P === 'mois' ? 'semaine' : 'mois'}</p></div></div>${barres(rythme)}</section>
   </div>` : videMascotte('Rien à raconter… pour l’instant', 'Aucun film vu sur cette période. Change de période avec les flèches, ou ajoute un film.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
 }
 
@@ -852,3 +850,12 @@ async function actionTopFicheDeplacer(bloc, place) {
     await ouvrirTopsFiche();
   } catch (err) { toast('Classement non enregistré : ' + err.message); }
 }
+
+// Infobulles des graphiques : décalées pour rester dans l'écran (et dans la zone qui défile).
+document.addEventListener('pointerover', (e) => {
+  const tip = e.target.closest?.('.col, .point')?.querySelector('.tip');
+  if (!tip) return;
+  tip.style.translate = '0';
+  const r = tip.getBoundingClientRect(), b = tip.closest('.defile')?.getBoundingClientRect() || { left: 0, right: innerWidth }, m = 8;
+  tip.style.translate = `${Math.max(b.left + m - r.left, 0) || Math.min(b.right - m - r.right, 0)}px 0`;
+});

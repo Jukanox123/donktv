@@ -542,7 +542,7 @@ async function pageCollection() {
       <label class="champ"><span>Trier par</span><select id="coll-tri" data-menu>${TRIS.map(([v, l]) => `<option value="${v}" ${v === coll.tri ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
     </div>
     <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) =>
-      `<button type="button" data-filtre-genre="${g}" aria-pressed="${coll.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div>
+      g ? `<a href="#genre/${slugGenre(g)}"><img src="${buste(g)}" alt="">${g}</a>` : '<button type="button" data-filtre-genre="" aria-pressed="true">Tous les genres</button>').join('')}</div>
   </div>
   <div id="coll-resultats">${htmlResultats()}</div>`;
 }
