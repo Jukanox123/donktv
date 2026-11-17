@@ -31,6 +31,7 @@ Mis à jour le 12 novembre 2026.
 
 - Retour du 17 novembre (2e série) : plus d'étiquettes « Vu » ni « À voir » sur les affiches (accueil, Watchlist, pages de genre) ; « À voir ensuite » sans points sous les affiches ; « Bientôt au cinéma en France » : bustes de genre sur l'affiche, plus de genre sous l'affiche.
 - Retour du 17 novembre (3e série) : « Bientôt au cinéma » sans point après l'année ; Mes films : les puces de genre mènent à la page du genre ; bandeau de genre sans arrondi en bas (PC et mobile) ; Watchlist : « Vu » ouvre la fenêtre « Ton avis » (note, coup de cœur, date) ; stats : infobulles gardées dans l'écran ; rétro : plus de « Le podium », « Tes têtes d'affiche » au style de « Tes meilleurs films », « Ton rythme par semaine » (par jour / par mois selon la période) sans sous-titre, panneau sombre du genre dominant autour de la liste des genres seulement.
+- Retour du 17 novembre (4e série) : rétro : « Ton rythme par … » au style des titres Réalisateurs / Acteurs, bandeau du haut sans arrondi en bas (PC et mobile) ; pages de genre : en-tête « Mes films » avec Grille / Calendrier, puis recherche, tri et puces de genre (avec « Tous les genres ») au-dessus du bandeau.
 
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
