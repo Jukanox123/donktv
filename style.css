@@ -748,6 +748,7 @@ dialog.feuille { width: min(520px, 100%); }
   .carte-film b { font-size: 13px; }
   .carte-bas { font-size: 12px; justify-content: flex-start; }
   .carte-bas span:not(:empty)::after { content: " ·"; }
+  .carte-bas.sans-points span::after { content: none; }
   .coeur-carte { top: 6px; right: 6px; width: 22px; height: 22px; }
   .bustes { right: 6px; bottom: 6px; }
   .bustes > span[role=img] { width: 26px; height: 26px; }

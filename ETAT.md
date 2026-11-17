@@ -29,6 +29,8 @@ Mis à jour le 12 novembre 2026.
 
 - Retour du 17 novembre : genres en lecture seule à l'ajout et dans Modifier (plus de « pré-remplis par TMDB, modifiables », plus d'erreur genre) ; stats : portraits carrés à coins arrondis (photos), « Par année de sortie » qui défile avec son axe, heatmap sans survol ; rétro : genre dominant sur un panneau sombre, têtes d'affiche = 3 réalisateurs et 3 acteurs avec photo, rythme sans « pic » ni liste des revisionnages ; plus de débordement à droite sur mobile.
 
+- Retour du 17 novembre (2e série) : plus d'étiquettes « Vu » ni « À voir » sur les affiches (accueil, Watchlist, pages de genre) ; « À voir ensuite » sans points sous les affiches ; « Bientôt au cinéma en France » : bustes de genre sur l'affiche, plus de genre sous l'affiche.
+
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
 - La collection n'affiche que les films vus.

@@ -38,7 +38,6 @@ async function chargerFilms() {
 
 const bustesHtml = (g) => `<span class="bustes">${g.slice(0, 2).map((x) => `<span title="${x}" role="img" aria-label="Genre : ${x}"><img src="${buste(x)}" alt=""></span>`).join('')}${g.length > 2 ? `<span class="plus" title="${g.slice(2).join(', ')}">+${g.length - 2}</span>` : ''}</span>`;
 const posterHtml = (f, badge = '') => `<span class="poster">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}${badge}${f.statut === 'vu' && f.coup_de_coeur ? ICO_COEUR_CARTE : ''}${bustesHtml(f.genres)}</span>`;
-const badgeStatut = (f) => `<span class="badge ${f.statut === 'vu' ? 'vu' : ''}">${f.statut === 'vu' ? 'Vu' : 'À voir'}</span>`;
 const carteFilm = (f, bas, badge = '') => `<a class="carte-film" href="#film/${f.id}" aria-label="${esc(f.titre)}${f.annee ? ', ' + f.annee : ''}">${posterHtml(f, badge)}<b>${esc(f.titre)}</b><span class="carte-bas">${bas}</span></a>`;
 const noteBas = (f) => `<span>${f.annee ?? ''}</span><strong>${f.statut !== 'vu' ? 'À voir' : f.note ? '★ ' + fr(f.note) : 'À noter'}</strong>`;
 
@@ -97,7 +96,7 @@ function htmlAVoir() {
   av.page = p;
   return `<p class="muted compteur" aria-live="polite">${compteur}</p>
   <div class="grille-films grille-avoir">${items.map((f) => `<div class="carte-avoir">
-    <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f, '<span class="badge">À voir</span>')}</a>
+    <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f)}</a>
     <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small></div>
     <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="Marquer ${esc(f.titre)} comme vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span>Marquer comme vu</span></button>
   </div>`).join('')}</div>${paginationHtml(p, nbPages, 'data-av-page')}`;
@@ -168,7 +167,7 @@ function htmlGenre() {
     <div class="boutons"><button class="btn" type="button" data-genre-reset>Effacer la recherche</button><button class="btn primaire" type="button" data-ajout>Ajouter un film</button></div></div>`;
   const { p, nbPages, items, compteur } = decouper(l, gp.page, mobile() ? 9 : 10);
   gp.page = p;
-  return `<p class="muted compteur" aria-live="polite">${compteur}</p><div class="grille-films">${items.map((f) => carteFilm(f, noteBas(f), badgeStatut(f))).join('')}</div>${paginationHtml(p, nbPages, 'data-genre-page')}`;
+  return `<p class="muted compteur" aria-live="polite">${compteur}</p><div class="grille-films">${items.map((f) => carteFilm(f, noteBas(f))).join('')}</div>${paginationHtml(p, nbPages, 'data-genre-page')}`;
 }
 
 /* ---------- Mes tops ---------- */
@@ -635,17 +634,17 @@ async function pageAccueilPleine() {
     <p class="muted">${souvenir.f.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(souvenir.f.note)} / 5` : 'Pas noté'}${souvenir.f.coup_de_coeur ? ' · coup de cœur' : ''}</p>
     <a class="btn" href="#film/${souvenir.f.id}">Revoir la fiche</a></div></section>` : ''}
   ${vus.length ? `<section>${titreSection('', 'Derniers films vus', '#collection', 'Voir la collection')}
-    <div class="rangee">${[...vus].sort(parDernier).slice(0, 6).map((f) => carteFilm(f, noteBas(f), '<span class="badge vu">Vu</span>')).join('')}</div></section>` : ''}
+    <div class="rangee">${[...vus].sort(parDernier).slice(0, 6).map((f) => carteFilm(f, noteBas(f))).join('')}</div></section>` : ''}
   ${rp.n ? `<section class="retro-carte"><div><p class="sur-titre">Rétrospective · ${majuscule(MOIS[Number(md.slice(5, 7)) - 1])} ${md.slice(0, 4)}</p>
       <h2>${gMois?.n ? `Un mois sous le signe ${SIGNE[gMois.g]}` : 'Ton mois en un coup d’œil'}</h2>
       <p>Ton genre dominant, ton réalisateur phare et tes meilleures notes du mois, réunis sur une page.</p><a class="btn clair" href="#retros/mois-1">Voir ma rétro de ${MOIS[Number(md.slice(5, 7)) - 1]}</a></div>
     <div class="retro-carte-chiffres"><div><span class="chiffre">${rp.n}</span><span>${rp.n > 1 ? 'films vus' : 'film vu'}</span></div><div><span class="chiffre">${rp.heures}<small>h</small></span><span>devant l'écran</span></div>
       <div><span class="chiffre">${rp.note ? fr1(rp.note) : '–'}</span><span>note moyenne</span></div></div></section>` : ''}
   ${aVoir.length ? `<section>${titreSection('', 'À voir ensuite', '#a-voir', 'Toute la watchlist')}
-    <div class="rangee">${[...aVoir].sort((a, b) => b.ajoute_le.localeCompare(a.ajoute_le)).slice(0, 6).map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span><span>ajouté ${ilYa(f.ajout)}</span>`, '<span class="badge">À voir</span>')).join('')}</div></section>` : ''}
+    <div class="rangee">${[...aVoir].sort((a, b) => b.ajoute_le.localeCompare(a.ajoute_le)).slice(0, 6).map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span><span>ajouté ${ilYa(f.ajout)}</span>`).replace('carte-bas', 'carte-bas sans-points')).join('')}</div></section>` : ''}
   ${sorties.length ? `<section><div class="section-tete"><div><h2 class="section">Bientôt au cinéma en France</h2></div></div>
-    <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml({ ...f, genres: [] }, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>`)}
-      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}${f.genres[0] ? ' · ' + f.genres[0] : ''}</span></span></a>`; }).join('')}</div></section>` : ''}`;
+    <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml(f, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>`)}
+      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}</span></span></a>`; }).join('')}</div></section>` : ''}`;
 }
 
 /* ---------- Mon espace (mobile) ---------- */
