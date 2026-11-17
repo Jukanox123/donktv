@@ -869,3 +869,119 @@ dialog.feuille { width: min(520px, 100%); }
   .fini > div { width: 100%; background: rgba(250,240,220,.92); padding: 16px; border-radius: 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+
+/* Où le regarder, plateformes */
+.ou-regarder { display: flex; flex-direction: column; gap: 14px; }
+.pfs { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 10px; }
+.pf { display: inline-flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 14px 6px 6px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.pf img { width: 40px; height: 40px; border-radius: 8px; filter: grayscale(1); opacity: .55; }
+.pf span { display: flex; flex-direction: column; line-height: 1.25; }
+.pf b { font-size: 15px; }
+.pf small { font-size: 13px; }
+.pf-mien { border-color: var(--accent); background: var(--ok-bg); color: var(--ok-fg); }
+.pf-mien img { filter: none; opacity: 1; }
+.pf-mien b { color: var(--text); }
+.pf-achat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; font-size: 14px; }
+.pf-achat span:not(.muted) { display: inline-flex; align-items: center; gap: 6px; }
+.pf-achat img, .tirage-pf img { width: 22px; height: 22px; border-radius: 5px; }
+.pf-note { font-size: 13px; }
+.pf-choix .pf { cursor: pointer; font: inherit; transition: transform .25s cubic-bezier(.22,1,.36,1), background .2s; }
+.pf-choix .pf:hover { transform: translateY(-2px); }
+.pf-choix .pf b { font-size: 14px; }
+.mes-pf { display: flex; gap: 4px; margin-top: 4px; }
+.mes-pf img { width: 22px; height: 22px; border-radius: 5px; }
+
+/* Saga sur la fiche, pages saga et sagas */
+.jauge { display: block; height: 6px; border-radius: 3px; background: var(--chip); overflow: hidden; }
+.jauge span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.saga-lien { flex-direction: row; align-items: center; gap: 16px; padding: 18px 20px; text-decoration: none; color: var(--text); }
+.saga-lien > span { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.saga-lien small { color: var(--muted); font-size: 14px; }
+.saga-tete { display: flex; flex-direction: column; gap: 12px; padding: clamp(28px, 5vw, 56px); border-radius: 16px; background: #1F3327 center / cover; color: #F6F1E4; }
+.saga-tete .sur-titre { color: #CFE3C1; }
+.saga-tete h1 { font-size: clamp(34px, 5vw, 56px); letter-spacing: -1.5px; line-height: 1.05; }
+.saga-tete .jauge { max-width: 360px; background: rgba(255,255,255,.2); }
+.saga-tete .jauge span { background: #9CC77A; }
+.saga-resume { max-width: 640px; font-size: 15px; opacity: .9; }
+.sagas { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.sagas a { padding: 0; gap: 0; overflow: hidden; text-decoration: none; color: var(--text); }
+.saga-img { aspect-ratio: 16 / 9; background: var(--chip); }
+.saga-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.saga-txt { display: flex; flex-direction: column; gap: 6px; padding: 16px 18px 18px; }
+.saga-txt small { color: var(--muted); font-size: 14px; }
+.carte-tmdb .poster { opacity: .8; }
+.carte-tmdb .btn { height: 38px; font-size: 14px; }
+.carte-tmdb .carte-bas { font-size: 13px; color: var(--muted); }
+
+/* Page réalisateur / acteur */
+.bloc { display: flex; flex-direction: column; gap: 20px; }
+.bio .lien { font-weight: 700; color: var(--accent); }
+.casting a { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; }
+.casting a:hover b { text-decoration: underline; }
+button.retour { border: 0; background: none; padding: 0; cursor: pointer; font-family: inherit; }
+.personne-tete { display: grid; grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: auto auto 1fr; gap: 16px 40px; align-items: start; }
+.personne-tete > div:not(.kpis) { display: flex; flex-direction: column; gap: 10px; }
+.personne-photo { grid-row: 1 / 4; }
+.personne-tete h1 { font-size: clamp(36px, 5vw, 56px); letter-spacing: -1.5px; line-height: 1.05; }
+.personne-photo { aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden; background: var(--chip); display: flex; align-items: center; justify-content: center; font: 700 48px 'Fraunces', serif; color: var(--muted); box-shadow: var(--shadow); }
+.personne-photo img { width: 100%; height: 100%; object-fit: cover; }
+.bio { font-size: 15px; max-width: 720px; }
+.bio summary { cursor: pointer; list-style: none; }
+.bio summary::-webkit-details-marker { display: none; }
+.bio[open] summary { display: none; }
+.bio p + p { margin-top: 8px; }
+.personne-kpis { margin-top: 4px; grid-column: 2; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.personne-kpis .chiffre { font-size: 36px; }
+
+/* Qu'est-ce que je regarde ? */
+dialog.tirage-fen { width: min(720px, calc(100% - 32px)); margin: auto; }
+.tirage { padding: 24px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
+.tirage-tete { display: flex; align-items: center; gap: 14px; }
+.tirage-tete img { width: 56px; height: 72px; object-fit: contain; object-position: bottom; }
+.tirage-tete > div { flex: 1; }
+.tirage-tete h2 { font-size: 26px; letter-spacing: -.5px; }
+.tirage-tete .muted { font-size: 15px; }
+.tirage-filtres { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.tirage-filtres .bascule button { height: 38px; padding: 0 12px; font-size: 14px; white-space: nowrap; }
+.tirage-filtres .champ { flex: none; }
+.tirage-filtres [data-tg-mes][aria-pressed=true] { background: var(--ok-bg); border-color: var(--accent); color: var(--ok-fg); }
+.bobine { position: relative; overflow: hidden; padding: 22px 0; border-radius: 14px; background: var(--surface); border: 1px solid var(--line);
+  mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
+.bobine-piste { display: flex; gap: 14px; width: max-content; will-change: transform; }
+.bobine-item { flex: none; width: 118px; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: var(--chip); display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 0; font-size: 13px; transition: transform .18s ease, filter .3s; box-shadow: 0 10px 22px -14px rgba(20,40,28,.5); }
+.bobine-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bobine-item b { padding: 8px; }
+.bobine-item.centre { transform: scale(1.08); }
+.bobine-piste.arrete .bobine-item:not(.elu) { filter: grayscale(.8) brightness(.8); }
+.bobine-item.elu { transform: scale(1.14); box-shadow: 0 0 0 3px var(--star), 0 18px 30px -14px rgba(20,40,28,.6); }
+.bobine-cadre { position: absolute; left: 50%; top: 0; translate: -50% 0; border: 8px solid transparent; border-top-color: var(--star); }
+.bobine::after { content: ""; position: absolute; left: 50%; bottom: 0; translate: -50% 0; border: 8px solid transparent; border-bottom-color: var(--star); }
+.tirage-compte { font-size: 14px; text-align: center; margin-top: -6px; }
+.tirage-elu { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; animation: monter .5s cubic-bezier(.22,1,.36,1); }
+.tirage-elu h3 { font-size: 28px; letter-spacing: -.5px; }
+.tirage-elu .muted { font-size: 15px; }
+.tirage-elu .btn { margin-top: 6px; }
+.tirage-pf { display: flex; gap: 12px; font-size: 14px; color: var(--ok-fg); }
+.tirage-pf span { display: inline-flex; align-items: center; gap: 6px; }
+@keyframes monter { from { opacity: 0; transform: translateY(12px); } }
+.introuvable h1 { font-size: 36px; letter-spacing: -1px; }
+
+@media (max-width: 760px) {
+  .personne-tete { grid-template-columns: 110px minmax(0, 1fr); grid-template-rows: auto; gap: 18px; align-items: center; }
+  .personne-photo { grid-row: auto; }
+  .personne-tete > .bio, .personne-tete > .personne-kpis { grid-column: 1 / -1; }
+  .personne-tete h1 { font-size: 30px; }
+  .personne-kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .personne-kpis .kpi { padding: 14px 16px; }
+  .personne-kpis .chiffre { font-size: 28px; }
+  .pf { min-height: 46px; }
+  .pf img { width: 34px; height: 34px; }
+  .sagas { grid-template-columns: 1fr; }
+  dialog.tirage-fen { width: 100%; max-width: none; height: auto; margin: auto 0 0; border-radius: 18px 18px 0 0; max-height: 92dvh; }
+  .tirage { padding: 20px; gap: 14px; }
+  .tirage-tete h2 { font-size: 22px; }
+  .bobine-item { width: 92px; }
+  .avoir-tete .coll-tete-droite { width: 100%; justify-content: space-between; }
+}
+@media (prefers-reduced-motion: reduce) { .bobine-item, .tirage-elu { transition: none; animation: none; } }

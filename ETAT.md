@@ -1,6 +1,6 @@
 # État du projet DonkTV
 
-Mis à jour le 12 novembre 2026.
+Mis à jour le 18 novembre 2026.
 
 ## Liens
 - App en ligne : https://jukanox123.github.io/donktv/ (dépôt GitHub `Jukanox123/donktv`)
@@ -32,7 +32,16 @@ Mis à jour le 12 novembre 2026.
 - Retour du 17 novembre (2e série) : plus d'étiquettes « Vu » ni « À voir » sur les affiches (accueil, Watchlist, pages de genre) ; « À voir ensuite » sans points sous les affiches ; « Bientôt au cinéma en France » : bustes de genre sur l'affiche, plus de genre sous l'affiche.
 - Retour du 17 novembre (3e série) : « Bientôt au cinéma » sans point après l'année ; Mes films : les puces de genre mènent à la page du genre ; bandeau de genre sans arrondi en bas (PC et mobile) ; Watchlist : « Vu » ouvre la fenêtre « Ton avis » (note, coup de cœur, date) ; stats : infobulles gardées dans l'écran ; rétro : plus de « Le podium », « Tes têtes d'affiche » au style de « Tes meilleurs films », « Ton rythme par semaine » (par jour / par mois selon la période) sans sous-titre, panneau sombre du genre dominant autour de la liste des genres seulement.
 - Retour du 17 novembre (4e série) : rétro : « Ton rythme par … » au style des titres Réalisateurs / Acteurs, bandeau du haut sans arrondi en bas (PC et mobile) ; pages de genre : en-tête « Mes films » avec Grille / Calendrier, puis recherche, tri et puces de genre (avec « Tous les genres ») au-dessus du bandeau.
+- 18 novembre : nouvelles pages et sections à créer dans les maquettes (Où le regarder, Mes plateformes, filtre Plateforme, Qu'est-ce que je regarde, pages personne, saga, Mes sagas, page introuvable).
 - Retour du 17 novembre (5e série) : puce du genre en cours ramenée à l'écran ; onglet « Mes films » actif sur les pages de genre ; « tes » → « mes » dans les titres et libellés (Mes westerns…, Mes genres, Mes meilleurs films, Mes têtes d'affiche, Répartition de mes notes, Mon genre dominant… sur l'accueil) ; « +X ce mois-ci » des KPI à la taille des autres phrases.
+- 18 novembre (nouvelles fonctions) : « Où le regarder ? » sur la fiche (plateformes en France via TMDB/JustWatch, en vert celles de l'utilisateur, location et achat à part) ; Réglages › Mes plateformes ; filtre « Plateforme » (dont « Sur mes plateformes ») dans Mes films et la Watchlist, logos de mes plateformes sous les cartes de la Watchlist ; « Qu'est-ce que je regarde ? » (bouton de la Watchlist, tirage animé avec filtres durée, genre, mes plateformes) ; pages réalisateur / acteur (#personne/id, liens depuis le casting) ; sagas (bloc sur la fiche, #saga/id, #sagas via Mon espace et la recherche) ; page introuvable avec Baudet.
+
+## Améliorations techniques du 18 novembre
+- Base : lancer une fois `supabase/migration-2026-11-18.sql` (colonnes plateformes, saga, maj_le). Sans elles, l'app marche mais sans plateformes ni sagas.
+- Données à jour : à l'ouverture d'une fiche, notes TMDB, date de sortie FR, plateformes et saga relues sur TMDB (une fois par session) ; note Rotten Tomatoes relue si elle a plus de 30 jours ou si le film a été vu depuis. Au démarrage, les films dont les plateformes ont plus de 7 jours sont complétés en arrière-plan (sans OMDb).
+- Cache mémoire des lectures (`lire()` dans app.js) : affichage immédiat, relecture après 30 s, vidé à chaque écriture.
+- Service worker : cache des images séparé et plafonné à 400 fichiers ; l'ancien cache v1 est supprimé.
+- Démarrage attendu après le chargement de tous les scripts (`pagesChargees`).
 
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
@@ -42,7 +51,7 @@ Mis à jour le 12 novembre 2026.
 - Réalisateurs : photo et genre (Réalisateur / Réalisatrice) lus sur TMDB à l'ouverture de la fiche, pas stockés en base.
 
 ## Technique
-- Site statique : `index.html`, `style.css`, `app.js` (base, fiche, collection, ajout), `pages.js` (autres pages), `sw.js`, `img/`.
+- Site statique : `index.html`, `style.css`, `app.js` (base, fiche, collection, ajout), `pages.js` (autres pages), `decouvrir.js` (plateformes, tirage, personnes, sagas), `sw.js`, `img/`.
 - Schéma de la base : `supabase/schema.sql` (tables reglages, films, visionnages, tops ; sécurité par utilisateur).
 - Routage par `#page/param` ; table `PAGES`.
 - Clés TMDB et OMDb : saisies dans Réglages, stockées dans Supabase, jamais dans le code.

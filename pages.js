@@ -30,8 +30,7 @@ function ilYa(isoDate) {
 
 // Tous les films avec leurs dates de visionnage triées.
 async function chargerFilms() {
-  const { data, error } = await sb.from('films').select('id,tmdb_id,titre,titre_original,annee,date_sortie_fr,affiche,genres,realisateurs,acteurs,duree,pays,statut,note,coup_de_coeur,ajoute_le,visionnages(date)');
-  if (error) throw error;
+  const data = await lire('films', () => sb.from('films').select('*,visionnages(date)'));
   return data.map((f) => ({ ...f, note: f.note == null ? null : Number(f.note), visions: f.visionnages.map((v) => v.date).sort(), ajout: f.ajoute_le.slice(0, 10),
     cherche: norm([f.titre, f.titre_original, ...f.realisateurs, ...f.acteurs.map((a) => a.nom)].join(' ')) }));
 }
@@ -66,16 +65,17 @@ const parDernier = (a, b) => (b.visions.at(-1) || b.ajout).localeCompare(a.visio
 
 /* ---------- À voir ---------- */
 
-const av = { q: '', tri: 'ajout', genre: '', page: 1, films: [], vus: [] };
+const av = { q: '', tri: 'ajout', genre: '', pf: '', page: 1, films: [], vus: [] };
 
 async function pageAVoir() {
   av.films = (await chargerFilms()).filter((f) => f.statut === 'a_voir');
   av.vus = [];
   const n = av.films.length;
   return `<div class="coll-tete avoir-tete"><div class="titre-page"><h1>Watchlist</h1></div>
-    <p class="muted"><strong>${n}</strong> ${n > 1 ? 'films à voir' : 'film à voir'}</p></div>
+    <div class="coll-tete-droite"><p class="muted"><strong>${n}</strong> ${n > 1 ? 'films à voir' : 'film à voir'}</p>
+    ${n ? `<button class="btn primaire" type="button" data-tirage>${ICO_DE}Qu’est-ce que je regarde ?</button>` : ''}</div></div>
   ${n ? `<div class="filtres"><div class="filtres-ligne">${champRecherche('av-q', av.q, 'Rechercher dans la watchlist')}
-      ${champTri('av-tri', [['ajout', 'Date d’ajout'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['duree', 'Durée'], ['titre', 'Titre']], av.tri)}</div>
+      ${champTri('av-tri', [['ajout', 'Date d’ajout'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['duree', 'Durée'], ['titre', 'Titre']], av.tri)}${champPf('av-pf', av.films, av.pf)}</div>
     <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) => {
       const c = g ? av.films.filter((f) => f.genres.includes(g)).length : n;
       if (!c && av.genre !== g) return ''; // un genre absent de la watchlist ne filtrerait rien
@@ -90,14 +90,14 @@ function htmlAVoir() {
   const q = norm(av.q.trim());
   const tri = { ajout: (a, b) => b.ajoute_le.localeCompare(a.ajoute_le), genre: (a, b) => (a.genres[0] || '￿').localeCompare(b.genres[0] || '￿', 'fr'),
     annee: (a, b) => (b.annee ?? 0) - (a.annee ?? 0), duree: (a, b) => (a.duree ?? 1e9) - (b.duree ?? 1e9), ...TRIS_TEXTE }[av.tri];
-  const l = restants.filter((f) => (!av.genre || f.genres.includes(av.genre)) && (!q || f.cherche.includes(q))).sort(tri);
+  const l = restants.filter((f) => (!av.genre || f.genres.includes(av.genre)) && surPf(f, av.pf) && (!q || f.cherche.includes(q))).sort(tri);
   if (!l.length) return videMascotte('Aucun film trouvé', 'Baudet a fouillé partout, rien ne correspond à ces filtres.', '<button class="btn primaire" type="button" data-av-reset>Réinitialiser les filtres</button>');
   const { p, nbPages, items, compteur } = decouper(l, av.page, mobile() ? 12 : 10);
   av.page = p;
   return `<p class="muted compteur" aria-live="polite">${compteur}</p>
   <div class="grille-films grille-avoir">${items.map((f) => `<div class="carte-avoir">
     <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f)}</a>
-    <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small></div>
+    <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small>${mesLogos(f)}</div>
     <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="Marquer ${esc(f.titre)} comme vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span>Marquer comme vu</span></button>
   </div>`).join('')}</div>${paginationHtml(p, nbPages, 'data-av-page')}`;
 }
@@ -182,9 +182,7 @@ function libelleTops(tops = []) {
 }
 
 async function chargerTops() {
-  const { data, error } = await sb.from('tops').select('liste,position,film_id,films(titre)');
-  if (error) throw error;
-  tp.rows = data;
+  tp.rows = await lire('tops', () => sb.from('tops').select('liste,position,film_id,films(titre)'));
 }
 
 // Remplace tout un classement. Sans transaction côté navigateur : si l'écriture échoue, on remet l'ancien.
@@ -655,6 +653,7 @@ function pageMonEspace() {
     ${lien('#tops', '#E3A72F', svg('M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3'), 'Mes tops', 'Top 10 de tous les temps et tops par genre')}
     ${lien('#stats', '#3F7A4F', svg('M3 17l6-6 4 4 8-8M15 7h6v6'), 'Statistiques', 'Mes chiffres, mes genres et mes pays')}
     ${lien('#retros', '#3E8ED0', svg('M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z'), 'Rétrospectives', 'Semaine, mois et année')}
+    ${lien('#sagas', '#7A5AA6', svg('M4 5h4v14H4zM10 5h4v14h-4zM16.5 5.5l3.8 1-3.6 13.5-3.8-1z'), 'Mes sagas', 'Star Wars, Harry Potter… où j’en suis')}
     ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svg('M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM12 7v7M9 11l3 3 3-3M11 19h2')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
     ${lien('#reglages', '#56685A', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 10 3.17V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.82 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 21 10h.09a2 2 0 1 1 0 4H21a1.65 1.65 0 0 0-1.6 1z'), 'Réglages', 'Thème, clés TMDB et OMDb')}
   </nav>`;
@@ -695,7 +694,7 @@ fen.addEventListener('close', () => fen.classList.remove('feuille'));
 
 const rr = { films: null, q: '', tmdb: [] };
 const rch = $('#recherche'), rchCorps = $('#recherche-corps');
-const PAGES_RECHERCHE = [['Collection', '#collection'], ['À voir', '#a-voir'], ['Mes tops', '#tops'], ['Statistiques', '#stats'], ['Rétrospectives', '#retros'], ['Réglages', '#reglages']];
+const PAGES_RECHERCHE = [['Collection', '#collection'], ['À voir', '#a-voir'], ['Mes tops', '#tops'], ['Statistiques', '#stats'], ['Rétrospectives', '#retros'], ['Mes sagas', '#sagas'], ['Réglages', '#reglages']];
 
 async function ouvrirRechercheRapide() {
   rr.q = ''; rr.tmdb = [];
@@ -787,6 +786,7 @@ $('#page').addEventListener('input', (e) => {
 $('#page').addEventListener('change', (e) => {
   const id = e.target.id;
   if (id === 'av-tri') { av.tri = e.target.value; av.page = 1; $('#av-resultats').innerHTML = htmlAVoir(); }
+  else if (id === 'av-pf') { av.pf = e.target.value; av.page = 1; $('#av-resultats').innerHTML = htmlAVoir(); }
   else if (id === 'genre-tri') { gp.tri = e.target.value; gp.page = 1; $('#genre-resultats').innerHTML = htmlGenre(); }
   else if (id === 'stats-annee') { st.annee = Number(e.target.value); majStats(); }
 });
@@ -799,9 +799,7 @@ $('#page').addEventListener('click', (e) => {
     document.querySelectorAll('[data-av-genre]').forEach((x) => x.setAttribute('aria-pressed', x === b));
     $('#av-resultats').innerHTML = htmlAVoir();
   } else if ('avReset' in d) {
-    Object.assign(av, { q: '', genre: '', page: 1 }); $('#av-q').value = '';
-    document.querySelectorAll('[data-av-genre]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.avGenre === ''));
-    $('#av-resultats').innerHTML = htmlAVoir();
+    Object.assign(av, { q: '', genre: '', pf: '', page: 1 }); route();
   } else if (d.avPage) { av.page = Number(d.avPage); $('#av-resultats').innerHTML = htmlAVoir(); $('#av-resultats').scrollIntoView({ block: 'start' }); }
   else if (d.marquerVu) marquerVu(Number(d.marquerVu), b);
   else if ('genreReset' in d) { gp.q = ''; $('#genre-q').value = ''; $('#genre-resultats').innerHTML = htmlGenre(); }

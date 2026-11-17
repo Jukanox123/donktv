@@ -1,0 +1,241 @@
+// Plateformes de l'utilisateur, « Qu'est-ce que je regarde ? », pages réalisateur / acteur et sagas.
+
+/* ---------- Réglages : mes plateformes ---------- */
+
+const pfListe = memo(async () => {
+  const { results } = await tmdb('/watch/providers/movie', { watch_region: 'FR' });
+  return uniques(results.map((p) => ({ ...p, display_priority: p.display_priorities?.FR ?? p.display_priority })));
+});
+let pfToutes = false;
+
+async function remplirPlateformes() {
+  const zone = $('#pf-choix');
+  if (!zone) return;
+  if (!reglages.tmdb_token) return (zone.innerHTML = '<p class="muted">Renseigne d’abord ta clé TMDB ci-dessous.</p>');
+  let l;
+  try { l = await pfListe(); } catch (err) { return (zone.innerHTML = `<p class="muted">${esc(err.message)}</p>`); }
+  const mes = reglages.plateformes || [], vus = l.filter((p, i) => pfToutes || i < 18 || mes.includes(p.nom));
+  zone.innerHTML = `<ul class="pfs pf-choix">${vus.map((p) => `<li><button type="button" class="pf${mes.includes(p.nom) ? ' pf-mien' : ''}" data-pf="${esc(p.nom)}" aria-pressed="${mes.includes(p.nom)}">${logoPf(p)}<b>${esc(p.nom)}</b></button></li>`).join('')}</ul>
+    ${l.length > vus.length ? `<button class="btn plat" type="button" data-pf-toutes>Afficher toutes les plateformes (${l.length})</button>` : ''}`;
+}
+pageReglages.apres = remplirPlateformes;
+
+async function basculerPlateforme(b) {
+  const nom = b.dataset.pf, mes = reglages.plateformes || [], avant = [...mes];
+  const apres = mes.includes(nom) ? mes.filter((x) => x !== nom) : [...mes, nom];
+  b.disabled = true;
+  try {
+    await enregistrerReglages({ plateformes: apres });
+    b.setAttribute('aria-pressed', apres.includes(nom)); b.classList.toggle('pf-mien', apres.includes(nom));
+  } catch (err) {
+    reglages.plateformes = avant;
+    toast(/plateformes/.test(err.message) ? 'La base n’a pas encore la colonne « plateformes » : lance le script du 18 novembre dans Supabase.' : err.message);
+  } finally { b.disabled = false; }
+}
+
+/* ---------- Qu'est-ce que je regarde ? ---------- */
+
+const ICO_DE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/></svg>';
+const tg = { duree: 0, genre: '', mes: false, films: [], enCours: false };
+const DUREES = [[0, 'Peu importe'], [105, '1 h 45 max'], [135, '2 h 15 max']];
+
+// Les films pas encore sortis ne peuvent pas être tirés.
+const candidats = () => tg.films.filter((f) => !(f.date_sortie_fr > aujourdhui()) && (!tg.duree || (f.duree && f.duree <= tg.duree))
+  && (!tg.genre || f.genres.includes(tg.genre)) && (!tg.mes || (f.plateformes || []).some((p) => aMoi(p.nom))));
+const melange = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(([, x]) => x);
+const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}</span>`;
+
+async function ouvrirTirage() {
+  tg.films = (await chargerFilms()).filter((f) => f.statut === 'a_voir');
+  const genres = GENRES.filter((g) => tg.films.some((f) => f.genres.includes(g)));
+  if (!genres.includes(tg.genre)) tg.genre = '';
+  fen.classList.remove('petit'); fen.classList.add('tirage-fen');
+  fenCorps.innerHTML = `<div class="tirage">
+    <div class="tirage-tete"><img src="img/mascotte.png" alt=""><div><h2>Qu’est-ce que je regarde ?</h2><p class="muted">Baudet tire au sort un film de ta watchlist.</p></div>
+      <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div class="tirage-filtres">
+      <div class="bascule" role="group" aria-label="Durée">${DUREES.map(([v, l]) => `<button type="button" data-tg-duree="${v}" aria-pressed="${tg.duree === v}">${l}</button>`).join('')}</div>
+      <label class="champ"><span>Genre</span><select id="tg-genre" data-menu><option value="">Tous</option>${genres.map((g) => `<option ${g === tg.genre ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
+      ${(reglages.plateformes || []).length ? `<button class="btn" type="button" data-tg-mes aria-pressed="${tg.mes}">Sur mes plateformes</button>` : ''}
+    </div>
+    <div class="bobine"><div class="bobine-piste" id="piste"></div><span class="bobine-cadre" aria-hidden="true"></span></div>
+    <p class="muted tirage-compte" id="tg-compte" aria-live="polite"></p>
+    <div id="tg-resultat" aria-live="polite"></div>
+    <button class="btn primaire grand" type="button" data-tg-lancer>${ICO_DE}Lancer</button></div>`;
+  majTirage();
+  if (!fen.open) fen.showModal();
+}
+fen.addEventListener('close', () => fen.classList.remove('tirage-fen'));
+
+function majTirage() {
+  const l = candidats(), piste = $('#piste');
+  $('#tg-compte').textContent = l.length ? `${pluriel(l.length, 'film possible', 'films possibles')}` : 'Aucun film ne correspond à ces critères.';
+  $('[data-tg-lancer]').disabled = !l.length;
+  $('#tg-resultat').innerHTML = '';
+  piste.classList.remove('arrete');
+  piste.style.transform = '';
+  // Piste au repos : quelques affiches, centrées.
+  const repos = l.length ? Array.from({ length: 9 }, (_, i) => melange(l)[i % l.length]) : [];
+  piste.innerHTML = repos.map(affichePiste).join('');
+  if (repos.length) piste.style.transform = `translateX(${decalage(piste, 4)}px)`;
+}
+
+// Décalage qui place l'affiche n° i au centre de la bobine.
+function decalage(piste, i) {
+  const it = piste.children[0], pas = it.offsetWidth + parseFloat(getComputedStyle(piste).columnGap || 0);
+  return piste.parentElement.clientWidth / 2 - it.offsetWidth / 2 - i * pas;
+}
+
+function lancerTirage() {
+  const l = candidats();
+  if (!l.length || tg.enCours) return;
+  tg.enCours = true;
+  const elu = l[Math.floor(Math.random() * l.length)], piste = $('#piste'), bouton = $('[data-tg-lancer]');
+  // Une longue bande d'affiches qui défile, l'élu vers la fin.
+  const bande = Array.from({ length: 34 }, () => l[Math.floor(Math.random() * l.length)]), fin = 30;
+  bande[fin] = elu;
+  piste.classList.remove('arrete');
+  $('#tg-resultat').innerHTML = '';
+  piste.innerHTML = bande.map(affichePiste).join('');
+  fen.querySelectorAll('.tirage-filtres button, [data-tg-lancer]').forEach((x) => (x.disabled = true));
+  const depart = decalage(piste, 2), arrivee = decalage(piste, fin) + (Math.random() - 0.5) * piste.children[0].offsetWidth * 0.5;
+  const duree = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 3800, t0 = performance.now(), items = [...piste.children];
+  let centre = -1;
+  const pas = (t) => {
+    const k = duree ? Math.min(1, (t - t0) / duree) : 1, e = 1 - Math.pow(1 - k, 4); // ralentit comme une roue qui s'arrête
+    const x = depart + (arrivee - depart) * e;
+    piste.style.transform = `translateX(${x}px)`;
+    const c = Math.round((decalage(piste, 0) - x) / (items[0].offsetWidth + parseFloat(getComputedStyle(piste).columnGap || 0)));
+    if (c !== centre) { items[centre]?.classList.remove('centre'); items[c]?.classList.add('centre'); centre = c; }
+    if (k < 1) return requestAnimationFrame(pas);
+    // Recalage en douceur sur l'élu, puis le résultat.
+    piste.style.transition = 'transform .45s cubic-bezier(.2,.8,.2,1)';
+    piste.style.transform = `translateX(${decalage(piste, fin)}px)`;
+    items[centre]?.classList.remove('centre'); items[fin].classList.add('centre', 'elu');
+    setTimeout(() => {
+      piste.style.transition = ''; piste.classList.add('arrete');
+      afficherElu(elu);
+      fen.querySelectorAll('.tirage-filtres button').forEach((x) => (x.disabled = false));
+      bouton.disabled = false; bouton.innerHTML = ICO_DE + 'Relancer';
+      tg.enCours = false;
+    }, duree ? 480 : 0);
+  };
+  requestAnimationFrame(pas);
+}
+
+function afficherElu(f) {
+  const pf = (f.plateformes || []).filter((p) => aMoi(p.nom));
+  $('#tg-resultat').innerHTML = `<div class="tirage-elu"><p class="sur-titre">Baudet a choisi</p>
+    <h3>${esc(f.titre)}</h3><p class="muted">${[f.annee, duree(f.duree), f.genres.join(', ')].filter(Boolean).join(' · ')}</p>
+    ${pf.length ? `<p class="tirage-pf">${pf.map((p) => `<span>${logoPf(p)}${esc(p.nom)}</span>`).join('')}</p>` : ''}
+    <a class="btn" href="#film/${f.id}">Voir la fiche</a></div>`;
+}
+
+/* ---------- Pages réalisateur et acteur ---------- */
+
+const personneTmdb = memo((id) => tmdb(`/person/${id}`, { append_to_response: 'movie_credits' }));
+const pers = { id: null, tous: false };
+const ICO_RETOUR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+const retour = (label) => `<button class="retour" type="button" data-retour>${ICO_RETOUR}${label}</button>`;
+const sansCle = () => videMascotte('Clé TMDB manquante', 'Cette page se remplit avec TMDB : renseigne ta clé dans les Réglages.', '<a class="btn primaire" href="#reglages">Ouvrir les réglages</a>');
+
+// Carte d'un film qui n'est pas (encore) dans ma base.
+const carteTmdb = (c) => {
+  const futur = c.release_date > aujourdhui();
+  return `<div class="carte-film carte-tmdb"><span class="poster">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}</span>
+  <b>${esc(c.title)}</b><span class="carte-bas"><span>${futur ? 'Sort le ' + dateLongue(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
+  <button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button></div>`;
+};
+const grille = (l) => `<div class="grille-films">${l.join('')}</div>`;
+
+async function pagePersonne(p) {
+  if (!reglages.tmdb_token) return sansCle();
+  let id = p;
+  if (!/^\d+$/.test(p)) {
+    const nom = decodeURIComponent(p), r = await tmdb('/search/person', { query: nom });
+    id = (r.results?.find((x) => x.name === nom) || r.results?.[0])?.id;
+    if (!id) return videMascotte('Personne introuvable', `TMDB ne connaît personne qui s’appelle « ${esc(nom)} ».`, retour('Retour'));
+  }
+  if (pers.id !== id) Object.assign(pers, { id, tous: false });
+  const [d, F] = await Promise.all([personneTmdb(id), chargerFilms()]);
+  const real = d.known_for_department === 'Directing', femme = d.gender === 1;
+  const credits = [...new Map((real ? d.movie_credits.crew.filter((c) => c.job === 'Director') : d.movie_credits.cast).map((c) => [c.id, c])).values()];
+  const mien = new Map(F.map((f) => [f.tmdb_id, f]));
+  const miens = credits.map((c) => mien.get(c.id)).filter(Boolean), vus = miens.filter((f) => f.statut === 'vu').sort(parDernier), aVoir = miens.filter((f) => f.statut === 'a_voir');
+  const reste = credits.filter((c) => !mien.has(c.id) && !(c.genre_ids || []).includes(99)).sort((a, b) => b.vote_count - a.vote_count);
+  const notes = vus.filter((f) => f.note).map((f) => f.note), coeurs = vus.filter((f) => f.coup_de_coeur).length;
+  const metier = real ? (femme ? 'Réalisatrice' : 'Réalisateur') : femme ? 'Actrice' : 'Acteur';
+  const naissance = d.birthday ? `${femme ? 'Née' : 'Né'} le ${dateLongue(d.birthday)}${d.place_of_birth ? ' · ' + esc(d.place_of_birth) : ''}${d.deathday ? ` · ${femme ? 'morte' : 'mort'} le ${dateLongue(d.deathday)}` : ''}` : '';
+  const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? fr1(moyenne(notes)) : '–', 'ma note moyenne'], [coeurs, coeurs > 1 ? 'coups de cœur' : 'coup de cœur'],
+    [`${vus.length}<small>/${credits.length}</small>`, real ? 'de ses films réalisés' : 'de sa filmographie']];
+  const montres = pers.tous ? reste : reste.slice(0, 12);
+  return `${retour('Retour')}
+  <section class="personne-tete"><span class="personne-photo">${d.profile_path ? `<img src="https://image.tmdb.org/t/p/w342${esc(d.profile_path)}" alt="Portrait de ${esc(d.name)} (TMDB)">` : esc(d.name.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>
+    <div><p class="sur-titre">${metier}</p><h1>${esc(d.name)}</h1>${naissance ? `<p class="muted">${naissance}</p>` : ''}</div>
+      ${d.biography ? `<details class="bio"><summary>${esc(d.biography.split('\n')[0].slice(0, 260))}${d.biography.length > 260 ? '… <span class="lien">Lire la suite</span>' : ''}</summary>${d.biography.length > 260 ? `<p>${esc(d.biography).replace(/\n+/g, '</p><p>')}</p>` : ''}</details>` : ''}
+      <div class="kpis personne-kpis">${kpis.map(([v, l]) => `<div class="kpi"><span class="chiffre">${v}</span><span class="muted">${l}</span></div>`).join('')}</div></section>
+  <section class="bloc"><h2 class="section">${real ? 'Mes films de' : 'Mes films avec'} ${esc(d.name)}</h2>
+    ${vus.length ? grille(vus.map((f) => carteFilm(f, noteBas(f)))) : '<p class="muted">Aucun film vu pour l’instant.</p>'}</section>
+  ${aVoir.length ? `<section class="bloc"><h2 class="section">Dans ma watchlist</h2>${grille(aVoir.map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span>`)))}</section>` : ''}
+  ${reste.length ? `<section class="bloc"><h2 class="section">À découvrir</h2>${grille(montres.map(carteTmdb))}
+    ${reste.length > montres.length ? `<button class="btn" type="button" data-pers-tous style="align-self:center">Voir toute la filmographie (${reste.length})</button>` : ''}</section>` : ''}`;
+}
+
+/* ---------- Sagas ---------- */
+
+async function pageSaga(id) {
+  if (!reglages.tmdb_token) return sansCle();
+  const [c, F] = await Promise.all([collection(id), chargerFilms()]);
+  const mien = new Map(F.map((f) => [f.tmdb_id, f])), parts = [...c.parts].sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
+  const l = sortis(parts), vus = l.filter((p) => mien.get(p.id)?.statut === 'vu').length;
+  return `<a class="retour" href="#sagas">${ICO_RETOUR}Mes sagas</a>
+  <section class="saga-tete"${c.backdrop_path ? ` style="background-image:linear-gradient(90deg,rgba(14,22,18,.88),rgba(14,22,18,.35)),url(https://image.tmdb.org/t/p/w1280${esc(c.backdrop_path)})"` : ''}>
+    <p class="sur-titre">Saga</p><h1>${esc(nomSaga(c.name))}</h1>
+    <p>${vus === l.length && l.length ? 'Saga terminée, bravo !' : `${vus} ${vus > 1 ? 'films vus' : 'film vu'} sur ${l.length}`}</p>
+    <span class="jauge" aria-hidden="true"><span style="width:${l.length ? (vus / l.length) * 100 : 0}%"></span></span>
+    ${c.overview ? `<p class="saga-resume">${esc(c.overview)}</p>` : ''}</section>
+  <section class="bloc"><h2 class="section">Les films, dans l’ordre de sortie</h2>${grille(parts.map((p) => {
+    const f = mien.get(p.id);
+    return f ? carteFilm(f, f.statut === 'vu' ? noteBas(f) : `<span>${f.annee ?? ''}</span><strong>Dans ma watchlist</strong>`) : carteTmdb(p);
+  }))}</section>`;
+}
+
+async function pageSagas() {
+  const F = await chargerFilms(), ids = [...new Set(F.filter((f) => f.saga_id).map((f) => f.saga_id))];
+  const titre = '<div class="titre-page"><h1>Mes sagas</h1></div>';
+  if (!ids.length) return titre + videMascotte('Aucune saga pour l’instant', 'Dès qu’un film de ta collection fait partie d’une saga (Star Wars, Harry Potter…), elle apparaît ici. Les films déjà ajoutés sont vérifiés au fil des démarrages.', '<a class="btn primaire" href="#collection">Voir mes films</a>');
+  if (!reglages.tmdb_token) return titre + sansCle();
+  const vusIds = new Set(F.filter((f) => f.statut === 'vu').map((f) => f.tmdb_id));
+  const sagas = (await Promise.allSettled(ids.map(collection))).filter((r) => r.status === 'fulfilled').map(({ value: c }) => {
+    const l = sortis(c.parts), vus = l.filter((p) => vusIds.has(p.id)).length;
+    return { c, n: l.length, vus };
+  }).filter((x) => x.n).sort((a, b) => (a.vus === a.n) - (b.vus === b.n) || b.vus / b.n - a.vus / a.n);
+  return `${titre}<ul class="sagas">${sagas.map(({ c, n, vus }) => `<li><a class="carte" href="#saga/${c.id}">
+    <span class="saga-img">${c.backdrop_path ? `<img src="https://image.tmdb.org/t/p/w500${esc(c.backdrop_path)}" alt="" loading="lazy">` : ''}</span>
+    <span class="saga-txt"><b>${esc(nomSaga(c.name))}</b><small>${vus === n ? 'Terminée · ' : ''}${vus} sur ${n} vus</small><span class="jauge" aria-hidden="true"><span style="width:${(vus / n) * 100}%"></span></span></span></a></li>`).join('')}</ul>`;
+}
+
+/* ---------- Branchements ---------- */
+
+Object.assign(PAGES, { personne: (p) => pagePersonne(p), saga: (id) => pageSaga(id), sagas: () => pageSagas() });
+
+$('#page').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const d = b.dataset;
+  if (d.pf) basculerPlateforme(b);
+  else if ('pfToutes' in d) { pfToutes = true; remplirPlateformes(); }
+  else if ('tirage' in d) ouvrirTirage().catch((err) => toast(err.message));
+  else if ('persTous' in d) { pers.tous = true; route(); }
+  else if ('retour' in d) history.length > 1 ? history.back() : (location.hash = '#accueil');
+  else if (d.rrAvoir) ajouterAVoirRapide(d.rrAvoir, b);
+});
+fen.addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b || !fen.classList.contains('tirage-fen')) return;
+  const d = b.dataset;
+  if (d.tgDuree) { tg.duree = Number(d.tgDuree); fen.querySelectorAll('[data-tg-duree]').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
+  else if ('tgMes' in d) { tg.mes = !tg.mes; b.setAttribute('aria-pressed', tg.mes); majTirage(); }
+  else if ('tgLancer' in d) lancerTirage();
+});
+fen.addEventListener('change', (e) => { if (e.target.id === 'tg-genre') { tg.genre = e.target.value; majTirage(); } });

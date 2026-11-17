@@ -1,6 +1,39 @@
 // La clé « publishable » est faite pour être publique : les données sont protégées par les règles RLS (supabase/schema.sql).
 const sb = supabase.createClient('https://garqewteguzlrpujqcjc.supabase.co', 'sb_publishable_JUGsl_hVTnJm9E4MdSynDw_o6QL5B9d');
 
+// Lectures gardées en mémoire : une page déjà vue s'affiche tout de suite, puis la base est relue en arrière-plan.
+// Toute écriture (insert, update, upsert, delete) vide le cache.
+const lectures = new Map();
+let generation = 0;
+const fromBase = sb.from.bind(sb);
+sb.from = (table) => {
+  const q = fromBase(table);
+  for (const m of ['insert', 'update', 'upsert', 'delete']) {
+    const ecrire = q[m];
+    q[m] = (...a) => { lectures.clear(); generation++; return ecrire.apply(q, a); };
+  }
+  return q;
+};
+async function lire(cle, requete) {
+  const c = lectures.get(cle);
+  if (c) {
+    if (Date.now() - c.t > 30e3) revalider(cle, requete, c);
+    return structuredClone(c.data);
+  }
+  const g = generation, { data, error } = await requete();
+  if (error) throw error;
+  if (g === generation) lectures.set(cle, { data, t: Date.now() });
+  return structuredClone(data);
+}
+async function revalider(cle, requete, ancien) {
+  ancien.t = Date.now(); // une seule relecture à la fois
+  const g = generation, { data, error } = await requete().catch((e) => ({ error: e }));
+  if (error || g !== generation) return;
+  lectures.set(cle, { data, t: Date.now() });
+  // Ne pas redessiner sous les doigts : pas pendant une saisie ni avec une fenêtre ouverte.
+  if (JSON.stringify(data) !== JSON.stringify(ancien.data) && !document.activeElement?.matches('input, textarea') && !document.querySelector('dialog[open]')) route();
+}
+
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fr = (n) => String(n).replace('.', ',');
@@ -115,6 +148,8 @@ function pageReglages() {
       <div class="themes" role="radiogroup" aria-label="Thème">${[['clair', 'Clair'], ['sombre', 'Sombre'], ['auto', 'Automatique']].map(([id, label]) =>
         `<button type="button" role="radio" aria-checked="${theme === id}" data-theme-choix="${id}"><span class="apercu" style="background:${APERCUS[id]};border:1px solid var(--line)" aria-hidden="true"></span>${label}</button>`).join('')}</div>
     </section>
+    <section class="carte"><div><h2>Mes plateformes</h2><p class="muted">Touche celles auxquelles tu es abonné : elles ressortent en vert dans « Où le regarder ? » et servent au filtre « Sur mes plateformes ».</p></div>
+      <div id="pf-choix"><p class="muted">Chargement des plateformes…</p></div></section>
     <section class="carte"><div><h2>Sources des films</h2><p class="muted">Deux clés gratuites : TMDB pour les fiches, OMDb pour la note des critiques.</p></div>
       ${CLES.map((k) => `<div class="cle" data-cle="${k.champ}">
         <div class="cle-tete"><label for="${k.champ}">${k.nom}</label><span class="etat ${reglages[k.champ] ? 'ok' : ''}">${reglages[k.champ] ? 'Connectée' : 'À renseigner'}</span></div>
@@ -131,11 +166,14 @@ function pageReglages() {
 
 const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
 
+const pageIntrouvable = () => `<div class="vide-mascotte introuvable"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
+  <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
+
 async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
-  const actif = { film: 'collection', calendrier: 'collection', genre: 'collection' }[nom] || nom;
+  const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  const rendu = (PAGES[nom] || (() => `<div class="titre-page"><p class="sur-titre">En construction</p><h1>Cette page arrive bientôt</h1><p class="muted">Elle sera ajoutée dans une prochaine étape du développement.</p></div>`))(id);
+  const rendu = (PAGES[nom] || pageIntrouvable)(id);
   if (rendu instanceof Promise) {
     if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement…</p>';
     let html;
@@ -225,8 +263,8 @@ function tuile(ico, label, valeur, unite, bas, lien, niv) {
   return lien ? `<a class="${cls}" href="${lien}" target="_blank" rel="noopener">${contenu}</a>` : `<div class="${cls}">${contenu}</div>`;
 }
 
-const personne = (nom, photo, role) => `<li><span class="photo">${photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(photo)}" alt="" loading="lazy">` : esc(nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
-  <b>${esc(nom)}</b>${role ? `<small>${esc(role)}</small>` : ''}</li>`;
+const personne = (nom, photo, role, id) => `<li><a href="#personne/${id || encodeURIComponent(nom)}"><span class="photo">${photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(photo)}" alt="" loading="lazy">` : esc(nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
+  <b>${esc(nom)}</b>${role ? `<small>${esc(role)}</small>` : ''}</a></li>`;
 // TMDB : 1 = femme. Au masculin dès qu'un réalisateur n'est pas une femme (ou genre inconnu).
 const titreReal = (rs) => (rs.every((r) => r.genre === 1) ? 'Réalisatrice' : 'Réalisateur') + (rs.length > 1 ? 's' : '');
 
@@ -261,10 +299,12 @@ function htmlFilm(f) {
   <div class="fiche-corps">
     <div class="fiche-main">
       ${f.synopsis || pasSorti ? `<section><h2 class="section">Synopsis</h2><p class="synopsis${f.synopsis ? '' : ' muted'}">${f.synopsis ? esc(f.synopsis) : 'Le film n’est pas encore sorti : son synopsis sera bientôt disponible.'}</p></section>` : ''}
+      ${ouRegarderHtml(f.offres)}
+      ${f.saga ? sagaFicheHtml(f.saga) : ''}
       ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
         <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path d="M33 26l23 14-23 14z" fill="#1A2730"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
-      ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '')).join('')}</ul></section>` : ''}
-      ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role)).join('')}</ul></section>` : ''}
+      ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '', r.id)).join('')}</ul></section>` : ''}
+      ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
     <aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
       <b>${dateLongue(d)}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
@@ -272,34 +312,93 @@ function htmlFilm(f) {
   </div>`;
 }
 
+const logoPf = (p) => (p.logo ? `<img src="https://image.tmdb.org/t/p/w92${esc(p.logo)}" alt="">` : '');
+const pastillePf = (p, mien) => `<li class="pf${mien ? ' pf-mien' : ''}">${logoPf(p)}<span><b>${esc(p.nom)}</b><small>${mien ? 'Dans mes abonnements' : 'Pas abonné'}</small></span></li>`;
+
+function ouRegarderHtml(o) {
+  if (!o) return '';
+  const abo = [...o.abo].sort((a, b) => aMoi(b.nom) - aMoi(a.nom));
+  return `<section class="ou-regarder"><h2 class="section">Où le regarder ?</h2>
+    ${abo.length ? `<ul class="pfs">${abo.map((p) => pastillePf(p, aMoi(p.nom))).join('')}</ul>` : '<p class="muted">Pas disponible en abonnement ni gratuitement en France pour l’instant.</p>'}
+    ${o.achat.length ? `<p class="pf-achat"><span class="muted">En location ou à l’achat :</span> ${o.achat.map((p) => `<span>${logoPf(p)}${esc(p.nom)}</span>`).join('')}</p>` : ''}
+    <p class="muted pf-note">${(reglages.plateformes || []).length ? '' : 'Choisis tes plateformes dans les <a href="#reglages">Réglages</a> pour les voir en vert. '}Données JustWatch via ${o.lien ? `<a href="${esc(o.lien)}" target="_blank" rel="noopener">TMDB ↗</a>` : 'TMDB'}</p></section>`;
+}
+
+const nomSaga = (n) => String(n).replace(/\s*[-–]\s*(Saga|Collection)$/i, '');
+const sortis = (parts) => parts.filter((p) => p.release_date && p.release_date <= aujourdhui());
+function sagaFicheHtml(sg) {
+  const ids = new Set(films.filter((x) => x.statut === 'vu').map((x) => x.tmdb_id)), l = sg.parts && sortis(sg.parts), n = l?.length, vus = l?.filter((p) => ids.has(p.id)).length;
+  return `<section><h2 class="section">Saga</h2><a class="saga-lien carte" href="#saga/${sg.id}"><span><b>${esc(nomSaga(sg.nom))}</b>${n ? `<small>${vus} ${vus > 1 ? 'films vus' : 'film vu'} sur ${n}</small><span class="jauge" aria-hidden="true"><span style="width:${(vus / n) * 100}%"></span></span>` : ''}</span>${FLECHE('d')}</a></section>`;
+}
+
 async function pageFilm(id) {
-  const { data: f, error } = await sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle();
-  if (error) throw error;
-  if (f && f.note_rt == null && f.imdb_id && reglages.omdb_key && !pageFilm.essayes.has(f.id)) {
-    // Note absente (clé OMDb pas encore valide à l'ajout, ou OMDb indisponible) : on retente une fois par session.
-    pageFilm.essayes.add(f.id);
-    try {
-      const rt = parseInt((await omdb(f.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value);
-      if (rt >= 0) { f.note_rt = rt; await sb.from('films').update({ note_rt: rt }).eq('id', f.id); }
-    } catch {}
-  }
+  const f = await lire('film/' + id, () => sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle());
   if (f) {
-    f.tops = (await sb.from('tops').select('liste,position').eq('film_id', f.id)).data || [];
-    f.reals = await realisateurs(f);
+    const [d, tops] = await Promise.all([reglages.tmdb_token ? details(f.tmdb_id).catch(() => null) : null,
+      lire('tops/' + id, () => sb.from('tops').select('liste,position').eq('film_id', f.id))]);
+    f.tops = tops || [];
+    f.reals = d ? d.credits.crew.filter((c) => c.job === 'Director').map((c) => ({ id: c.id, nom: c.name, photo: c.profile_path, genre: c.gender })) : f.realisateurs.map((nom) => ({ nom }));
+    f.idActeurs = new Map((d?.credits.cast || []).map((c) => [c.name, c.id]));
+    f.offres = d && offres(d);
+    const saga = d ? d.belongs_to_collection : f.saga_id && { id: f.saga_id, name: f.saga_nom };
+    f.saga = saga && { id: saga.id, nom: saga.name, parts: (await collection(saga.id).catch(() => null))?.parts };
+    if (d) mettreAJour(f, d);
   }
   fiche = f;
   return f ? htmlFilm(f) : `<div class="titre-page"><p class="sur-titre">Fiche film</p><h1>Ce film n'est plus dans ta collection</h1><a class="btn" href="#accueil" style="align-self:flex-start">Retour à l'accueil</a></div>`;
 }
 
-pageFilm.essayes = new Set();
+/* ---------- Données TMDB lues en direct : plateformes, saga, notes à jour ---------- */
 
-// Photo et genre des réalisateurs : pas stockés en base, lus sur TMDB (sinon, les noms seuls).
-const cacheReals = new Map();
-async function realisateurs(f) {
-  if (!cacheReals.has(f.tmdb_id) && reglages.tmdb_token) try {
-    cacheReals.set(f.tmdb_id, (await tmdb(`/movie/${f.tmdb_id}/credits`)).crew.filter((c) => c.job === 'Director').map((c) => ({ nom: c.name, photo: c.profile_path, genre: c.gender })));
-  } catch {}
-  return cacheReals.get(f.tmdb_id) || f.realisateurs.map((nom) => ({ nom }));
+// Une lecture par film et par session (promesse gardée, oubliée en cas d'erreur pour réessayer).
+const memo = (fn) => { const m = new Map(); return (k) => { if (!m.has(k)) m.set(k, fn(k).catch((e) => { m.delete(k); throw e; })); return m.get(k); }; };
+const details = memo((tmdbId) => tmdb(`/movie/${tmdbId}`, { append_to_response: 'credits,release_dates,watch/providers' }));
+const collection = memo((id) => tmdb(`/collection/${id}`));
+
+// « Netflix Standard with Ads », « Paramount+ Amazon Channel »… comptent comme la plateforme elle-même.
+const nomPlateforme = (n) => n.replace(/\s+(Standard\s+)?with\s+Ads$/i, '').replace(/\s+(Amazon|Apple TV|Prime Video)\s+Channel$/i, '').replace(/\s+Plus$/i, '+').replace(/^Amazon Prime Video$/i, 'Prime Video').trim();
+const uniques = (l) => [...new Map(l.sort((a, b) => a.display_priority - b.display_priority).map((p) => [nomPlateforme(p.provider_name), { nom: nomPlateforme(p.provider_name), logo: p.logo_path }])).values()];
+function offres(d) {
+  const r = d['watch/providers']?.results?.FR || {};
+  return { abo: uniques([...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]), achat: uniques([...(r.rent || []), ...(r.buy || [])]), lien: r.link };
+}
+const aMoi = (nom) => (reglages.plateformes || []).includes(nom);
+const mesLogos = (f) => { const l = (f.plateformes || []).filter((p) => aMoi(p.nom)); return l.length ? `<span class="mes-pf" role="img" aria-label="Sur ${esc(l.map((p) => p.nom).join(', '))}">${l.map((p) => logoPf(p)).join('')}</span>` : ''; };
+
+// Garde la fiche à jour : notes, date de sortie, plateformes et saga depuis TMDB ; note des critiques tous les 30 jours.
+async function mettreAJour(f, d, avecOmdb = true) {
+  const v = versFilm(d), auj = aujourdhui(), patch = {}, nouveau = {};
+  for (const k of ['note_tmdb', 'votes_tmdb', 'date_sortie_fr']) if (v[k] != null && String(v[k]) !== String(f[k] ?? '')) patch[k] = f[k] = v[k];
+  const pf = offres(d).abo.map(({ nom, logo }) => ({ nom, logo }));
+  if (JSON.stringify(pf) !== JSON.stringify(f.plateformes) || f.plateformes_le !== auj) Object.assign(nouveau, { plateformes: pf, plateformes_le: auj });
+  if ((d.belongs_to_collection?.id ?? null) !== (f.saga_id ?? null)) Object.assign(nouveau, { saga_id: d.belongs_to_collection?.id ?? null, saga_nom: d.belongs_to_collection?.name ?? null });
+  const vueDepuis = f.statut === 'vu' && f.visionnages.some((x) => x.date > (f.maj_le || ''));
+  const rtVieille = f.note_rt == null || !f.maj_le || joursEntre(f.maj_le, auj) > 30 || vueDepuis;
+  let rt = null;
+  if (avecOmdb && rtVieille && f.imdb_id && reglages.omdb_key && !mettreAJour.essayes.has(f.id)) {
+    mettreAJour.essayes.add(f.id);
+    try { rt = parseInt((await omdb(f.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value); } catch {}
+    if (rt >= 0 && rt !== f.note_rt) patch.note_rt = rt;
+    if (rt >= 0) nouveau.maj_le = auj;
+  }
+  // Deux écritures : si les colonnes du 18 novembre manquent encore, les notes sont quand même mises à jour.
+  if (Object.keys(patch).length) await sb.from('films').update(patch).eq('id', f.id);
+  if (Object.keys(nouveau).length) await sb.from('films').update(nouveau).eq('id', f.id);
+  if ('note_rt' in patch && location.hash === '#film/' + f.id && !document.querySelector('dialog[open]')) route();
+}
+mettreAJour.essayes = new Set();
+
+// Au démarrage : complète en arrière-plan les films dont les plateformes datent de plus de 7 jours (pour les filtres et les sagas).
+async function completerFilms() {
+  if (!reglages.tmdb_token) return;
+  const { data, error } = await sb.from('films').select('id,tmdb_id,statut,note_tmdb,votes_tmdb,date_sortie_fr,plateformes,plateformes_le,saga_id,note_rt,maj_le,imdb_id,visionnages(date)');
+  if (error) return; // colonnes pas encore créées
+  const auj = aujourdhui(), file = data.filter((f) => !f.plateformes_le || joursEntre(f.plateformes_le, auj) >= 7);
+  if (!file.length) return;
+  // OMDb seulement à l'ouverture d'une fiche (quota de 1 000 requêtes par jour).
+  const travail = async () => { for (let f; (f = file.shift());) try { await mettreAJour(f, await details(f.tmdb_id), false); } catch {} };
+  await Promise.all([travail(), travail(), travail(), travail()]);
+  if (/^#(a-voir|collection|genre|sagas?|accueil)?(\/|$)/.test(location.hash) && !document.querySelector('dialog[open]') && !document.activeElement?.matches('input')) route();
 }
 
 // Affiche chaque message sous sa section et amène le premier à l'écran ; renvoie true si rien ne manque.
@@ -517,7 +616,18 @@ const ICO_COEUR_CARTE = '<svg role="img" aria-label="Coup de cœur" class="coeur
 const ICO_REVU = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>';
 const FLECHE = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d === 'g' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'}"/></svg>`;
 
-const coll = { q: '', tri: 'date', genre: '', page: 1, films: [] };
+const coll = { q: '', tri: 'date', genre: '', pf: '', page: 1, films: [] };
+
+// Filtre par plateforme (Mes films et Watchlist) : « mes » = au moins une de mes plateformes.
+const surPf = (f, pf) => !pf || (f.plateformes || []).some((p) => (pf === 'mes' ? aMoi(p.nom) : p.nom === pf));
+function champPf(id, liste, valeur) {
+  const n = {};
+  liste.forEach((f) => (f.plateformes || []).forEach((p) => (n[p.nom] = (n[p.nom] || 0) + 1)));
+  const noms = Object.keys(n).sort((a, b) => n[b] - n[a] || a.localeCompare(b, 'fr'));
+  if (!noms.length && !valeur) return ''; // plateformes pas encore lues : rien à filtrer
+  const opts = [['', 'Toutes'], ...((reglages.plateformes || []).length ? [['mes', 'Sur mes plateformes']] : []), ...noms.map((x) => [x, `${x} (${n[x]})`])];
+  return `<label class="champ"><span>Plateforme</span><select id="${id}" data-menu>${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === valeur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+}
 const TRIS = [['date', 'Date de visionnage'], ['note', 'Note'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['real', 'Réalisateur'], ['acteur', 'Acteur'], ['duree', 'Durée'], ['coeur', 'Coups de cœur']];
 
 function entete(vue, compteur = '') {
@@ -530,8 +640,7 @@ function entete(vue, compteur = '') {
 }
 
 async function pageCollection() {
-  const { data, error } = await sb.from('films').select('id,titre,annee,affiche,note,coup_de_coeur,genres,realisateurs,acteurs,duree,ajoute_le,visionnages(date)').eq('statut', 'vu');
-  if (error) throw error;
+  const data = await lire('collection', () => sb.from('films').select('*,visionnages(date)').eq('statut', 'vu'));
   coll.films = data.map((f) => ({ ...f, note: f.note == null ? null : Number(f.note),
     dernier: f.visionnages.map((v) => v.date).sort().at(-1) || f.ajoute_le.slice(0, 10),
     cherche: norm([f.titre, ...f.realisateurs, ...f.acteurs.map((a) => a.nom)].join(' ')) }));
@@ -541,6 +650,7 @@ async function pageCollection() {
       <label class="champ champ-recherche"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input id="coll-q" type="search" placeholder="Titre, réalisateur, acteur…" aria-label="Rechercher dans la collection" value="${esc(coll.q)}" autocomplete="off"></label>
       <label class="champ"><span>Trier par</span><select id="coll-tri" data-menu>${TRIS.map(([v, l]) => `<option value="${v}" ${v === coll.tri ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+      ${champPf('coll-pf', coll.films, coll.pf)}
     </div>
     <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) =>
       g ? `<a href="#genre/${slugGenre(g)}"><img src="${buste(g)}" alt="">${g}</a>` : '<button type="button" data-filtre-genre="" aria-pressed="true">Tous les genres</button>').join('')}</div>
@@ -561,7 +671,7 @@ function filmsFiltres() {
     duree: (a, b) => (b.duree ?? 0) - (a.duree ?? 0),
     coeur: (a, b) => b.coup_de_coeur - a.coup_de_coeur || parDate(a, b),
   }[coll.tri];
-  return coll.films.filter((f) => (!coll.genre || f.genres.includes(coll.genre)) && (!q || f.cherche.includes(q))).sort(tri);
+  return coll.films.filter((f) => (!coll.genre || f.genres.includes(coll.genre)) && surPf(f, coll.pf) && (!q || f.cherche.includes(q))).sort(tri);
 }
 
 function htmlResultats() {
@@ -596,8 +706,7 @@ const majResultats = () => { const r = $('#coll-resultats'); if (r) r.innerHTML 
 const cal = { mois: null, jour: null, visions: [] };
 
 async function pageCalendrier() {
-  const { data, error } = await sb.from('visionnages').select('date,film_id,films(id,titre,affiche,note,coup_de_coeur,duree)');
-  if (error) throw error;
+  const data = await lire('calendrier', () => sb.from('visionnages').select('date,film_id,films(id,titre,affiche,note,coup_de_coeur,duree)'));
   const premier = {};
   data.forEach((v) => { if (!premier[v.film_id] || v.date < premier[v.film_id]) premier[v.film_id] = v.date; });
   cal.visions = data.filter((v) => v.films).map((v) => ({ ...v, revu: v.date > premier[v.film_id] }));
@@ -645,6 +754,7 @@ $('#page').addEventListener('input', (e) => {
 });
 $('#page').addEventListener('change', (e) => {
   if (e.target.id === 'coll-tri') { coll.tri = e.target.value; coll.page = 1; majResultats(); }
+  if (e.target.id === 'coll-pf') { coll.pf = e.target.value; coll.page = 1; majResultats(); }
 });
 $('#page').addEventListener('click', (e) => {
   const b = e.target.closest('button');
@@ -655,10 +765,8 @@ $('#page').addEventListener('click', (e) => {
     document.querySelectorAll('[data-filtre-genre]').forEach((x) => x.setAttribute('aria-pressed', x === b));
     majResultats();
   } else if ('reinitialiser' in d) {
-    Object.assign(coll, { q: '', genre: '', page: 1 });
-    $('#coll-q').value = '';
-    document.querySelectorAll('[data-filtre-genre]').forEach((x) => x.setAttribute('aria-pressed', x.dataset.filtreGenre === ''));
-    majResultats();
+    Object.assign(coll, { q: '', genre: '', pf: '', page: 1 });
+    route();
   } else if (d.page) {
     coll.page = Number(d.page); majResultats();
     $('.filtres').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -821,13 +929,16 @@ async function demarrer() {
   if (reglages.theme) appliquerTheme(reglages.theme);
   $('#connexion').hidden = true; $('#app').hidden = false;
   route();
+  completerFilms();
   if (r.error || f.error) toast('Lecture de la base impossible : ' + (r.error || f.error).message);
 }
 
+const pagesChargees = new Promise((ok) => (document.readyState === 'loading' ? addEventListener('DOMContentLoaded', ok) : ok()));
 sb.auth.onAuthStateChange((_evt, session) => {
   const id = session?.user?.id || null;
   if (id === uid && id) return; // simple renouvellement du jeton
   uid = id;
   if (!uid) { if (dlg.open) dlg.close(); $('#app').hidden = true; $('#connexion').hidden = false; return; }
-  setTimeout(demarrer, 0); // pas d'appel Supabase dans ce rappel : il bloquerait la session
+  // Pas d'appel Supabase dans ce rappel (il bloquerait la session), et pas avant que pages.js et decouvrir.js soient chargés.
+  pagesChargees.then(() => setTimeout(demarrer, 0));
 });

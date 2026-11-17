@@ -5,7 +5,8 @@ create table reglages (
   user_id uuid primary key default auth.uid() references auth.users on delete cascade,
   tmdb_token text,
   omdb_key text,
-  theme text not null default 'auto' check (theme in ('auto', 'clair', 'sombre'))
+  theme text not null default 'auto' check (theme in ('auto', 'clair', 'sombre')),
+  plateformes text[] not null default '{}'  -- noms des plateformes de streaming de l'utilisateur
 );
 
 create table films (
@@ -31,6 +32,11 @@ create table films (
   note_tmdb numeric(3,1),
   votes_tmdb int,
   note_rt int,             -- pourcentage Rotten Tomatoes
+  maj_le date,             -- dernière mise à jour de note_rt
+  plateformes jsonb,       -- [{nom, logo}] en abonnement ou gratuit en France ; null = jamais lu
+  plateformes_le date,
+  saga_id int,             -- collection TMDB
+  saga_nom text,
   ajoute_le timestamptz not null default now(),
   unique (user_id, tmdb_id)
 );
