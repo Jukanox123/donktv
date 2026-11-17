@@ -79,14 +79,14 @@ const duree = (m) => (m ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, 
 const ETAPES = [
   ['#3F7A4F', 'M12 5v14M5 12h14', 'Ajoute tes films', 'Tape un titre : affiche, synopsis, réalisateur et casting arrivent tout seuls depuis TMDB.'],
   ['#E3A72F', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z', 'Note-les', 'Une note en demi-étoiles, un coup de cœur si le film le mérite, et la date où tu l’as vu.'],
-  ['#3E8ED0', 'M4 20V10M10 20V4M16 20v-7M22 20H2', 'Découvre tes stats', 'Tes genres préférés, tes réalisateurs fétiches, ta carte du monde et tes rétrospectives.'],
+  ['#3E8ED0', 'M4 20V10M10 20V4M16 20v-7M22 20H2', 'Découvre tes stats', 'Mes genres préférés, mes réalisateurs fétiches, ma carte du monde et mes rétrospectives.'],
 ];
 
 function pageAccueil() {
   if (films.length) return pageAccueilPleine();
   if (films.length) {
     // shortcut: liste simple en attendant le vrai accueil (KPI, souvenirs, bientôt au cinéma) des maquettes.
-    return `<div class="titre-page"><p class="sur-titre">Accueil</p><h1>Tes derniers films</h1></div>
+    return `<div class="titre-page"><p class="sur-titre">Accueil</p><h1>Mes derniers films</h1></div>
       <div class="grille">${films.slice(0, 18).map((f) => `<a class="film" href="#film/${f.id}">
         <span class="affiche">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}<span class="badge ${f.statut === 'vu' ? 'vu' : ''}">${f.statut === 'vu' ? 'Vu' : 'À voir'}</span></span>
         <b>${esc(f.titre)}</b><small>${esc(f.annee ?? '')}${f.note ? ` · ${fr(f.note)} / 5` : ''}${f.coup_de_coeur ? ' · coup de cœur' : ''}</small></a>`).join('')}</div>`;
@@ -133,7 +133,7 @@ const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => page
 
 async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
-  const actif = { film: 'collection', calendrier: 'collection' }[nom] || nom;
+  const actif = { film: 'collection', calendrier: 'collection', genre: 'collection' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
   const rendu = (PAGES[nom] || (() => `<div class="titre-page"><p class="sur-titre">En construction</p><h1>Cette page arrive bientôt</h1><p class="muted">Elle sera ajoutée dans une prochaine étape du développement.</p></div>`))(id);
   if (rendu instanceof Promise) {
@@ -144,6 +144,7 @@ async function route() {
     page.innerHTML = html;
   } else page.innerHTML = rendu;
   if (page.dataset.vue !== hash) scrollTo(0, 0);
+  page.querySelector('.puces [aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'center' }); // genre en cours visible sur mobile
   page.dataset.vue = hash;
   PAGES[nom]?.apres?.();
   if (nom === 'accueil') proposerInstallation();
@@ -369,7 +370,7 @@ async function enregistrerEdition(b) {
     }
     majListe(fiche.id, patch);
     fen.close();
-    toast(fiche.statut === 'vu' || !vu ? 'Modifications enregistrées.' : `${fiche.titre} est maintenant dans tes films vus.`);
+    toast(fiche.statut === 'vu' || !vu ? 'Modifications enregistrées.' : `${fiche.titre} est maintenant dans mes films vus.`);
     route();
   } catch (e) {
     err.textContent = 'Enregistrement impossible : ' + (e.message || e); err.hidden = false;

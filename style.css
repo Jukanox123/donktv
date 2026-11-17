@@ -398,7 +398,7 @@ kbd { font: 500 12px 'Roboto', system-ui, sans-serif; padding: 2px 6px; border-r
 .kpi-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.6px; color: var(--muted); }
 .kpi .chiffre { font-size: 44px; line-height: 1; letter-spacing: -1.5px; }
 .kpi .chiffre small, .retro-kpis .chiffre small, .retro-carte-chiffres small { font: 500 16px 'Roboto', system-ui, sans-serif; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
-.kpi .muted { font-size: 14px; }
+.kpi .muted, .kpi .hausse, .kpi .baisse { font-size: 14px; }
 .rangee { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 20px; }
 
 /* À voir */
@@ -789,7 +789,7 @@ dialog.feuille { width: min(520px, 100%); }
   .kpi { padding: 16px; }
   .kpi .chiffre { font-size: 32px; }
   .kpi-label { font-size: 11px; letter-spacing: 1.2px; }
-  .kpi .muted { font-size: 12px; }
+  .kpi .muted, .kpi .hausse, .kpi .baisse { font-size: 12px; }
   .rangee { display: flex; overflow-x: auto; gap: 12px; margin: 0 -20px; padding: 0 20px 4px; scrollbar-width: none; }
   .rangee > * { flex: 0 0 120px; }
   .grille-avoir { display: flex; flex-direction: column; gap: 10px; }

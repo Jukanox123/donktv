@@ -116,17 +116,17 @@ async function marquerVu(id, b) {
 
 // Couleurs et textes du bandeau de chaque genre, repris des maquettes.
 const GENRE_INFO = {
-  Western: ['#F1C98E', '#3A2414', '#6A4528', 'rgba(255,253,247,.72)', '255,244,222', 'Poussière, duels au soleil et grands espaces. Baudet a sorti son chapeau.', 'Tes westerns', 'Baudet en cowboy, lasso à la main, dans le désert devant un saloon'],
-  Thriller: ['#4A5A6E', '#F1ECDF', '#C9D3DC', 'rgba(20,28,38,.55)', '18,26,36', 'Ruelles mouillées, indices et suspense. Baudet a sorti sa loupe.', 'Tes thrillers', 'Baudet en détective, loupe à la main, dans une rue pluvieuse la nuit'],
-  Drame: ['#8A6A4E', '#F6EEE2', '#E2D3C2', 'rgba(40,28,20,.5)', '38,26,18', 'Larmes, pluie d’automne et grandes émotions. Baudet a sorti son mouchoir.', 'Tes drames', 'Baudet en larmes, un mouchoir à la main, assis près d’une fenêtre sous la pluie d’automne'],
-  SF: ['#B7A9DA', '#24204A', '#4A4473', 'rgba(250,248,255,.76)', '238,232,250', 'Étoiles, planètes lointaines et voyages dans le temps. Baudet a enfilé son scaphandre.', 'Tes films de SF', 'Baudet en astronaute qui fait coucou sur une planète violette, devant une planète à anneaux et une fusée'],
-  Horreur: ['#3E4A4A', '#EEF0EA', '#C3CBC4', 'rgba(16,22,22,.55)', '14,20,20', 'Brume, craquements et manoirs abandonnés. Baudet a allumé sa lampe torche.', 'Tes films d’horreur', 'Baudet inquiet, lampe torche à la main, dans une forêt brumeuse la nuit devant un vieux manoir'],
-  Comédie: ['#B24A3A', '#FFF6E8', '#F6D9C2', 'rgba(60,16,12,.5)', '70,18,14', 'Fous rires, quiproquos et confettis. Baudet a sorti son nez rouge.', 'Tes comédies', 'Baudet en clown qui jongle en riant sur une scène de cirque, entre des rideaux rouges et des confettis'],
-  Romantique: ['#F2C6CC', '#4A1F2A', '#7A3E4A', 'rgba(255,248,248,.74)', '255,240,242', 'Bouquets de fleurs, lettres d’amour et couchers de soleil. Baudet a sorti sa plus belle rose.', 'Tes films romantiques', 'Baudet en pull et écharpe rose, une rose et une lettre d’amour à la main, dans un jardin fleuri au coucher du soleil'],
-  Action: ['#E8A07A', '#2A1410', '#5A2E22', 'rgba(255,246,238,.72)', '255,236,222', 'Courses-poursuites, cascades et explosions au ralenti. Baudet a sorti ses lunettes noires.', 'Tes films d’action', 'Baudet en blouson de cuir, bandeau rouge et lunettes de soleil, sautant d’un toit à l’autre au coucher du soleil'],
-  Animation: ['#BFDDE2', '#1E3A40', '#3E5E64', 'rgba(250,255,255,.74)', '238,248,250', 'Crayons, pinceaux et mondes dessinés à la main. Baudet a enfilé sa blouse d’artiste.', 'Tes films d’animation', 'Baudet en béret rouge et blouse tachée de peinture, palette à la main, devant son chevalet dans un atelier ensoleillé'],
-  Aventure: ['#A9CFA0', '#1E3A22', '#3E5E40', 'rgba(250,255,246,.72)', '236,248,230', 'Cartes au trésor, temples oubliés et jungles à perte de vue. Baudet a sorti son casque d’explorateur.', 'Tes films d’aventure', 'Baudet en explorateur, casque colonial et carte au trésor à la main, devant un temple en ruine dans la jungle'],
-  Guerre: ['#C9C2B2', '#2A2A1E', '#545240', 'rgba(250,248,240,.72)', '240,236,226', 'Brume de l’aube, tranchées et héros ordinaires. Baudet a enfilé son casque et sorti ses jumelles.', 'Tes films de guerre', 'Baudet en uniforme kaki et casque, jumelles à la main, devant un campement militaire dans la brume de l’aube'],
+  Western: ['#F1C98E', '#3A2414', '#6A4528', 'rgba(255,253,247,.72)', '255,244,222', 'Poussière, duels au soleil et grands espaces. Baudet a sorti son chapeau.', 'Mes westerns', 'Baudet en cowboy, lasso à la main, dans le désert devant un saloon'],
+  Thriller: ['#4A5A6E', '#F1ECDF', '#C9D3DC', 'rgba(20,28,38,.55)', '18,26,36', 'Ruelles mouillées, indices et suspense. Baudet a sorti sa loupe.', 'Mes thrillers', 'Baudet en détective, loupe à la main, dans une rue pluvieuse la nuit'],
+  Drame: ['#8A6A4E', '#F6EEE2', '#E2D3C2', 'rgba(40,28,20,.5)', '38,26,18', 'Larmes, pluie d’automne et grandes émotions. Baudet a sorti son mouchoir.', 'Mes drames', 'Baudet en larmes, un mouchoir à la main, assis près d’une fenêtre sous la pluie d’automne'],
+  SF: ['#B7A9DA', '#24204A', '#4A4473', 'rgba(250,248,255,.76)', '238,232,250', 'Étoiles, planètes lointaines et voyages dans le temps. Baudet a enfilé son scaphandre.', 'Mes films de SF', 'Baudet en astronaute qui fait coucou sur une planète violette, devant une planète à anneaux et une fusée'],
+  Horreur: ['#3E4A4A', '#EEF0EA', '#C3CBC4', 'rgba(16,22,22,.55)', '14,20,20', 'Brume, craquements et manoirs abandonnés. Baudet a allumé sa lampe torche.', 'Mes films d’horreur', 'Baudet inquiet, lampe torche à la main, dans une forêt brumeuse la nuit devant un vieux manoir'],
+  Comédie: ['#B24A3A', '#FFF6E8', '#F6D9C2', 'rgba(60,16,12,.5)', '70,18,14', 'Fous rires, quiproquos et confettis. Baudet a sorti son nez rouge.', 'Mes comédies', 'Baudet en clown qui jongle en riant sur une scène de cirque, entre des rideaux rouges et des confettis'],
+  Romantique: ['#F2C6CC', '#4A1F2A', '#7A3E4A', 'rgba(255,248,248,.74)', '255,240,242', 'Bouquets de fleurs, lettres d’amour et couchers de soleil. Baudet a sorti sa plus belle rose.', 'Mes films romantiques', 'Baudet en pull et écharpe rose, une rose et une lettre d’amour à la main, dans un jardin fleuri au coucher du soleil'],
+  Action: ['#E8A07A', '#2A1410', '#5A2E22', 'rgba(255,246,238,.72)', '255,236,222', 'Courses-poursuites, cascades et explosions au ralenti. Baudet a sorti ses lunettes noires.', 'Mes films d’action', 'Baudet en blouson de cuir, bandeau rouge et lunettes de soleil, sautant d’un toit à l’autre au coucher du soleil'],
+  Animation: ['#BFDDE2', '#1E3A40', '#3E5E64', 'rgba(250,255,255,.74)', '238,248,250', 'Crayons, pinceaux et mondes dessinés à la main. Baudet a enfilé sa blouse d’artiste.', 'Mes films d’animation', 'Baudet en béret rouge et blouse tachée de peinture, palette à la main, devant son chevalet dans un atelier ensoleillé'],
+  Aventure: ['#A9CFA0', '#1E3A22', '#3E5E40', 'rgba(250,255,246,.72)', '236,248,230', 'Cartes au trésor, temples oubliés et jungles à perte de vue. Baudet a sorti son casque d’explorateur.', 'Mes films d’aventure', 'Baudet en explorateur, casque colonial et carte au trésor à la main, devant un temple en ruine dans la jungle'],
+  Guerre: ['#C9C2B2', '#2A2A1E', '#545240', 'rgba(250,248,240,.72)', '240,236,226', 'Brume de l’aube, tranchées et héros ordinaires. Baudet a enfilé son casque et sorti ses jumelles.', 'Mes films de guerre', 'Baudet en uniforme kaki et casque, jumelles à la main, devant un campement militaire dans la brume de l’aube'],
 };
 
 const gp = { genre: null, q: '', tri: 'date', page: 1, films: [] };
@@ -239,7 +239,7 @@ function ouvrirAjoutTop() {
   fen.classList.remove('petit');
   fenCorps.innerHTML = `<div class="ajout-tete"><div class="ajout-titres"><span class="sur-titre">${nomTop(l)}</span><h2>Ajouter au top</h2></div>
     <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    <label class="recherche">${ICO_LOUPE}<input id="top-q" type="search" placeholder="Rechercher parmi tes films vus…" aria-label="Rechercher parmi tes films vus" autocomplete="off"></label>
+    <label class="recherche">${ICO_LOUPE}<input id="top-q" type="search" placeholder="Rechercher parmi mes films vus…" aria-label="Rechercher parmi mes films vus" autocomplete="off"></label>
     <ul class="resultats" id="top-candidats">${candidats.length ? candidats.map((f) => `<li data-cherche="${esc(f.cherche)}"><button type="button" data-top-choisir="${f.id}">${affiche(f.affiche)}
       <span><b>${esc(f.titre)}</b><small>${[f.annee, f.genres.join(', ')].filter(Boolean).join(' · ')}</small></span><span class="badge vu">Ajouter</span></button></li>`).join('')
     : `<li class="vide">${l === 'tous' ? 'Tous tes films vus sont déjà classés, ou tu n’as pas encore de film vu.' : `Aucun film vu en ${l} à ajouter.`}</li>`}</ul>`;
@@ -451,9 +451,9 @@ function htmlStats() {
       <div class="hm-legende" aria-hidden="true"><span>Aucun</span>${[0, 1, 2, 3, 4].map((n) => `<span class="hm-${n}"></span>`).join('')}<span>4 films et +</span></div></div></section>
 
   <section class="carte stat"><div class="stat-tete"><h2>${st.mesure === 'films' ? 'Films vus par mois' : 'Heures par mois'}</h2>${seg('data-mesure', st.mesure, [['films', 'Films'], ['heures', 'Heures']])}</div>${barres(parMois)}</section>
-  <section class="carte stat"><div class="stat-tete"><h2>Répartition de tes notes</h2><span class="muted">moyenne ${notes.length ? fr1(moyenne(notes)) : '–'} / 5</span></div>${barres(repNotes)}</section>
+  <section class="carte stat"><div class="stat-tete"><h2>Répartition de mes notes</h2><span class="muted">moyenne ${notes.length ? fr1(moyenne(notes)) : '–'} / 5</span></div>${barres(repNotes)}</section>
 
-  <section class="carte stat large stat-genres"><div class="stat-genres-liste"><div class="stat-tete"><h2>Tes genres</h2><p class="muted">Un film peut compter dans plusieurs genres.</p></div>
+  <section class="carte stat large stat-genres"><div class="stat-genres-liste"><div class="stat-tete"><h2>Mes genres</h2><p class="muted">Un film peut compter dans plusieurs genres.</p></div>
     ${lignesH(parGenre.map((x) => ({ ico: `<a href="#genre/${slugGenre(x.g)}" tabindex="-1" aria-hidden="true"><img class="hb-buste" src="${buste(x.g)}" alt=""></a>`, nom: `<a href="#genre/${slugGenre(x.g)}">${x.g}</a>`, pct: (x.n / parGenre[0].n) * 100, val: x.n, tip: pluriel(x.n, 'film') })))}</div>
     ${top ? `<a class="genre-prefere" href="#genre/${slugGenre(top.g)}"><img src="img/decor-${slugGenre(top.g)}.jpg" alt="${esc(GENRE_INFO[top.g][7])}">
       <span><span class="sur-titre">Genre préféré</span><b>${top.g}</b><small>${pluriel(top.n, 'film')} · ${Math.round((top.n / F.length) * 100)} % de ta collection</small></span></a>` : ''}</section>
@@ -504,7 +504,7 @@ async function dessinerCarte() {
     const parNum = {};
     Object.entries(st.pays).forEach(([c, l]) => { if (ISO_NUM[c]) parNum[String(ISO_NUM[c]).padStart(3, '0')] = [c, l]; });
     const nom = (c) => { try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(c); } catch { return c; } };
-    st.carte = `<svg viewBox="0 0 960 480" role="img" aria-label="Carte des pays d'origine de tes films">${features.map((f) => {
+    st.carte = `<svg viewBox="0 0 960 480" role="img" aria-label="Carte des pays d'origine de mes films">${features.map((f) => {
       const p = parNum[f.id];
       return `<path d="${chemin(f)}" class="geo-${p ? niveauPays(p[1].length) : 0}"></path>`;
     }).join('')}</svg>`;
@@ -593,12 +593,12 @@ function htmlRetro() {
       ${r.n ? `<div class="retro-kpis">${kpis.map(([v, u, phrase, c]) => `<div><span class="chiffre">${v}<small>${u}</small></span><span>${phrase}</span>${c ? `<span class="cmp cmp-${c[0]}"><b aria-hidden="true">${fleches[c[0]]}</b>${c[1]}</span>` : ''}</div>`).join('')}</div>` : ''}
     </div></section>
   ${r.n ? `<div class="retro-corps">
-    <section><h2 class="section">Tes meilleurs films</h2>
+    <section><h2 class="section">Mes meilleurs films</h2>
       <ol class="retro-top">${top.map((f, i) => `<li><span class="rang" aria-hidden="true">${i + 1}</span><a href="#film/${f.id}">${posterHtml({ ...f, genres: [] })}<b>${esc(f.titre)}</b><small>${f.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(f.note)} · ` : ''}${f.annee ?? ''}</small></a></li>`).join('')}</ol></section>
     ${genres.length ? `<section class="retro-genre"><img src="img/decor-${slugGenre(genres[0].g)}.jpg" alt="${esc(GENRE_INFO[genres[0].g][7])}"><div class="retro-genre-voile" aria-hidden="true"></div>
       <div class="retro-genre-texte"><p class="sur-titre">Genre dominant</p><h2>${genres[0].g}</h2>
       ${lignesH(genres.map((x) => ({ ico: `<img class="hb-buste" src="${buste(x.g)}" alt="">`, nom: x.g, pct: (x.n / genres[0].n) * 100, val: x.n })))}</div></section>` : ''}
-    ${phares.length ? `<section class="retro-phares"><h2 class="section">Tes têtes d’affiche</h2><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol>${liste.map(([nom, n]) => `<li>${portrait(nom)}<div><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
+    ${phares.length ? `<section class="retro-phares"><h2 class="section">Mes têtes d’affiche</h2><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol>${liste.map(([nom, n]) => `<li>${portrait(nom)}<div><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
     <section class="carte stat retro-rythme"><div class="stat-tete"><h3>Ton rythme par ${P === 'semaine' ? 'jour' : P === 'mois' ? 'semaine' : 'mois'}</h3></div>${barres(rythme)}</section>
   </div>` : videMascotte('Rien à raconter… pour l’instant', 'Aucun film vu sur cette période. Change de période avec les flèches, ou ajoute un film.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
 }
@@ -636,7 +636,7 @@ async function pageAccueilPleine() {
     <div class="rangee">${[...vus].sort(parDernier).slice(0, 6).map((f) => carteFilm(f, noteBas(f))).join('')}</div></section>` : ''}
   ${rp.n ? `<section class="retro-carte"><div><p class="sur-titre">Rétrospective · ${majuscule(MOIS[Number(md.slice(5, 7)) - 1])} ${md.slice(0, 4)}</p>
       <h2>${gMois?.n ? `Un mois sous le signe ${SIGNE[gMois.g]}` : 'Ton mois en un coup d’œil'}</h2>
-      <p>Ton genre dominant, ton réalisateur phare et tes meilleures notes du mois, réunis sur une page.</p><a class="btn clair" href="#retros/mois-1">Voir ma rétro de ${MOIS[Number(md.slice(5, 7)) - 1]}</a></div>
+      <p>Mon genre dominant, mon réalisateur phare et mes meilleures notes du mois, réunis sur une page.</p><a class="btn clair" href="#retros/mois-1">Voir ma rétro de ${MOIS[Number(md.slice(5, 7)) - 1]}</a></div>
     <div class="retro-carte-chiffres"><div><span class="chiffre">${rp.n}</span><span>${rp.n > 1 ? 'films vus' : 'film vu'}</span></div><div><span class="chiffre">${rp.heures}<small>h</small></span><span>devant l'écran</span></div>
       <div><span class="chiffre">${rp.note ? fr1(rp.note) : '–'}</span><span>note moyenne</span></div></div></section>` : ''}
   ${aVoir.length ? `<section>${titreSection('', 'À voir ensuite', '#a-voir', 'Toute la watchlist')}
@@ -653,7 +653,7 @@ function pageMonEspace() {
   const svg = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
   return `<div class="titre-page"><h1>Mon espace</h1></div><nav class="carte espace" aria-label="Autres pages">
     ${lien('#tops', '#E3A72F', svg('M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3'), 'Mes tops', 'Top 10 de tous les temps et tops par genre')}
-    ${lien('#stats', '#3F7A4F', svg('M3 17l6-6 4 4 8-8M15 7h6v6'), 'Statistiques', 'Tes chiffres, tes genres et tes pays')}
+    ${lien('#stats', '#3F7A4F', svg('M3 17l6-6 4 4 8-8M15 7h6v6'), 'Statistiques', 'Mes chiffres, mes genres et mes pays')}
     ${lien('#retros', '#3E8ED0', svg('M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z'), 'Rétrospectives', 'Semaine, mois et année')}
     ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svg('M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM12 7v7M9 11l3 3 3-3M11 19h2')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
     ${lien('#reglages', '#56685A', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 10 3.17V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.82 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 21 10h.09a2 2 0 1 1 0 4H21a1.65 1.65 0 0 0-1.6 1z'), 'Réglages', 'Thème, clés TMDB et OMDb')}
