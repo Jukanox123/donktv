@@ -17,7 +17,8 @@ self.addEventListener('fetch', (e) => {
 
 async function reseauDabord(r) {
   try {
-    const rep = await fetch(r);
+    // no-cache : GitHub Pages laisse le navigateur garder les fichiers 10 min ; on revalide pour voir chaque mise en ligne tout de suite.
+    const rep = await fetch(r, { cache: 'no-cache' });
     if (rep.ok) (await caches.open(CACHE)).put(r, rep.clone());
     return rep;
   } catch {
