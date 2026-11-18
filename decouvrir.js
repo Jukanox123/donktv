@@ -200,21 +200,28 @@ async function pagePersonne(p) {
 
 /* ---------- Sagas ---------- */
 
+const FL = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+
+// Saga : jauge en haut, puis une frise chronologique d'affiches (même format que le reste de l'app).
 async function pageSaga(id) {
   if (!reglages.tmdb_token) return sansCle();
   const [c, F] = await Promise.all([collection(id), chargerFilms()]);
   const mien = new Map(F.map((f) => [f.tmdb_id, f])), parts = [...c.parts].sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
-  const l = sortis(parts), vus = l.filter((p) => mien.get(p.id)?.statut === 'vu').length;
+  const l = sortis(parts), vus = l.filter((p) => mien.get(p.id)?.statut === 'vu').length, pct = l.length ? Math.round((vus / l.length) * 100) : 0;
+  const item = (p) => {
+    const f = mien.get(p.id), etat = f?.statut === 'vu' ? 'vu' : f ? 'a-voir' : '';
+    return `<li class="frise-item"><span class="frise-annee">${(p.release_date || '').slice(0, 4) || 'À venir'}</span><span class="frise-point ${etat}" aria-hidden="true"></span>
+      ${f ? carteFilm(f, f.statut === 'vu' ? noteBas(f) : `<span>Dans ma watchlist</span>`) : carteTmdb(p)}</li>`;
+  };
   return `<a class="retour" href="#sagas">${ICO_RETOUR}Mes sagas</a>
-  <section class="saga-tete"${c.backdrop_path ? ` style="background-image:linear-gradient(90deg,rgba(14,22,18,.88),rgba(14,22,18,.35)),url(https://image.tmdb.org/t/p/w1280${esc(c.backdrop_path)})"` : ''}>
-    <p class="sur-titre">Saga</p><h1>${esc(nomSaga(c.name))}</h1>
-    <p>${vus === l.length && l.length ? 'Saga terminée, bravo !' : `${vus} ${vus > 1 ? 'films vus' : 'film vu'} sur ${l.length}`}</p>
-    <span class="jauge" aria-hidden="true"><span style="width:${l.length ? (vus / l.length) * 100 : 0}%"></span></span>
-    ${c.overview ? `<p class="saga-resume">${esc(c.overview)}</p>` : ''}</section>
-  <section class="bloc"><h2 class="section">Les films, dans l’ordre de sortie</h2>${grille(parts.map((p) => {
-    const f = mien.get(p.id);
-    return f ? carteFilm(f, f.statut === 'vu' ? noteBas(f) : `<span>${f.annee ?? ''}</span><strong>Dans ma watchlist</strong>`) : carteTmdb(p);
-  }))}</section>`;
+  <section class="saga-tete"><div class="saga-titre"><p class="sur-titre">Saga</p><h1>${esc(nomSaga(c.name))}</h1></div>
+    <div class="saga-jauge"><p><b>${vus}</b> ${vus > 1 ? 'films vus' : 'film vu'} sur ${l.length}${vus === l.length && l.length ? ' · saga terminée' : ''}</p>
+      <span class="jauge" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Saga vue à ${pct} %"><span style="width:${pct}%"></span></span></div>
+    ${c.overview ? `<p class="saga-resume muted">${esc(c.overview)}</p>` : ''}</section>
+  <section class="bloc"><div class="section-tete"><div><h2 class="section">Dans l’ordre de sortie</h2></div>
+      <div class="frise-fleches"><button class="btn carre" type="button" data-frise="-1" aria-label="Films précédents">${FL('M15 18l-6-6 6-6')}</button><button class="btn carre" type="button" data-frise="1" aria-label="Films suivants">${FL('M9 18l6-6-6-6')}</button></div></div>
+    <ol class="frise">${parts.map(item).join('')}</ol>
+    <p class="frise-legende muted"><span><i class="frise-point vu"></i>Vu</span><span><i class="frise-point a-voir"></i>Dans ma watchlist</span><span><i class="frise-point"></i>Pas encore vu</span></p></section>`;
 }
 
 async function pageSagas() {
@@ -235,6 +242,8 @@ async function pageSagas() {
 /* ---------- Branchements ---------- */
 
 Object.assign(PAGES, { personne: (p) => pagePersonne(p), saga: (id) => pageSaga(id), sagas: () => pageSagas() });
+// Flèches de la frise seulement si elle dépasse de l'écran.
+PAGES.saga.apres = () => { const f = $('.frise'); if (f) $('.frise-fleches').style.display = f.scrollWidth > f.clientWidth + 2 ? '' : 'none'; };
 
 $('#page').addEventListener('click', (e) => {
   if (!e.target.closest('.pf-recherche') && $('#pf-sugg')) $('#pf-sugg').hidden = true;
@@ -243,6 +252,7 @@ $('#page').addEventListener('click', (e) => {
   const d = b.dataset;
   if (d.pf) basculerPlateforme(b);
   else if ('tirage' in d) ouvrirTirage().catch((err) => toast(err.message));
+  else if (d.frise) { const f = $('.frise'); f.scrollBy({ left: Number(d.frise) * f.clientWidth * 0.8, behavior: 'smooth' }); }
   else if ('persTous' in d) { pers.tous = true; route(); }
   else if ('retour' in d) history.length > 1 ? history.back() : (location.hash = '#accueil');
   else if (d.rrAvoir) ajouterAVoirRapide(d.rrAvoir, b);

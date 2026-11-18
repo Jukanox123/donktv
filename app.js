@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.1';
+const VERSION = '1.2';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -172,10 +172,34 @@ const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => page
 const pageIntrouvable = () => `<div class="vide-mascotte introuvable"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
   <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
 
+// Menu PC : la pastille glisse sous l'onglet actif (ou sous « Mon espace » pour ses pages).
+function placerPastille() {
+  const cap = $('nav.capsule'), p = cap.querySelector('.capsule-pastille');
+  const cible = cap.querySelector(':scope > a[aria-current]') || cap.querySelector('.capsule-espace.actif');
+  if (!cible || !cap.offsetWidth) return (p.style.opacity = 0);
+  const r = cible.getBoundingClientRect(), c = cap.getBoundingClientRect();
+  Object.assign(p.style, { width: r.width + 'px', transform: `translateX(${r.left - c.left - 1}px)`, opacity: 1 });
+}
+addEventListener('resize', placerPastille);
+document.fonts?.ready.then(placerPastille);
+
+function menuEspace(ouvrir) {
+  const b = $('[data-espace-menu]');
+  b.setAttribute('aria-expanded', ouvrir);
+  $('#espace-menu').hidden = !ouvrir;
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-espace-menu]')) menuEspace($('#espace-menu').hidden);
+  else if (!$('#espace-menu').hidden) menuEspace(false);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#espace-menu').hidden) { menuEspace(false); $('[data-espace-menu]').focus(); } });
+
 async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
   const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
+  $('.capsule-espace').classList.toggle('actif', ['tops', 'stats', 'retros', 'sagas', 'reglages'].includes(actif));
+  placerPastille();
   const rendu = (PAGES[nom] || pageIntrouvable)(id);
   if (rendu instanceof Promise) {
     if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement…</p>';
