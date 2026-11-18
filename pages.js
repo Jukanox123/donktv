@@ -73,7 +73,8 @@ async function pageAVoir() {
   const n = av.films.length;
   return `<div class="coll-tete avoir-tete"><div class="titre-page"><h1>Watchlist</h1></div>
     <div class="coll-tete-droite"><p class="muted"><strong>${n}</strong> ${n > 1 ? 'films à voir' : 'film à voir'}</p>
-    ${n ? `<button class="btn primaire" type="button" data-tirage>${ICO_DE}Qu’est-ce que je regarde ?</button>` : ''}</div></div>
+    ${n ? `<button class="btn primaire" type="button" data-tirage aria-expanded="${tg.ouvert}" aria-controls="tirage-zone">${ICO_DE}Qu’est-ce que je regarde ?</button>` : ''}</div></div>
+  ${n ? '<div id="tirage-zone"></div>' : ''}
   ${n ? `<div class="filtres"><div class="filtres-ligne">${champRecherche('av-q', av.q, 'Rechercher dans la watchlist')}
       ${champTri('av-tri', [['ajout', 'Date d’ajout'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['duree', 'Durée'], ['titre', 'Titre']], av.tri)}${champPf('av-pf', av.films, av.pf)}</div>
     <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) => {
@@ -98,7 +99,7 @@ function htmlAVoir() {
   <div class="grille-films grille-avoir">${items.map((f) => `<div class="carte-avoir">
     <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f)}</a>
     <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small></div>
-    <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="Marquer ${esc(f.titre)} comme vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span>Marquer comme vu</span></button>
+    <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="${esc(f.titre)} : je l’ai vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span>Je l’ai vu</span></button>
   </div>`).join('')}</div>${paginationHtml(p, nbPages, 'data-av-page')}`;
 }
 
@@ -613,7 +614,7 @@ function htmlRetro() {
     ${genres.length ? `<section class="retro-genre"><img src="img/decor-${slugGenre(genres[0].g)}.jpg" alt="${esc(GENRE_INFO[genres[0].g][7])}"><div class="retro-genre-voile" aria-hidden="true"></div>
       <div class="retro-genre-texte"><p class="sur-titre">Genre dominant</p><h2>${genres[0].g}</h2>
       ${lignesH(genres.map((x) => ({ ico: `<img class="hb-buste" src="${buste(x.g)}" alt="">`, nom: x.g, pct: (x.n / genres[0].n) * 100, val: x.n })))}</div></section>` : ''}
-    ${phares.length ? `<section class="retro-phares"><h2 class="section">Mes têtes d’affiche</h2><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol>${liste.map(([nom, n]) => `<li><a class="phare-lien" href="#personne/${encodeURIComponent(nom)}">${portrait(nom)}<div><b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')} ${ici}</small></div></a></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
+    ${phares.length ? `<section class="retro-phares"><h2 class="section">Mes têtes d’affiche</h2><div>${phares.map(([role, liste]) => `<div class="carte phare"><h3>${role}</h3><ol class="phare-ligne">${liste.map(([nom, n]) => `<li><a class="phare-lien" href="#personne/${encodeURIComponent(nom)}">${portrait(nom)}<b>${esc(nom)}</b><small class="muted">${pluriel(n, 'film')}</small></a></li>`).join('')}</ol></div>`).join('')}</div></section>` : ''}
     <section class="carte stat retro-rythme"><div class="stat-tete"><h3>Ton rythme par ${P === 'semaine' ? 'jour' : P === 'mois' ? 'semaine' : 'mois'}</h3></div>${courbe(rythme)}</section>
   </div>` : videMascotte('Rien à raconter… pour l’instant', 'Aucun film vu sur cette période. Change de période avec les flèches, ou ajoute un film.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
 }
@@ -752,7 +753,7 @@ function afficherRecherche() {
     const connus = new Set((rr.films || []).map((f) => f.tmdb_id));
     groupes = [['Dans ta collection', (rr.films || []).filter((f) => f.cherche.includes(q)).slice(0, 5).map(filmItem)],
       ['Ajouter depuis TMDB', rr.tmdb.filter((r) => !connus.has(r.id)).slice(0, 5).map((r) => `<div class="rr-item">${affiche(r.poster_path)}<span><b>${esc(r.title)}</b><small>${(r.release_date || '').slice(0, 4) || 'Date inconnue'}</small></span>
-        <span class="rr-actions"><button class="btn" type="button" data-rr-vu="${r.id}">Vu</button><button class="btn" type="button" data-rr-avoir="${r.id}">À voir</button></span></div>`)],
+        <span class="rr-actions"><button class="btn" type="button" data-rr-vu="${r.id}">Je l’ai vu</button><button class="btn" type="button" data-rr-avoir="${r.id}">+ Watchlist</button></span></div>`)],
       ['Pages', PAGES_RECHERCHE.filter(([n]) => norm(n).includes(q)).map(pageItem)]];
   }
   groupes = groupes.filter(([, l]) => l.length);

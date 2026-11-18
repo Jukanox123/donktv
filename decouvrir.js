@@ -53,36 +53,46 @@ async function basculerPlateforme(b) {
 /* ---------- Qu'est-ce que je regarde ? ---------- */
 
 const ICO_DE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/></svg>';
-const tg = { duree: 0, genre: '', mes: false, films: [], enCours: false };
-const DUREES = [[0, 'Peu importe'], [105, '1 h 45 max'], [135, '2 h 15 max']];
+const tg = { duree: '', genre: '', mes: null, ouvert: false, films: [], enCours: false };
+const DUREES = [['', 'Peu importe'], ['moins', 'Moins de 2 h'], ['plus', 'Plus de 2 h']];
 
-// Les films pas encore sortis ne peuvent pas être tirés.
-const candidats = () => tg.films.filter((f) => !(f.date_sortie_fr > aujourdhui()) && (!tg.duree || (f.duree && f.duree <= tg.duree))
+// Par défaut : seulement les films disponibles aujourd'hui sur mes plateformes. Les films pas encore sortis ne peuvent pas être tirés.
+const candidats = () => tg.films.filter((f) => !(f.date_sortie_fr > aujourdhui())
+  && (!tg.duree || (f.duree && (tg.duree === 'moins' ? f.duree <= 120 : f.duree > 120)))
   && (!tg.genre || f.genres.includes(tg.genre)) && (!tg.mes || (f.plateformes || []).some((p) => aMoi(p.nom))));
 const melange = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(([, x]) => x);
 const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}</span>`;
+const zoneTirage = () => $('#tirage-zone');
 
-async function ouvrirTirage() {
-  tg.films = (await chargerFilms()).filter((f) => f.statut === 'a_voir');
+// Encart de la Watchlist, replié par défaut : il se déplie sous le bouton « Qu'est-ce que je regarde ? ».
+function tirageHtml() {
+  tg.mes ??= !!(reglages.plateformes || []).length;
   const genres = GENRES.filter((g) => tg.films.some((f) => f.genres.includes(g)));
   if (!genres.includes(tg.genre)) tg.genre = '';
-  fen.classList.remove('petit'); fen.classList.add('tirage-fen');
-  fenCorps.innerHTML = `<div class="tirage">
-    <div class="tirage-tete"><img src="img/mascotte.png" alt=""><div><h2>Qu’est-ce que je regarde ?</h2><p class="muted">Baudet tire au sort un film de ta watchlist.</p></div>
-      <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  return `<section class="tirage carte">
     <div class="tirage-filtres">
       <div class="bascule" role="group" aria-label="Durée">${DUREES.map(([v, l]) => `<button type="button" data-tg-duree="${v}" aria-pressed="${tg.duree === v}">${l}</button>`).join('')}</div>
-      <label class="champ"><span>Genre</span><select id="tg-genre" data-menu><option value="">Tous</option>${genres.map((g) => `<option ${g === tg.genre ? 'selected' : ''}>${g}</option>`).join('')}</select></label>
-      ${(reglages.plateformes || []).length ? `<button class="btn" type="button" data-tg-mes aria-pressed="${tg.mes}">Sur mes plateformes</button>` : ''}
+      ${(reglages.plateformes || []).length ? `<button class="btn" type="button" data-tg-mes aria-pressed="${tg.mes}">${ICO_VU}Sur mes plateformes</button>` : ''}
     </div>
+    <div class="puces" role="group" aria-label="Genre">${['', ...genres].map((g) => `<button type="button" data-tg-genre="${g}" aria-pressed="${tg.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div>
     <div class="bobine"><div class="bobine-piste" id="piste"></div><span class="bobine-cadre" aria-hidden="true"></span></div>
     <p class="muted tirage-compte" id="tg-compte" aria-live="polite"></p>
     <div id="tg-resultat" aria-live="polite"></div>
-    <button class="btn primaire grand" type="button" data-tg-lancer>${ICO_DE}Lancer</button></div>`;
-  majTirage();
-  if (!fen.open) fen.showModal();
+    <button class="btn primaire grand" type="button" data-tg-lancer>${ICO_DE}Lancer</button></section>`;
 }
-fen.addEventListener('close', () => fen.classList.remove('tirage-fen'));
+
+function basculerTirage(b) {
+  tg.ouvert = !tg.ouvert;
+  b.setAttribute('aria-expanded', tg.ouvert);
+  afficherTirage();
+}
+function afficherTirage() {
+  const z = zoneTirage();
+  if (!z) return;
+  tg.films = av.films;
+  z.innerHTML = tg.ouvert ? tirageHtml() : '';
+  if (tg.ouvert) majTirage();
+}
 
 function majTirage() {
   const l = candidats(), piste = $('#piste');
@@ -114,7 +124,7 @@ function lancerTirage() {
   piste.classList.remove('arrete');
   $('#tg-resultat').innerHTML = '';
   piste.innerHTML = bande.map(affichePiste).join('');
-  fen.querySelectorAll('.tirage-filtres button, [data-tg-lancer]').forEach((x) => (x.disabled = true));
+  zoneTirage().querySelectorAll('.tirage button').forEach((x) => (x.disabled = true));
   const depart = decalage(piste, 2), arrivee = decalage(piste, fin) + (Math.random() - 0.5) * piste.children[0].offsetWidth * 0.5;
   const duree = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 3800, t0 = performance.now(), items = [...piste.children];
   let centre = -1;
@@ -132,7 +142,7 @@ function lancerTirage() {
     setTimeout(() => {
       piste.style.transition = ''; piste.classList.add('arrete');
       afficherElu(elu);
-      fen.querySelectorAll('.tirage-filtres button').forEach((x) => (x.disabled = false));
+      zoneTirage().querySelectorAll('.tirage button').forEach((x) => (x.disabled = false));
       bouton.disabled = false; bouton.innerHTML = ICO_DE + 'Relancer';
       tg.enCours = false;
     }, duree ? 480 : 0);
@@ -162,7 +172,7 @@ const carteTmdb = (c) => {
   const futur = c.release_date > aujourdhui();
   return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}</a>
   <a href="#decouverte/${c.id}" tabindex="-1"><b>${esc(c.title)}</b></a><span class="carte-bas"><span>${futur ? 'Sort le ' + dateLongue(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
-  <div class="carte-actions"><button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button>${futur ? '' : `<button class="btn" type="button" data-tmdb-vu="${c.id}" aria-label="${esc(c.title)} : vu">${ICO_VU}Vu</button>`}</div></div>`;
+  <div class="carte-actions"><button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button>${futur ? '' : `<button class="btn" type="button" data-tmdb-vu="${c.id}" aria-label="${esc(c.title)} : je l’ai vu">${ICO_VU}Je l’ai vu</button>`}</div></div>`;
 };
 const grille = (l) => `<div class="grille-films">${l.join('')}</div>`;
 
@@ -227,7 +237,7 @@ async function pageSaga(id) {
   const item = (p) => {
     const f = mien.get(p.id), vu = f?.statut === 'vu';
     const carte = !f ? carteTmdb(p) : vu ? carteFilm(f, noteBas(f)) : `${carteFilm(f, `<span>${f.annee ?? ''}</span>`)}
-      <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="Marquer ${esc(f.titre)} comme vu">${ICO_VU}<span>Marquer comme vu</span></button>`;
+      <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="${esc(f.titre)} : je l’ai vu">${ICO_VU}<span>Je l’ai vu</span></button>`;
     return `<li class="frise-item${vu ? '' : ' pas-vu'}"><span class="frise-annee">${(p.release_date || '').slice(0, 4) || 'À venir'}</span><span class="frise-point${vu ? ' vu' : ''}" aria-hidden="true"></span>${carte}</li>`;
   };
   return `<a class="retour" href="#sagas">${ICO_RETOUR}Mes sagas</a>
@@ -257,6 +267,7 @@ async function pageSagas() {
 
 /* ---------- Branchements ---------- */
 
+PAGES['a-voir'] && (PAGES['a-voir'].apres = afficherTirage);
 Object.assign(PAGES, { personne: (p) => pagePersonne(p), saga: (id) => pageSaga(id), sagas: () => pageSagas() });
 // Flèches de la frise seulement si elle dépasse de l'écran.
 PAGES.saga.apres = () => { const f = $('.frise'); if (f) $('.frise-fleches').style.display = f.scrollWidth > f.clientWidth + 2 ? '' : 'none'; };
@@ -267,20 +278,15 @@ $('#page').addEventListener('click', (e) => {
   if (!b) return;
   const d = b.dataset;
   if (d.pf) basculerPlateforme(b);
-  else if ('tirage' in d) ouvrirTirage().catch((err) => toast(err.message));
+  else if ('tirage' in d) basculerTirage(b);
+  else if (d.tgDuree != null) { tg.duree = d.tgDuree; b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
+  else if (d.tgGenre != null) { tg.genre = d.tgGenre; b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
+  else if ('tgMes' in d) { tg.mes = !tg.mes; b.setAttribute('aria-pressed', tg.mes); majTirage(); }
+  else if ('tgLancer' in d) lancerTirage();
   else if (d.frise) { const f = $('.frise'); f.scrollBy({ left: Number(d.frise) * f.clientWidth * 0.8, behavior: 'smooth' }); }
   else if (d.persPage) { pers.page = Number(d.persPage); route().then(() => $('#a-decouvrir')?.scrollIntoView({ block: 'start' })); }
   else if (d.tmdbVu) { ouvrirRecherche(); choisir(d.tmdbVu); }
   else if ('retour' in d) history.length > 1 ? history.back() : (location.hash = '#accueil');
   else if (d.rrAvoir) ajouterAVoirRapide(d.rrAvoir, b);
 });
-fen.addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (!b || !fen.classList.contains('tirage-fen')) return;
-  const d = b.dataset;
-  if (d.tgDuree) { tg.duree = Number(d.tgDuree); fen.querySelectorAll('[data-tg-duree]').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
-  else if ('tgMes' in d) { tg.mes = !tg.mes; b.setAttribute('aria-pressed', tg.mes); majTirage(); }
-  else if ('tgLancer' in d) lancerTirage();
-});
 $('#page').addEventListener('input', (e) => { if (e.target.id === 'pf-q') suggererPlateformes(e.target.value); });
-fen.addEventListener('change', (e) => { if (e.target.id === 'tg-genre') { tg.genre = e.target.value; majTirage(); } });

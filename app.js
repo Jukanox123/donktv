@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.2.3';
+const VERSION = '1.2.4';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -167,7 +167,38 @@ function pageReglages() {
   </div>`;
 }
 
+// Fond de la fiche : teinte moyenne de l'affiche, assombrie pour garder le texte clair lisible.
+const teintes = new Map();
+function teinterFiche() {
+  const affiche = $('.fiche-affiche img')?.getAttribute('src').replace(/^.*\/w500/, ''), hero = $('.fiche-hero');
+  if (!affiche || !hero || teintes.has(affiche)) return;
+  // Petite copie demandée en CORS : si TMDB refuse, l'affiche affichée n'est pas touchée et la couleur par défaut reste.
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
+      c.width = 12; c.height = 18; x.drawImage(img, 0, 0, 12, 18);
+      const d = x.getImageData(0, 0, 12, 18).data;
+      let r = 0, g = 0, b = 0, poids = 0;
+      for (let i = 0; i < d.length; i += 4) { // les pixels colorés comptent plus que les gris
+        const w = 0.2 + Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]);
+        r += d[i] * w; g += d[i + 1] * w; b += d[i + 2] * w; poids += w;
+      }
+      [r, g, b] = [r / poids / 255, g / poids / 255, b / poids / 255];
+      const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, delta = max - min;
+      const h = !delta ? 0 : max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+      const s = !delta ? 0 : delta / (1 - Math.abs(2 * l - 1));
+      const teinte = `hsl(${Math.round((h * 60 + 360) % 360)} ${Math.round(Math.min(Math.max(s, 0.18), 0.5) * 100)}% 22%)`;
+      teintes.set(affiche, teinte);
+      hero.style.setProperty('--fiche-bg', teinte);
+    } catch {}
+  };
+  img.src = 'https://image.tmdb.org/t/p/w92' + affiche;
+}
+
 const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), decouverte: (id) => pageDecouverte(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
+PAGES.film.apres = PAGES.decouverte.apres = teinterFiche;
 
 const pageIntrouvable = () => `<div class="vide-mascotte introuvable"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
   <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
@@ -304,8 +335,9 @@ function htmlFilm(f) {
   const n = visions.length;
   const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
-  return `<div class="fiche-tete">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>`}
-  <section class="fiche-hero">
+  return `<div class="fiche-tete">
+  <section class="fiche-hero"${teintes.has(f.affiche) ? ` style="--fiche-bg:${teintes.get(f.affiche)}"` : ''}>
+    <div class="fiche-retour">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>`}</div>
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
       <h1>${esc(f.titre)}</h1>
@@ -317,7 +349,7 @@ function htmlFilm(f) {
         ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`, niveau(f.note_tmdb && f.note_tmdb * 10))}
       </div>
       <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
-      ${decouverte ? `<div class="fiche-actions"><button class="btn clair" type="button" data-tmdb-vu="${f.tmdb_id}">${ICO_VU}Vu</button><button class="btn contour large" type="button" data-rr-avoir="${f.tmdb_id}">+ Watchlist</button></div>` : `<div class="fiche-actions">
+      ${decouverte ? `<div class="fiche-actions"><button class="btn clair" type="button" data-tmdb-vu="${f.tmdb_id}">${ICO_VU}Je l’ai vu</button><button class="btn contour large" type="button" data-rr-avoir="${f.tmdb_id}">+ Watchlist</button></div>` : `<div class="fiche-actions">
         <button class="btn clair" type="button" data-action="${vu ? 'revu' : 'vu'}">${vu ? 'Je l’ai revu' : 'Je l’ai vu'}</button>
         <button class="btn contour ${vu ? '' : 'large'}" type="button" data-action="modifier">Modifier</button>
         ${vu ? `<button class="btn contour" type="button" data-action="tops">${ICO_TROPHEE}${libelleTops(f.tops)}</button>` : ''}

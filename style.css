@@ -195,7 +195,7 @@ a.film { text-decoration: none; color: inherit; }
 a.film:hover b { text-decoration: underline; }
 .fiche-tete { display: flex; flex-direction: column; gap: 16px; }
 .retour { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; font-weight: 500; font-size: 15px; color: var(--muted); text-decoration: none; }
-.fiche-hero { border-radius: 20px; background: #24394A; color: #F3EEDD; padding: clamp(28px, 4vw, 56px); display: flex; flex-wrap: wrap; gap: clamp(32px, 4vw, 56px); align-items: stretch; }
+.fiche-hero { border-radius: 20px; background: var(--fiche-bg, #24394A); transition: background-color .6s; color: #F3EEDD; padding: clamp(28px, 4vw, 56px); display: flex; flex-wrap: wrap; gap: clamp(32px, 4vw, 56px); align-items: stretch; }
 .fiche-affiche { flex: 0 0 320px; align-self: flex-start; aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden; background: #3E5F7A; box-shadow: 0 30px 50px -24px rgba(0,0,0,.6); }
 .fiche-affiche img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fiche-infos { flex: 999 1 480px; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; gap: 20px; }
@@ -794,8 +794,7 @@ dialog.feuille { width: min(520px, 100%); }
   .carte-avoir .poster { border-radius: 6px; box-shadow: none; }
   .carte-avoir .badge, .carte-avoir .bustes { display: none; }
   .carte-avoir .btn { width: 56px; height: 56px; padding: 0; flex-direction: column; gap: 2px; font-size: 11px; margin: 0; }
-  .carte-avoir .btn span { display: none; }
-  .carte-avoir .btn::after { content: "Vu"; }
+  .carte-avoir .btn { width: 64px; height: 60px; line-height: 1.15; text-align: center; white-space: normal; }
   .genre-hero { margin: 0 -20px; border-radius: 0; min-height: 440px; padding: 24px 20px; }
   .genre-hero picture img { object-position: 80% 40%; }
   .genre-hero::after { background: linear-gradient(100deg, rgba(var(--g-voile),.9) 0%, rgba(var(--g-voile),.64) 44%, rgba(var(--g-voile),0) 68%); }
@@ -1003,8 +1002,6 @@ dialog.tirage-fen { width: min(720px, calc(100% - 32px)); margin: auto; }
   .jauge-ronde b { font-size: 26px; }
   .jauge-ronde b small { font-size: 16px; }
   .jauge-ronde > span > small { font-size: 11px; }
-  .frise-item > .btn span { display: none; }
-  .frise-item > .btn::after { content: "Vu"; }
   .frise { --w: 120px; --g: 14px; gap: 14px; margin: 0 -20px; padding: 0 20px 8px; scroll-padding: 0 20px; }
   .frise-fleches { display: none; }
   .saga-jauge b { font-size: 26px; }
@@ -1100,3 +1097,24 @@ nav.capsule > a[aria-current], .capsule-espace.actif { background: none; color: 
 .etiquettes.bords { justify-content: space-between; }
 .etiquettes.bords span { flex: 0 0 0; display: flex; justify-content: center; }
 .cal-detail .pagination .long { display: none; }
+/* Fiche : fond teinté par l'affiche, pleine largeur et collé au menu sur PC ; « Retour » dans le bandeau */
+.fiche-hero { position: relative; }
+.fiche-retour { position: absolute; top: 6px; left: clamp(28px, 4vw, 56px); }
+.fiche-hero .retour { color: rgba(243,238,221,.8); }
+.fiche-hero .retour:hover { color: #F3EEDD; }
+@media (min-width: 761px) {
+  #page:has(> .fiche-tete) { overflow-x: visible; }
+  .fiche-tete .fiche-hero { width: 100vw; margin: -32px calc(50% - 50vw) 0; border-radius: 0;
+    padding-inline: calc((100vw - min(100vw, 1280px)) / 2 + clamp(20px, 5vw, 64px)); }
+  .fiche-tete .fiche-retour { left: calc((100vw - min(100vw, 1280px)) / 2 + clamp(20px, 5vw, 64px)); }
+}
+@media (max-width: 760px) {
+  .fiche-retour { position: static; order: -1; margin: -12px 0 -12px; }
+}
+/* Rétrospective : têtes d'affiche en pleine largeur, 3 portraits en ligne */
+.retro-corps > .retro-genre, .retro-corps > .retro-phares { grid-column: 1 / -1; }
+.phare-ligne { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px !important; }
+.phare-ligne .phare-lien { flex-direction: column; text-align: center; gap: 8px; }
+.phare-ligne .initiales { width: clamp(72px, 12vw, 120px); height: clamp(72px, 12vw, 120px); border-radius: 50%; font-size: 26px; object-fit: cover; }
+.phare-ligne b { font-size: 16px; line-height: 1.2; }
+.phare-ligne small { font-size: 13px; }
