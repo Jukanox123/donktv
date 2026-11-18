@@ -140,15 +140,18 @@ const CLES = [
   { champ: 'omdb_key', nom: 'Clé OMDb', aide: 'Gratuite, à demander sur omdbapi.com. Limitée à 1 000 requêtes par jour.', test: (v) => omdb('tt0133093', v) },
 ];
 
+// Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
+const VERSION = '1.1';
+
 function pageReglages() {
   const theme = reglages.theme || 'auto';
-  return `<div class="titre-page"><p class="sur-titre">Réglages</p><h1>Ton application, à ta façon</h1></div>
+  return `<div class="titre-page"><h1>Réglages</h1></div>
   <div class="reglages">
     <section class="carte"><div><h2>Apparence</h2><p class="muted">Le mode automatique suit le réglage de ton téléphone ou de ton ordinateur.</p></div>
       <div class="themes" role="radiogroup" aria-label="Thème">${[['clair', 'Clair'], ['sombre', 'Sombre'], ['auto', 'Automatique']].map(([id, label]) =>
         `<button type="button" role="radio" aria-checked="${theme === id}" data-theme-choix="${id}"><span class="apercu" style="background:${APERCUS[id]};border:1px solid var(--line)" aria-hidden="true"></span>${label}</button>`).join('')}</div>
     </section>
-    <section class="carte"><div><h2>Mes plateformes</h2><p class="muted">Touche celles auxquelles tu es abonné : elles ressortent en vert dans « Où le regarder ? » et servent au filtre « Sur mes plateformes ».</p></div>
+    <section class="carte"><div><h2>Mes plateformes</h2><p class="muted">Cherche celles auxquelles tu es abonné et ajoute-les : elles ressortent en vert dans « Où le regarder ? » et servent au filtre « Sur mes plateformes ».</p></div>
       <div id="pf-choix"><p class="muted">Chargement des plateformes…</p></div></section>
     <section class="carte"><div><h2>Sources des films</h2><p class="muted">Deux clés gratuites : TMDB pour les fiches, OMDb pour la note des critiques.</p></div>
       ${CLES.map((k) => `<div class="cle" data-cle="${k.champ}">
@@ -157,7 +160,7 @@ function pageReglages() {
           <button class="btn" type="button" data-voir>Afficher</button><button class="btn" type="button" data-tester>Tester et enregistrer</button></div>
         <small>${k.aide}</small></div>`).join('')}
     </section>
-    <section class="carte"><h2>À propos</h2><p style="font-size:15px">DonkTV · version 1.0</p>
+    <section class="carte"><h2>À propos</h2><p style="font-size:15px">DonkTV · version ${VERSION}</p>
       <p class="muted" style="font-size:14px">Fiches, affiches et note des spectateurs : TMDB. Note des critiques : Rotten Tomatoes, via OMDb. Cette application utilise l'API TMDB mais n'est ni approuvée ni certifiée par TMDB.</p>
       <button class="btn" type="button" data-deconnexion style="align-self:flex-start">Se déconnecter</button>
     </section>
@@ -300,15 +303,15 @@ function htmlFilm(f) {
     <div class="fiche-main">
       ${f.synopsis || pasSorti ? `<section><h2 class="section">Synopsis</h2><p class="synopsis${f.synopsis ? '' : ' muted'}">${f.synopsis ? esc(f.synopsis) : 'Le film n’est pas encore sorti : son synopsis sera bientôt disponible.'}</p></section>` : ''}
       ${ouRegarderHtml(f.offres)}
-      ${f.saga ? sagaFicheHtml(f.saga) : ''}
       ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
         <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path d="M33 26l23 14-23 14z" fill="#1A2730"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
       ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '', r.id)).join('')}</ul></section>` : ''}
       ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
-    <aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
+    <div class="fiche-cote"><aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
       <b>${dateLongue(d)}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
       : `<p class="muted">Pas encore vu. Dans ta watchlist depuis le ${dateLongue(f.ajoute_le.slice(0, 10))}.</p>`}</aside>
+    ${f.saga ? sagaFicheHtml(f.saga) : ''}</div>
   </div>`;
 }
 
@@ -320,15 +323,14 @@ function ouRegarderHtml(o) {
   const abo = [...o.abo].sort((a, b) => aMoi(b.nom) - aMoi(a.nom));
   return `<section class="ou-regarder"><h2 class="section">Où le regarder ?</h2>
     ${abo.length ? `<ul class="pfs">${abo.map((p) => pastillePf(p, aMoi(p.nom))).join('')}</ul>` : '<p class="muted">Pas disponible en abonnement ni gratuitement en France pour l’instant.</p>'}
-    ${o.achat.length ? `<p class="pf-achat"><span class="muted">En location ou à l’achat :</span> ${o.achat.map((p) => `<span>${logoPf(p)}${esc(p.nom)}</span>`).join('')}</p>` : ''}
-    <p class="muted pf-note">${(reglages.plateformes || []).length ? '' : 'Choisis tes plateformes dans les <a href="#reglages">Réglages</a> pour les voir en vert. '}Données JustWatch via ${o.lien ? `<a href="${esc(o.lien)}" target="_blank" rel="noopener">TMDB ↗</a>` : 'TMDB'}</p></section>`;
+    ${(reglages.plateformes || []).length ? '' : '<p class="muted pf-note">Choisis tes plateformes dans les <a href="#reglages">Réglages</a> pour les voir en vert.</p>'}</section>`;
 }
 
 const nomSaga = (n) => String(n).replace(/\s*[-–]\s*(Saga|Collection)$/i, '');
 const sortis = (parts) => parts.filter((p) => p.release_date && p.release_date <= aujourdhui());
 function sagaFicheHtml(sg) {
   const ids = new Set(films.filter((x) => x.statut === 'vu').map((x) => x.tmdb_id)), l = sg.parts && sortis(sg.parts), n = l?.length, vus = l?.filter((p) => ids.has(p.id)).length;
-  return `<section><h2 class="section">Saga</h2><a class="saga-lien carte" href="#saga/${sg.id}"><span><b>${esc(nomSaga(sg.nom))}</b>${n ? `<small>${vus} ${vus > 1 ? 'films vus' : 'film vu'} sur ${n}</small><span class="jauge" aria-hidden="true"><span style="width:${(vus / n) * 100}%"></span></span>` : ''}</span>${FLECHE('d')}</a></section>`;
+  return `<section class="carte histo saga-cote"><h2>Saga</h2><a class="saga-lien" href="#saga/${sg.id}"><span><b>${esc(nomSaga(sg.nom))}</b>${n ? `<small>${vus} ${vus > 1 ? 'films vus' : 'film vu'} sur ${n}</small><span class="jauge" aria-hidden="true"><span style="width:${(vus / n) * 100}%"></span></span>` : ''}</span>${FLECHE('d')}</a></section>`;
 }
 
 async function pageFilm(id) {
@@ -360,7 +362,7 @@ const nomPlateforme = (n) => n.replace(/\s+(Standard\s+)?with\s+Ads$/i, '').repl
 const uniques = (l) => [...new Map(l.sort((a, b) => a.display_priority - b.display_priority).map((p) => [nomPlateforme(p.provider_name), { nom: nomPlateforme(p.provider_name), logo: p.logo_path }])).values()];
 function offres(d) {
   const r = d['watch/providers']?.results?.FR || {};
-  return { abo: uniques([...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]), achat: uniques([...(r.rent || []), ...(r.buy || [])]), lien: r.link };
+  return { abo: uniques([...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]) };
 }
 const aMoi = (nom) => (reglages.plateformes || []).includes(nom);
 const mesLogos = (f) => { const l = (f.plateformes || []).filter((p) => aMoi(p.nom)); return l.length ? `<span class="mes-pf" role="img" aria-label="Sur ${esc(l.map((p) => p.nom).join(', '))}">${l.map((p) => logoPf(p)).join('')}</span>` : ''; };

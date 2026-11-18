@@ -641,21 +641,38 @@ async function pageAccueilPleine() {
     <div class="rangee">${[...aVoir].sort((a, b) => b.ajoute_le.localeCompare(a.ajoute_le)).slice(0, 6).map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span><span>ajouté ${ilYa(f.ajout)}</span>`).replace('carte-bas', 'carte-bas sans-points')).join('')}</div></section>` : ''}
   ${sorties.length ? `<section><div class="section-tete"><div><h2 class="section">Bientôt au cinéma en France</h2></div></div>
     <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml(f, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>`)}
-      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}</span></span></a>`; }).join('')}</div></section>` : ''}`;
+      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}</span></span></a>`; }).join('')}</div></section>` : ''}
+  ${fonctionnalitesHtml(aVoir.length)}`;
+}
+
+function fonctionnalitesHtml(nAVoir) {
+  const carte = (attr, couleur, ico, titre, texte) => `<li><${attr.startsWith('href') ? 'a' : 'button type="button"'} class="fonction" ${attr}><span class="espace-ico" style="background:${couleur}" aria-hidden="true">${ico}</span>
+    <span><b>${titre}</b><small>${texte}</small></span></${attr.startsWith('href') ? 'a' : 'button'}></li>`;
+  return `<section class="fonctions"><div class="section-tete"><div><h2 class="section">Ce que DonkTV sait faire</h2></div></div><ul>
+    ${carte(nAVoir ? 'data-tirage' : 'href="#a-voir"', '#C2603A', ICO_DE.replace(/width="18" height="18"/, 'width="22" height="22"'), 'Qu’est-ce que je regarde ?', 'Baudet tire au sort un film de ma watchlist, selon la durée, le genre et mes plateformes.')}
+    ${carte('href="#reglages"', '#56685A', ICO_LOUPE.replace(/width="18" height="18"/, 'width="22" height="22"'), 'Où le regarder', 'Les plateformes de chaque film, et les miennes en vert.')}
+    ${carte('href="#tops"', '#E3A72F', svgEspace(CHEMINS.tops), 'Mes tops', 'Mon top 10 de tous les temps et un top 5 par genre.')}
+    ${carte('href="#stats"', '#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Mes genres, mes pays, mes heures devant l’écran.')}
+    ${carte('href="#retros"', '#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Ma semaine, mon mois et mon année de cinéma.')}
+    ${carte('href="#sagas"', '#7A5AA6', svgEspace(CHEMINS.sagas), 'Sagas', 'Où j’en suis dans Star Wars, Harry Potter et les autres.')}
+  </ul></section>`;
 }
 
 /* ---------- Mon espace (mobile) ---------- */
 
+// Icônes des pages, partagées par Mon espace et la section « Ce que DonkTV sait faire » de l'accueil.
+const CHEMINS = { tops: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3', stats: 'M3 17l6-6 4 4 8-8M15 7h6v6', retros: 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z', sagas: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' };
+const svgEspace = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+
 function pageMonEspace() {
   const lien = (href, couleur, ico, titre, sous) => `<a href="${href}"><span class="espace-ico" style="background:${couleur}" aria-hidden="true">${ico}</span><span><b>${titre}</b><small>${sous}</small></span>${ICO_FLECHE_D}</a>`;
-  const svg = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
   return `<div class="titre-page"><h1>Mon espace</h1></div><nav class="carte espace" aria-label="Autres pages">
-    ${lien('#tops', '#E3A72F', svg('M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3'), 'Mes tops', 'Top 10 de tous les temps et tops par genre')}
-    ${lien('#stats', '#3F7A4F', svg('M3 17l6-6 4 4 8-8M15 7h6v6'), 'Statistiques', 'Mes chiffres, mes genres et mes pays')}
-    ${lien('#retros', '#3E8ED0', svg('M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z'), 'Rétrospectives', 'Semaine, mois et année')}
-    ${lien('#sagas', '#7A5AA6', svg('M4 5h4v14H4zM10 5h4v14h-4zM16.5 5.5l3.8 1-3.6 13.5-3.8-1z'), 'Mes sagas', 'Star Wars, Harry Potter… où j’en suis')}
-    ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svg('M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM12 7v7M9 11l3 3 3-3M11 19h2')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
-    ${lien('#reglages', '#56685A', svg('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 9 4.68 1.65 1.65 0 0 0 10 3.17V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 2.82 1.17l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 21 10h.09a2 2 0 1 1 0 4H21a1.65 1.65 0 0 0-1.6 1z'), 'Réglages', 'Thème, clés TMDB et OMDb')}
+    ${lien('#tops', '#E3A72F', svgEspace(CHEMINS.tops), 'Mes tops', 'Top 10 de tous les temps et tops par genre')}
+    ${lien('#stats', '#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Mes chiffres, mes genres et mes pays')}
+    ${lien('#retros', '#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Semaine, mois et année')}
+    ${lien('#sagas', '#7A5AA6', svgEspace(CHEMINS.sagas), 'Mes sagas', 'Star Wars, Harry Potter… où j’en suis')}
+    ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svgEspace('M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM12 7v7M9 11l3 3 3-3M11 19h2')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
+    ${lien('#reglages', '#56685A', svgEspace('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'), 'Réglages', 'Thème, clés TMDB et OMDb')}
   </nav>`;
 }
 

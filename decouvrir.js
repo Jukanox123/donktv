@@ -6,31 +6,48 @@ const pfListe = memo(async () => {
   const { results } = await tmdb('/watch/providers/movie', { watch_region: 'FR' });
   return uniques(results.map((p) => ({ ...p, display_priority: p.display_priorities?.FR ?? p.display_priority })));
 });
-let pfToutes = false;
+const ICO_RETIRER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 
+// Recherche en haut, mes plateformes en dessous : seules celles choisies sont affichées.
 async function remplirPlateformes() {
   const zone = $('#pf-choix');
   if (!zone) return;
   if (!reglages.tmdb_token) return (zone.innerHTML = '<p class="muted">Renseigne d’abord ta clé TMDB ci-dessous.</p>');
-  let l;
-  try { l = await pfListe(); } catch (err) { return (zone.innerHTML = `<p class="muted">${esc(err.message)}</p>`); }
-  const mes = reglages.plateformes || [], vus = l.filter((p, i) => pfToutes || i < 18 || mes.includes(p.nom));
-  zone.innerHTML = `<ul class="pfs pf-choix">${vus.map((p) => `<li><button type="button" class="pf${mes.includes(p.nom) ? ' pf-mien' : ''}" data-pf="${esc(p.nom)}" aria-pressed="${mes.includes(p.nom)}">${logoPf(p)}<b>${esc(p.nom)}</b></button></li>`).join('')}</ul>
-    ${l.length > vus.length ? `<button class="btn plat" type="button" data-pf-toutes>Afficher toutes les plateformes (${l.length})</button>` : ''}`;
+  zone.innerHTML = `<div class="pf-recherche"><label class="champ champ-recherche">${ICO_LOUPE}<input id="pf-q" type="search" placeholder="Rechercher une plateforme" aria-label="Rechercher une plateforme" autocomplete="off" aria-controls="pf-sugg"></label>
+    <ul class="pf-sugg" id="pf-sugg" hidden></ul></div><ul class="pfs pf-choix" id="pf-mes" aria-label="Mes plateformes"></ul>`;
+  majMesPlateformes();
 }
+
 pageReglages.apres = remplirPlateformes;
+
+async function majMesPlateformes() {
+  const l = await pfListe().catch(() => []), mes = reglages.plateformes || [], logo = (n) => l.find((p) => p.nom === n) || { nom: n };
+  $('#pf-mes').innerHTML = mes.length ? mes.map((n) => `<li><span class="pf pf-mien">${logoPf(logo(n))}<b>${esc(n)}</b><button type="button" class="pf-retirer" data-pf="${esc(n)}" aria-label="Retirer ${esc(n)}">${ICO_RETIRER}</button></span></li>`).join('')
+    : '<li class="muted">Aucune plateforme choisie pour l’instant.</li>';
+}
+
+async function suggererPlateformes(q) {
+  const ul = $('#pf-sugg'), mes = reglages.plateformes || [];
+  let l = [];
+  try { l = await pfListe(); } catch (err) { ul.innerHTML = `<li class="muted">${esc(err.message)}</li>`; return (ul.hidden = false); }
+  const r = q.trim() ? l.filter((p) => !mes.includes(p.nom) && norm(p.nom).includes(norm(q.trim()))).slice(0, 8) : [];
+  ul.innerHTML = r.length ? r.map((p) => `<li><button type="button" data-pf="${esc(p.nom)}">${logoPf(p)}<b>${esc(p.nom)}</b><span class="lien">Ajouter</span></button></li>`).join('') : `<li class="muted">Aucune plateforme ne correspond.</li>`;
+  ul.hidden = !q.trim();
+}
 
 async function basculerPlateforme(b) {
   const nom = b.dataset.pf, mes = reglages.plateformes || [], avant = [...mes];
-  const apres = mes.includes(nom) ? mes.filter((x) => x !== nom) : [...mes, nom];
   b.disabled = true;
   try {
-    await enregistrerReglages({ plateformes: apres });
-    b.setAttribute('aria-pressed', apres.includes(nom)); b.classList.toggle('pf-mien', apres.includes(nom));
+    await enregistrerReglages({ plateformes: mes.includes(nom) ? mes.filter((x) => x !== nom) : [...mes, nom] });
+    const q = $('#pf-q');
+    if (b.closest('#pf-sugg')) { q.value = ''; $('#pf-sugg').hidden = true; q.focus(); }
+    majMesPlateformes();
   } catch (err) {
     reglages.plateformes = avant;
+    b.disabled = false;
     toast(/plateformes/.test(err.message) ? 'La base n’a pas encore la colonne « plateformes » : lance le script du 18 novembre dans Supabase.' : err.message);
-  } finally { b.disabled = false; }
+  }
 }
 
 /* ---------- Qu'est-ce que je regarde ? ---------- */
@@ -220,11 +237,11 @@ async function pageSagas() {
 Object.assign(PAGES, { personne: (p) => pagePersonne(p), saga: (id) => pageSaga(id), sagas: () => pageSagas() });
 
 $('#page').addEventListener('click', (e) => {
+  if (!e.target.closest('.pf-recherche') && $('#pf-sugg')) $('#pf-sugg').hidden = true;
   const b = e.target.closest('button');
   if (!b) return;
   const d = b.dataset;
   if (d.pf) basculerPlateforme(b);
-  else if ('pfToutes' in d) { pfToutes = true; remplirPlateformes(); }
   else if ('tirage' in d) ouvrirTirage().catch((err) => toast(err.message));
   else if ('persTous' in d) { pers.tous = true; route(); }
   else if ('retour' in d) history.length > 1 ? history.back() : (location.hash = '#accueil');
@@ -238,4 +255,5 @@ fen.addEventListener('click', (e) => {
   else if ('tgMes' in d) { tg.mes = !tg.mes; b.setAttribute('aria-pressed', tg.mes); majTirage(); }
   else if ('tgLancer' in d) lancerTirage();
 });
+$('#page').addEventListener('input', (e) => { if (e.target.id === 'pf-q') suggererPlateformes(e.target.value); });
 fen.addEventListener('change', (e) => { if (e.target.id === 'tg-genre') { tg.genre = e.target.value; majTirage(); } });
