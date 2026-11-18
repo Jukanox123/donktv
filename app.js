@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.2';
+const VERSION = '1.2.1';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -389,7 +389,6 @@ function offres(d) {
   return { abo: uniques([...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]) };
 }
 const aMoi = (nom) => (reglages.plateformes || []).includes(nom);
-const mesLogos = (f) => { const l = (f.plateformes || []).filter((p) => aMoi(p.nom)); return l.length ? `<span class="mes-pf" role="img" aria-label="Sur ${esc(l.map((p) => p.nom).join(', '))}">${l.map((p) => logoPf(p)).join('')}</span>` : ''; };
 
 // Garde la fiche à jour : notes, date de sortie, plateformes et saga depuis TMDB ; note des critiques tous les 30 jours.
 async function mettreAJour(f, d, avecOmdb = true) {
