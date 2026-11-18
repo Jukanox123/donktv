@@ -151,17 +151,18 @@ function afficherElu(f) {
 /* ---------- Pages réalisateur et acteur ---------- */
 
 const personneTmdb = memo((id) => tmdb(`/person/${id}`, { append_to_response: 'movie_credits' }));
-const pers = { id: null, tous: false };
+const pers = { id: null, page: 1 };
 const ICO_RETOUR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
 const retour = (label) => `<button class="retour" type="button" data-retour>${ICO_RETOUR}${label}</button>`;
 const sansCle = () => videMascotte('Clé TMDB manquante', 'Cette page se remplit avec TMDB : renseigne ta clé dans les Réglages.', '<a class="btn primaire" href="#reglages">Ouvrir les réglages</a>');
 
 // Carte d'un film qui n'est pas (encore) dans ma base.
+// L'affiche mène à la fiche du film (sans note ni visionnage) ; « Vu » ouvre l'ajout avec la note.
 const carteTmdb = (c) => {
   const futur = c.release_date > aujourdhui();
-  return `<div class="carte-film carte-tmdb"><span class="poster">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}</span>
-  <b>${esc(c.title)}</b><span class="carte-bas"><span>${futur ? 'Sort le ' + dateLongue(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
-  <button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button></div>`;
+  return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}</a>
+  <a href="#decouverte/${c.id}" tabindex="-1"><b>${esc(c.title)}</b></a><span class="carte-bas"><span>${futur ? 'Sort le ' + dateLongue(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
+  <div class="carte-actions"><button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button>${futur ? '' : `<button class="btn" type="button" data-tmdb-vu="${c.id}" aria-label="${esc(c.title)} : vu">${ICO_VU}Vu</button>`}</div></div>`;
 };
 const grille = (l) => `<div class="grille-films">${l.join('')}</div>`;
 
@@ -173,7 +174,7 @@ async function pagePersonne(p) {
     id = (r.results?.find((x) => x.name === nom) || r.results?.[0])?.id;
     if (!id) return videMascotte('Personne introuvable', `TMDB ne connaît personne qui s’appelle « ${esc(nom)} ».`, retour('Retour'));
   }
-  if (pers.id !== id) Object.assign(pers, { id, tous: false });
+  if (pers.id !== id) Object.assign(pers, { id, page: 1 });
   const [d, F] = await Promise.all([personneTmdb(id), chargerFilms()]);
   const real = d.known_for_department === 'Directing', femme = d.gender === 1;
   const credits = [...new Map((real ? d.movie_credits.crew.filter((c) => c.job === 'Director') : d.movie_credits.cast).map((c) => [c.id, c])).values()];
@@ -182,28 +183,31 @@ async function pagePersonne(p) {
   const reste = credits.filter((c) => !mien.has(c.id) && !(c.genre_ids || []).includes(99)).sort((a, b) => b.vote_count - a.vote_count);
   const notes = vus.filter((f) => f.note).map((f) => f.note), coeurs = vus.filter((f) => f.coup_de_coeur).length;
   const metier = real ? (femme ? 'Réalisatrice' : 'Réalisateur') : femme ? 'Actrice' : 'Acteur';
-  const naissance = d.birthday ? `${femme ? 'Née' : 'Né'} le ${dateLongue(d.birthday)}${d.place_of_birth ? ' · ' + esc(d.place_of_birth) : ''}${d.deathday ? ` · ${femme ? 'morte' : 'mort'} le ${dateLongue(d.deathday)}` : ''}` : '';
   const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? fr1(moyenne(notes)) : '–', 'ma note moyenne'], [coeurs, coeurs > 1 ? 'coups de cœur' : 'coup de cœur'],
     [`${vus.length}<small>/${credits.length}</small>`, real ? 'de ses films réalisés' : 'de sa filmographie']];
-  const montres = pers.tous ? reste : reste.slice(0, 12);
+  const { p: pg, nbPages, items: montres } = decouper(reste, pers.page, mobile() ? 9 : 10);
+  pers.page = pg;
   return `${retour('Retour')}
   <section class="personne-tete"><span class="personne-photo">${d.profile_path ? `<img src="https://image.tmdb.org/t/p/w342${esc(d.profile_path)}" alt="Portrait de ${esc(d.name)} (TMDB)">` : esc(d.name.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>
-    <div><p class="sur-titre">${metier}</p><h1>${esc(d.name)}</h1>${naissance ? `<p class="muted">${naissance}</p>` : ''}</div>
-      ${d.biography ? `<details class="bio"><summary>${esc(d.biography.split('\n')[0].slice(0, 260))}${d.biography.length > 260 ? '… <span class="lien">Lire la suite</span>' : ''}</summary>${d.biography.length > 260 ? `<p>${esc(d.biography).replace(/\n+/g, '</p><p>')}</p>` : ''}</details>` : ''}
+    <div><p class="sur-titre">${metier}</p><h1>${esc(d.name)}</h1></div>
       <div class="kpis personne-kpis">${kpis.map(([v, l]) => `<div class="kpi"><span class="chiffre">${v}</span><span class="muted">${l}</span></div>`).join('')}</div></section>
-  <section class="bloc"><h2 class="section">${real ? 'Mes films de' : 'Mes films avec'} ${esc(d.name)}</h2>
+  <section class="bloc"><h2 class="section">Mes films vus</h2>
     ${vus.length ? grille(vus.map((f) => carteFilm(f, noteBas(f)))) : '<p class="muted">Aucun film vu pour l’instant.</p>'}</section>
-  ${aVoir.length ? `<section class="bloc"><h2 class="section">Dans ma watchlist</h2>${grille(aVoir.map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span>`)))}</section>` : ''}
-  ${reste.length ? `<section class="bloc"><h2 class="section">À découvrir</h2>${grille(montres.map(carteTmdb))}
-    ${reste.length > montres.length ? `<button class="btn" type="button" data-pers-tous style="align-self:center">Voir toute la filmographie (${reste.length})</button>` : ''}</section>` : ''}`;
+  ${aVoir.length ? `<section class="bloc"><h2 class="section">Films dans ma watchlist</h2>${grille(aVoir.map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span>`)))}</section>` : ''}
+  ${reste.length ? `<section class="bloc" id="a-decouvrir"><h2 class="section">Films à découvrir</h2>${grille(montres.map(carteTmdb))}${paginationHtml(pg, nbPages, 'data-pers-page')}</section>` : ''}`;
 }
 
 /* ---------- Sagas ---------- */
 
 const FL = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
-// Coupe un texte à n caractères, sur un mot entier.
-const couper = (t, n) => (t.length <= n ? t : t.slice(0, t.lastIndexOf(' ', n)).replace(/[\s,;:.]+$/, '') + '…');
+// Garde les phrases entières qui tiennent dans n caractères (au moins la première).
+const couper = (t, n) => {
+  const phrases = t.match(/[^.!?…]+[.!?…]+(\s|$)|[^.!?…]+$/g) || [t];
+  let r = phrases[0];
+  for (const ph of phrases.slice(1)) { if ((r + ph).length > n) break; r += ph; }
+  return r.trim();
+};
 const ICO_VU = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
 
 // Jauge ronde : « 2/4 » au centre.
@@ -229,7 +233,7 @@ async function pageSaga(id) {
   return `<a class="retour" href="#sagas">${ICO_RETOUR}Mes sagas</a>
   <section class="saga-tete"><div class="saga-titre"><p class="sur-titre">Saga</p><h1>${esc(nomSaga(c.name))}</h1></div>
     ${jaugeRonde(vus, l.length)}
-    ${c.overview ? `<p class="saga-resume muted">${esc(couper(c.overview, 220))}</p>` : ''}</section>
+    ${c.overview ? `<p class="saga-resume muted">${esc(couper(c.overview, 480))}</p>` : ''}</section>
   <section class="bloc"><div class="section-tete"><div><h2 class="section">Dans l’ordre de sortie</h2></div>
       <div class="frise-fleches"><button class="btn carre" type="button" data-frise="-1" aria-label="Films précédents">${FL('M15 18l-6-6 6-6')}</button><button class="btn carre" type="button" data-frise="1" aria-label="Films suivants">${FL('M9 18l6-6-6-6')}</button></div></div>
     <ol class="frise">${parts.map(item).join('')}</ol>
@@ -265,7 +269,8 @@ $('#page').addEventListener('click', (e) => {
   if (d.pf) basculerPlateforme(b);
   else if ('tirage' in d) ouvrirTirage().catch((err) => toast(err.message));
   else if (d.frise) { const f = $('.frise'); f.scrollBy({ left: Number(d.frise) * f.clientWidth * 0.8, behavior: 'smooth' }); }
-  else if ('persTous' in d) { pers.tous = true; route(); }
+  else if (d.persPage) { pers.page = Number(d.persPage); route().then(() => $('#a-decouvrir')?.scrollIntoView({ block: 'start' })); }
+  else if (d.tmdbVu) { ouvrirRecherche(); choisir(d.tmdbVu); }
   else if ('retour' in d) history.length > 1 ? history.back() : (location.hash = '#accueil');
   else if (d.rrAvoir) ajouterAVoirRapide(d.rrAvoir, b);
 });

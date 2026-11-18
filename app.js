@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.2.2';
+const VERSION = '1.2.3';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -167,7 +167,7 @@ function pageReglages() {
   </div>`;
 }
 
-const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
+const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), decouverte: (id) => pageDecouverte(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
 
 const pageIntrouvable = () => `<div class="vide-mascotte introuvable"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
   <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
@@ -196,9 +196,11 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#esp
 
 async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
-  const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace' }[nom] || nom;
+  const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace', decouverte: 'collection' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  $('.capsule-espace').classList.toggle('actif', ['tops', 'stats', 'retros', 'sagas', 'reglages'].includes(actif));
+  const espace = ['tops', 'stats', 'retros', 'sagas', 'reglages', 'mon-espace'].includes(actif);
+  $('.capsule-espace').classList.toggle('actif', espace && actif !== 'mon-espace');
+  if (espace) $('.nav-bas a[href="#mon-espace"]').setAttribute('aria-current', 'page');
   placerPastille();
   const rendu = (PAGES[nom] || pageIntrouvable)(id);
   if (rendu instanceof Promise) {
@@ -270,7 +272,7 @@ function etoilesHtml(note, id) {
     <svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="var(${note >= i ? '--star' : '--star-empty'})"/>${note >= i - 0.5 ? '<path d="M12 2.5v14.8l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z" fill="var(--star)"/>' : ''}</svg>
     <button type="button" role="radio" style="left:0" data-note="${i - 0.5}" aria-checked="${note === i - 0.5}" aria-label="${fr(i - 0.5)} sur 5"></button>
     <button type="button" role="radio" style="right:0" data-note="${i}" aria-checked="${note === i}" aria-label="${i} sur 5"></button></span>`).join('')}</div>
-    <span class="chiffre">${note ? fr(note) + ' / 5' : 'À noter'}</span></div>`;
+    <span class="chiffre">${note ? fr(note) + ' / 5' : ''}</span></div>`;
 }
 const coeurHtml = (on) => `<button class="btn coeur" type="button" data-coeur aria-pressed="${on}"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="none" stroke="#D2483B" stroke-width="1.8"/></svg>Coup de cœur</button>`;
 // Genres en lecture seule : ceux que TMDB donne au film.
@@ -296,13 +298,13 @@ const personne = (nom, photo, role, id) => `<li><a href="#personne/${id || encod
 const titreReal = (rs) => (rs.every((r) => r.genre === 1) ? 'Réalisatrice' : 'Réalisateur') + (rs.length > 1 ? 's' : '');
 
 function htmlFilm(f) {
-  const vu = f.statut === 'vu';
+  const vu = f.statut === 'vu', decouverte = f.statut === 'decouverte';
   const pasSorti = String(f.date_sortie_fr || f.annee || '') > aujourdhui();
   const visions = f.visionnages.map((v) => v.date).sort();
   const n = visions.length;
-  const vuTxt = !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
+  const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
-  return `<div class="fiche-tete"><a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>
+  return `<div class="fiche-tete">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>`}
   <section class="fiche-hero">
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
@@ -315,12 +317,12 @@ function htmlFilm(f) {
         ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`, niveau(f.note_tmdb && f.note_tmdb * 10))}
       </div>
       <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
-      <div class="fiche-actions">
+      ${decouverte ? `<div class="fiche-actions"><button class="btn clair" type="button" data-tmdb-vu="${f.tmdb_id}">${ICO_VU}Vu</button><button class="btn contour large" type="button" data-rr-avoir="${f.tmdb_id}">+ Watchlist</button></div>` : `<div class="fiche-actions">
         <button class="btn clair" type="button" data-action="${vu ? 'revu' : 'vu'}">${vu ? 'Je l’ai revu' : 'Je l’ai vu'}</button>
         <button class="btn contour ${vu ? '' : 'large'}" type="button" data-action="modifier">Modifier</button>
         ${vu ? `<button class="btn contour" type="button" data-action="tops">${ICO_TROPHEE}${libelleTops(f.tops)}</button>` : ''}
         <button class="btn contour carre" type="button" data-action="supprimer" aria-label="Supprimer le film">${ICO_POUBELLE}</button>
-      </div>
+      </div>`}
     </div>
   </section></div>
   <div class="fiche-corps">
@@ -332,10 +334,10 @@ function htmlFilm(f) {
       ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '', r.id)).join('')}</ul></section>` : ''}
       ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
-    <div class="fiche-cote"><aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
+    ${decouverte ? '' : `<div class="fiche-cote"><aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
       <b>${dateLongue(d)}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
       : `<p class="muted">Pas encore vu. Dans ta watchlist depuis le ${dateLongue(f.ajoute_le.slice(0, 10))}.</p>`}</aside>
-    ${f.saga ? sagaFicheHtml(f.saga) : ''}</div>
+    ${f.saga ? sagaFicheHtml(f.saga) : ''}</div>`}
   </div>`;
 }
 
@@ -355,6 +357,20 @@ const sortis = (parts) => parts.filter((p) => p.release_date && p.release_date <
 function sagaFicheHtml(sg) {
   const ids = new Set(films.filter((x) => x.statut === 'vu').map((x) => x.tmdb_id)), l = sg.parts && sortis(sg.parts), n = l?.length, vus = l?.filter((p) => ids.has(p.id)).length;
   return `<section class="carte histo saga-cote"><h2>Saga</h2><a class="saga-lien" href="#saga/${sg.id}"><span><b>${esc(nomSaga(sg.nom))}</b>${n ? `<small>${vus} ${vus > 1 ? 'films vus' : 'film vu'} sur ${n}</small><span class="jauge" aria-hidden="true"><span style="width:${(vus / n) * 100}%"></span></span>` : ''}</span>${FLECHE('d')}</a></section>`;
+}
+
+// Film vu sur une page réalisateur / acteur ou une saga, pas encore dans ma base : fiche sans note ni visionnage.
+async function pageDecouverte(tmdbId) {
+  const connu = films.find((x) => x.tmdb_id === Number(tmdbId));
+  if (connu) { location.replace('#film/' + connu.id); return ''; }
+  if (!reglages.tmdb_token) return sansCle();
+  const d = await details(tmdbId), f = { ...versFilm(d), statut: 'decouverte', visionnages: [] };
+  f.reals = d.credits.crew.filter((c) => c.job === 'Director').map((c) => ({ id: c.id, nom: c.name, photo: c.profile_path, genre: c.gender }));
+  f.idActeurs = new Map(d.credits.cast.map((c) => [c.name, c.id]));
+  f.offres = offres(d);
+  const saga = d.belongs_to_collection;
+  f.saga = saga && { id: saga.id, nom: saga.name, parts: (await collection(saga.id).catch(() => null))?.parts };
+  return htmlFilm(f);
 }
 
 async function pageFilm(id) {
@@ -378,7 +394,7 @@ async function pageFilm(id) {
 
 // Une lecture par film et par session (promesse gardée, oubliée en cas d'erreur pour réessayer).
 const memo = (fn) => { const m = new Map(); return (k) => { if (!m.has(k)) m.set(k, fn(k).catch((e) => { m.delete(k); throw e; })); return m.get(k); }; };
-const details = memo((tmdbId) => tmdb(`/movie/${tmdbId}`, { append_to_response: 'credits,release_dates,watch/providers' }));
+const details = memo((tmdbId) => tmdb(`/movie/${tmdbId}`, { append_to_response: 'credits,release_dates,watch/providers,videos', include_video_language: 'fr,en' }));
 const collection = memo((id) => tmdb(`/collection/${id}`));
 
 // « Netflix Standard with Ads », « Paramount+ Amazon Channel »… comptent comme la plateforme elle-même.
@@ -728,7 +744,7 @@ const majResultats = () => { const r = $('#coll-resultats'); if (r) r.innerHTML 
 
 /* Calendrier */
 
-const cal = { mois: null, jour: null, visions: [] };
+const cal = { mois: null, jour: null, page: 1, visions: [] };
 
 async function pageCalendrier() {
   const data = await lire('calendrier', () => sb.from('visionnages').select('date,film_id,films(id,titre,affiche,note,coup_de_coeur,duree)'));
@@ -759,18 +775,19 @@ function htmlCal() {
       ${vs.length <= 3 ? vs.map(img).join('') : img(vs[0]) + img(vs[1]) + `<span class="cal-plus">+${vs.length - 2}</span>`}
       <span class="cal-num">${d}</span>${vs.some((v) => v.revu) ? `<span class="cal-revu" title="Revisionnage">${ICO_REVU}</span>` : ''}${vs.length === 1 && vs[0].films.coup_de_coeur ? ICO_COEUR_CARTE : ''}</button>`);
   }
-  const vsJour = parJour[cal.jour] || [];
+  const vsTous = parJour[cal.jour] || [], { p, nbPages, items: vsJour } = decouper(vsTous, cal.page, 9);
+  cal.page = p;
   return `<section class="carte cal-mois" aria-labelledby="mois-titre">
     <div class="cal-tete"><div class="cal-nav"><button class="btn carre" type="button" data-mois="-1" aria-label="Mois précédent">${FLECHE('g')}</button>
       <h2 id="mois-titre">${nomMois}</h2><button class="btn carre" type="button" data-mois="1" aria-label="Mois suivant">${FLECHE('d')}</button></div>
       <p class="cal-resume"><span><strong>${duMois.length}</strong> ${duMois.length > 1 ? 'films' : 'film'}</span><span><strong>${heures} h</strong> devant l'écran</span><span><strong>${jours.length}</strong> ${jours.length > 1 ? 'jours' : 'jour'} de cinéma</span></p></div>
     <div class="cal-grille cal-semaine" aria-hidden="true">${['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((j) => `<span>${j}</span>`).join('')}</div>
     <div class="cal-grille">${cases.join('')}</div></section>
-  <aside class="carte cal-detail" aria-live="polite">${cal.jour ? `<div><span class="sur-titre">${pluriel(vsJour.length, 'film vu', 'films vus')}</span>
+  <aside class="carte cal-detail" aria-live="polite">${cal.jour ? `<div><span class="sur-titre">${pluriel(vsTous.length, 'film vu', 'films vus')}</span>
       <h2>${nomJour(cal.jour).replace(/^./, (c) => c.toUpperCase())} ${cal.jour === 1 ? '1er' : cal.jour} ${MOIS[m - 1]}</h2></div>
     <ul>${vsJour.map((v) => `<li><a href="#film/${v.films.id}">${affiche(v.films.affiche)}<span><b>${esc(v.films.titre)}</b>
       <small>${v.films.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(Number(v.films.note))}` : 'Pas noté'}${v.films.duree ? ' · ' + duree(v.films.duree) : ''}</small>
-      <span class="pastilles">${v.films.coup_de_coeur ? '<span class="pastille-coeur">Coup de cœur</span>' : ''}${v.revu ? '<span>Revisionnage</span>' : ''}</span></span></a></li>`).join('')}</ul>`
+      <span class="pastilles">${v.films.coup_de_coeur ? '<span class="pastille-coeur">Coup de cœur</span>' : ''}${v.revu ? '<span>Revisionnage</span>' : ''}</span></span></a></li>`).join('')}</ul>${paginationHtml(p, nbPages, 'data-cal-page')}`
     : `<h2>Aucun film en ${MOIS[m - 1]}</h2><p class="muted">Les films vus ce mois-ci apparaîtront dans les cases des jours.</p>`}</aside>`;
 }
 
@@ -797,11 +814,13 @@ $('#page').addEventListener('click', (e) => {
     $('.filtres').scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   } else if (d.mois) {
     const [y, m] = cal.mois.split('-').map(Number), x = new Date(y, m - 1 + Number(d.mois), 1);
-    cal.mois = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`; cal.jour = null;
+    cal.mois = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`; cal.jour = null; cal.page = 1;
     $('#cal').innerHTML = htmlCal();
   } else if (d.jour) {
-    cal.jour = Number(d.jour); $('#cal').innerHTML = htmlCal();
+    cal.jour = Number(d.jour); cal.page = 1; $('#cal').innerHTML = htmlCal();
     $(`[data-jour="${d.jour}"]`)?.focus();
+  } else if (d.calPage) {
+    cal.page = Number(d.calPage); $('#cal').innerHTML = htmlCal();
   }
 });
 

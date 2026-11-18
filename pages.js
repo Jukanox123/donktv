@@ -130,11 +130,11 @@ const GENRE_INFO = {
   Guerre: ['#C9C2B2', '#2A2A1E', '#545240', 'rgba(250,248,240,.72)', '240,236,226', 'Brume de l’aube, tranchées et héros ordinaires. Baudet a enfilé son casque et sorti ses jumelles.', 'Mes films de guerre', 'Baudet en uniforme kaki et casque, jumelles à la main, devant un campement militaire dans la brume de l’aube'],
 };
 
-const gp = { genre: null, q: '', tri: 'date', page: 1, films: [] };
+const gp = { genre: null, q: '', tri: 'date', pf: '', page: 1, films: [] };
 
 async function pageGenre(s) {
   const g = genreDeSlug(s) || GENRES[0];
-  if (gp.genre !== g) Object.assign(gp, { genre: g, q: '', tri: 'date', page: 1 });
+  if (gp.genre !== g) Object.assign(gp, { genre: g, q: '', tri: 'date', pf: '', page: 1 });
   gp.films = (await chargerFilms()).filter((f) => f.genres.includes(g));
   const vus = gp.films.filter((f) => f.statut === 'vu');
   const [bg, texte, attenue, kpiBg, voile, accroche, filmsTitre, alt] = GENRE_INFO[g];
@@ -144,7 +144,7 @@ async function pageGenre(s) {
   const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? fr1(moyenne(notes)) : '–', 'note moyenne'],
     [Math.round(minutes / 60) + ' h', 'devant l’écran'], [nbCoeurs, nbCoeurs > 1 ? 'coups de cœur' : 'coup de cœur']];
   return `${entete('collection')}<div class="filtres">
-    ${vus.length ? `<div class="filtres-ligne">${champRecherche('genre-q', gp.q, 'Rechercher dans ce genre')}${champTri('genre-tri', [['date', 'Date de visionnage'], ['note', 'Note'], ['annee', 'Année de sortie'], ['titre', 'Titre']], gp.tri)}</div>` : ''}
+    ${vus.length ? `<div class="filtres-ligne">${champRecherche('genre-q', gp.q, 'Rechercher dans ce genre')}${champTri('genre-tri', [['date', 'Date de visionnage'], ['note', 'Note'], ['annee', 'Année de sortie'], ['titre', 'Titre']], gp.tri)}${champPf('genre-pf', vus, gp.pf)}</div>` : ''}
     <nav class="puces" aria-label="Genres"><a class="tous" href="#collection">Tous les genres</a>${GENRES.map((x) => `<a href="#genre/${slugGenre(x)}" ${x === g ? 'aria-current="page"' : ''}><img src="${buste(x)}" alt="">${x}</a>`).join('')}</nav></div>
   <section class="genre-hero" style="--g-bg:${bg};--g-texte:${texte};--g-attenue:${attenue};--g-kpi:${kpiBg};--g-voile:${voile}">
     <picture><source media="(max-width: 760px)" srcset="img/decor-${slugGenre(g)}.jpg"><img src="img/genre-${slugGenre(g)}.jpg" alt="${alt}"></picture>
@@ -162,9 +162,9 @@ function htmlGenre() {
   const q = norm(gp.q.trim());
   const tri = { date: parDernier, note: (a, b) => (b.note ?? -1) - (a.note ?? -1), annee: (a, b) => (b.annee ?? 0) - (a.annee ?? 0), ...TRIS_TEXTE }[gp.tri];
   // Les films vus d'abord, puis la watchlist du genre.
-  const l = gp.films.filter((f) => !q || f.cherche.includes(q)).sort((a, b) => (a.statut === 'vu' ? 0 : 1) - (b.statut === 'vu' ? 0 : 1) || tri(a, b));
-  if (!l.length) return `<div class="genre-vide" role="status">${ICO_LOUPE}<h3>Aucun film trouvé</h3><p class="muted">Rien ne correspond à « ${esc(gp.q)} » dans ce genre.</p>
-    <div class="boutons"><button class="btn" type="button" data-genre-reset>Effacer la recherche</button><button class="btn primaire" type="button" data-ajout>Ajouter un film</button></div></div>`;
+  const l = gp.films.filter((f) => surPf(f, gp.pf) && (!q || f.cherche.includes(q))).sort((a, b) => (a.statut === 'vu' ? 0 : 1) - (b.statut === 'vu' ? 0 : 1) || tri(a, b));
+  if (!l.length) return `<div class="genre-vide" role="status">${ICO_LOUPE}<h3>Aucun film trouvé</h3><p class="muted">${gp.q ? `Rien ne correspond à « ${esc(gp.q)} » dans ce genre.` : 'Rien ne correspond à ces filtres dans ce genre.'}</p>
+    <div class="boutons"><button class="btn" type="button" data-genre-reset>${gp.pf ? 'Réinitialiser les filtres' : 'Effacer la recherche'}</button><button class="btn primaire" type="button" data-ajout>Ajouter un film</button></div></div>`;
   const { p, nbPages, items, compteur } = decouper(l, gp.page, mobile() ? 9 : 10);
   gp.page = p;
   return `<p class="muted compteur" aria-live="polite">${compteur}</p><div class="grille-films">${items.map((f) => carteFilm(f, noteBas(f))).join('')}</div>${paginationHtml(p, nbPages, 'data-genre-page')}`;
@@ -321,14 +321,14 @@ function barres(items, unite = '', defile = false) {
 // Courbe avec le même axe que barres() : un point par période, au centre de son étiquette.
 function courbe(items) {
   const max = maxRond(Math.max(0, ...items.map((i) => i.v))), ticks = [4, 3, 2, 1, 0].map((k) => (max * k) / 4), n = items.length;
-  const pts = items.map((i, k) => [((k + 0.5) / n) * 1000, 260 - (i.v / max) * 260]), xy = pts.map((p) => p.join(',')).join(' ');
+  const pts = items.map((i, k) => [n > 1 ? (k / (n - 1)) * 1000 : 500, 260 - (i.v / max) * 260]), xy = pts.map((p) => p.join(',')).join(' ');
   return `<div class="graph"><div class="axe" aria-hidden="true">${ticks.map((t) => `<span>${t}</span>`).join('')}</div>
     <div class="zone"><div class="lignes" aria-hidden="true">${ticks.map(() => '<span></span>').join('')}</div>
     <svg viewBox="0 0 1000 260" preserveAspectRatio="none" role="img" aria-label="${esc(items.map((i) => i.tip).join(' ; '))}">
       <path d="M${pts[0][0]},260 L${xy.replace(/ /g, ' L')} L${pts[n - 1][0]},260 Z" fill="var(--accent)" fill-opacity=".12"/>
       <polyline points="${xy}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>
     ${pts.map((p, k) => `<span class="point" style="left:${p[0] / 10}%;top:${(p[1] / 260) * 100}%"><span class="tip">${esc(items[k].tip)}</span></span>`).join('')}</div>
-    <span></span><div class="etiquettes" aria-hidden="true">${items.map((i) => `<span>${i.label}</span>`).join('')}</div></div>`;
+    <span></span><div class="etiquettes bords" aria-hidden="true">${items.map((i) => `<span>${i.label}</span>`).join('')}</div></div>`;
 }
 
 const lignesH = (rows) => `<ol class="hbarres">${rows.map((r) => `<li>${r.ico || ''}<span class="hb-nom">${r.nom}</span><span class="hb-piste" title="${esc(r.tip || '')}"><span style="width:${r.pct}%"></span></span><span class="hb-val">${r.val}</span></li>`).join('')}</ol>`;
@@ -573,7 +573,7 @@ function htmlRetro() {
     [r.note ? fr1(r.note) : '–', '/ 5', 'de note moyenne'], [r.coeurs, '', r.coeurs > 1 ? 'coups de cœur' : 'coup de cœur', cmp(r.coeurs, prec.coeurs, '', 'coup de cœur', 'coups de cœur')]];
   const fleches = { up: '↑', down: '↓', eq: '=' };
   const resume = P === 'semaine' ? `Du ${dateLongue(debut).replace(/ \d{4}$/, '')} au ${dateLongue(fin)}.` : P === 'mois' ? `Du 1er au ${Number(fin.slice(8))} ${nomMois(fin)}.` : `De janvier à ${D === 0 ? 'aujourd’hui' : 'décembre'}.`;
-  const genres = GENRES.map((g) => ({ g, n: r.distincts.filter((f) => f.genres.includes(g)).length })).filter((x) => x.n).sort((a, b) => b.n - a.n).slice(0, 3);
+  const genres = GENRES.map((g) => ({ g, n: r.distincts.filter((f) => f.genres.includes(g)).length })).filter((x) => x.n).sort((a, b) => b.n - a.n).slice(0, 5);
   const top = [...r.distincts].sort((a, b) => (b.note ?? 0) - (a.note ?? 0) || b.coup_de_coeur - a.coup_de_coeur).slice(0, 3);
   const phare = (cle) => {
     const c = {};
@@ -667,12 +667,12 @@ function fonctionnalitesHtml() {
   const bloc = (couleur, ico, titre, texte) => `<li class="fonction"><span class="espace-ico" style="background:${couleur}" aria-hidden="true">${ico}</span><span><b>${titre}</b><small>${texte}</small></span></li>`;
   const grand = (ico) => ico.replace(/width="18" height="18"/, 'width="22" height="22"');
   return `<section class="fonctions"><div class="section-tete"><div><h2 class="section">Ce que DonkTV sait faire</h2></div></div><ul>
-    ${bloc('#C2603A', grand(ICO_DE), 'Qu’est-ce que je regarde ?', 'Plus besoin d’hésiter : Baudet tire au sort un film de ma watchlist. Je peux filtrer par durée, par genre ou par plateforme, et relancer le tirage autant de fois que je veux.')}
-    ${bloc('#56685A', grand(ICO_LOUPE), 'Sur quelle plateforme le regarder ?', 'Chaque fiche indique sur quelles plateformes le film est disponible en France. Celles auxquelles je suis abonné ressortent en vert, et je peux filtrer mes listes par plateforme.')}
-    ${bloc('#E3A72F', svgEspace(CHEMINS.tops), 'Mes tops', 'Je classe mes films préférés dans un top 10 de tous les temps et dans un top 10 pour chacun des 11 genres, puis je réordonne mes classements quand je veux.')}
-    ${bloc('#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Combien de films j’ai vus, combien d’heures j’ai passées devant l’écran, mes genres et mes pays préférés, mes réalisateurs et mes acteurs les plus vus.')}
-    ${bloc('#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Chaque semaine, chaque mois et chaque année, un récapitulatif de mon cinéma : films vus, genre dominant, meilleures notes et comparaison avec la période précédente.')}
-    ${bloc('#7A5AA6', svgEspace(CHEMINS.sagas), 'Sagas', 'DonkTV repère les sagas de ma collection, de Star Wars à Harry Potter. Je vois combien de films j’ai vus dans chacune et ceux qu’il me reste à découvrir.')}
+    ${bloc('#C2603A', grand(ICO_DE), 'Qu’est-ce que je regarde ?', 'Trop de choix, aucune idée ? Baudet tire au sort un film de ma watchlist. Une durée, un genre, une plateforme : je filtre, je lance, je relance. Le hasard fait bien les choses.')}
+    ${bloc('#56685A', grand(ICO_LOUPE), 'Sur quelle plateforme regarder mon film ?', 'Netflix, Prime Video ou Canal+ ? Chaque fiche montre où le film est disponible en France, et mes abonnements ressortent en vert. Je sais en un coup d’œil si je peux le lancer.')}
+    ${bloc('#E3A72F', svgEspace(CHEMINS.tops), 'Mes tops', 'Un top 10 de tous les temps. Et un top 10 pour chacun des 11 genres. Je classe, je déclasse, je réordonne. Mes chefs-d’œuvre, dans l’ordre que je choisis.')}
+    ${bloc('#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Combien de films. Combien d’heures. Mes genres, mes pays, mes réalisateurs et mes acteurs les plus vus. Tout mon cinéma, en chiffres et en graphiques.')}
+    ${bloc('#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Chaque semaine, chaque mois, chaque année : mon récap. Films vus, genre dominant, meilleures notes. Et la comparaison avec la période d’avant.')}
+    ${bloc('#7A5AA6', svgEspace(CHEMINS.sagas), 'Sagas', 'De Star Wars à Harry Potter, DonkTV repère les sagas de ma collection. Je vois où j’en suis dans chacune, et ce qu’il me reste à découvrir.')}
   </ul></section>`;
 }
 
@@ -807,6 +807,14 @@ document.addEventListener('click', (e) => { if (e.target.closest('[data-recherch
 
 /* ---------- Branchements ---------- */
 
+// Puces de genre sur PC : la molette fait défiler horizontalement.
+document.addEventListener('wheel', (e) => {
+  const p = e.target.closest?.('.puces');
+  if (!p || Math.abs(e.deltaY) <= Math.abs(e.deltaX) || p.scrollWidth <= p.clientWidth) return;
+  e.preventDefault();
+  p.scrollLeft += e.deltaY;
+}, { passive: false });
+
 Object.assign(PAGES, {
   'a-voir': () => pageAVoir(), genre: (s) => pageGenre(s), tops: (s) => pageTops(s), stats: () => pageStats(), retros: (p) => pageRetro(p), 'mon-espace': pageMonEspace,
 });
@@ -822,6 +830,7 @@ $('#page').addEventListener('change', (e) => {
   const id = e.target.id;
   if (id === 'av-tri') { av.tri = e.target.value; av.page = 1; $('#av-resultats').innerHTML = htmlAVoir(); }
   else if (id === 'av-pf') { av.pf = e.target.value; av.page = 1; $('#av-resultats').innerHTML = htmlAVoir(); }
+  else if (id === 'genre-pf') { gp.pf = e.target.value; gp.page = 1; $('#genre-resultats').innerHTML = htmlGenre(); }
   else if (id === 'genre-tri') { gp.tri = e.target.value; gp.page = 1; $('#genre-resultats').innerHTML = htmlGenre(); }
   else if (id === 'stats-annee') { st.annee = Number(e.target.value); majStats(); }
 });
@@ -837,7 +846,7 @@ $('#page').addEventListener('click', (e) => {
     Object.assign(av, { q: '', genre: '', pf: '', page: 1 }); route();
   } else if (d.avPage) { av.page = Number(d.avPage); $('#av-resultats').innerHTML = htmlAVoir(); $('#av-resultats').scrollIntoView({ block: 'start' }); }
   else if (d.marquerVu) marquerVu(Number(d.marquerVu), b);
-  else if ('genreReset' in d) { gp.q = ''; $('#genre-q').value = ''; $('#genre-resultats').innerHTML = htmlGenre(); }
+  else if ('genreReset' in d) { gp.q = ''; gp.pf = ''; route(); }
   else if (d.genrePage) { gp.page = Number(d.genrePage); $('#genre-resultats').innerHTML = htmlGenre(); $('.genre-films').scrollIntoView({ block: 'start' }); }
   else if ('topAjouter' in d) ouvrirAjoutTop();
   else if (d.topMonter) modifierTop('topMonter', b);
