@@ -17,14 +17,30 @@
 <body>
 
 <section id="connexion" class="connexion" hidden>
-  <form id="form-connexion" class="carte">
+  <div class="connexion-g">
     <span class="logo" role="img" aria-label="DonkTV"></span>
-    <h1>Connexion</h1>
-    <label>Adresse e-mail<input id="email" type="email" autocomplete="username" required></label>
-    <label>Mot de passe<input id="mdp" type="password" autocomplete="current-password" required></label>
-    <p id="erreur-connexion" class="erreur" role="alert" hidden></p>
-    <button class="btn primaire" type="submit">Se connecter</button>
-  </form>
+    <div class="connexion-bandeau" aria-hidden="true"><img src="img/connexion-mobile.jpg" alt="" onerror="this.onerror=null;this.src='img/bienvenue-mobile.jpg'"></div>
+    <div class="connexion-corps">
+      <div class="connexion-titres"><h1 id="cx-titre">Connecte-toi pour retrouver tes films</h1><p id="cx-texte" class="muted" hidden></p></div>
+      <p id="erreur-connexion" class="alerte ko" role="alert" hidden></p>
+      <p id="cx-ok" class="alerte ok" role="status" hidden></p>
+      <form id="form-connexion">
+        <label>E-mail<input id="email" type="email" autocomplete="username" placeholder="prenom@exemple.fr" required></label>
+        <div id="cx-mdp-bloc" class="champ-mdp">
+          <div class="cx-ligne"><label for="mdp" id="cx-mdp-label">Mot de passe</label><button type="button" class="lien" data-cx="oublie" id="cx-oubli">Mot de passe oublié ?</button></div>
+          <div class="mdp-oeil"><input id="mdp" type="password" autocomplete="current-password" minlength="6" required>
+            <button type="button" data-oeil aria-label="Afficher le mot de passe" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></svg></button></div>
+          <small id="cx-aide" class="muted" hidden>8 caractères minimum.</small>
+        </div>
+        <label id="cx-mdp2-bloc" hidden>Confirme ton mot de passe<input id="mdp2" type="password" autocomplete="new-password"></label>
+        <button class="btn primaire grand" type="submit" id="cx-bouton">Se connecter</button>
+      </form>
+      <p class="muted cx-pied"><button type="button" class="lien" data-cx="connexion" id="cx-retour" hidden>Retour à la connexion</button>
+        <span id="cx-invitation">DonkTV fonctionne sur invitation. Pas encore de compte ? Demande une invitation à la personne qui t’a parlé de DonkTV.</span></p>
+    </div>
+    <p class="cx-legal muted"><button type="button" class="lien" data-confidentialite>Confidentialité</button> · Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.</p>
+  </div>
+  <div class="connexion-d" aria-hidden="true"><img src="img/connexion.jpg" alt="" onerror="this.onerror=null;this.src='img/bienvenue.jpg'"></div>
 </section>
 
 <div id="app" hidden>
@@ -51,6 +67,17 @@
   </header>
 
   <main id="page"></main>
+
+  <footer class="pied">
+    <div class="pied-tete" aria-hidden="true"><img src="img/baudet-tete.png" alt="" onerror="this.parentNode.remove()"></div>
+    <div class="pied-in">
+      <div class="pied-marque"><a href="#accueil" class="logo-lien"><span class="logo" role="img" aria-label="DonkTV"></span></a><p class="muted">Les films que j’ai vus, et ceux qui m’attendent.</p></div>
+      <nav aria-labelledby="pied-cinema"><h2 id="pied-cinema">Cinéma</h2><a href="#collection">Mes films</a><a href="#a-voir">Watchlist</a><a href="#sagas">Mes sagas</a></nav>
+      <nav aria-labelledby="pied-espace"><h2 id="pied-espace">Mon espace</h2><a href="#tops">Mes tops</a><a href="#stats">Statistiques</a><a href="#retros">Rétrospectives</a><a href="#reglages">Réglages</a></nav>
+      <nav aria-labelledby="pied-apropos"><h2 id="pied-apropos">À propos</h2><a href="#inviter" class="si-admin">Inviter un utilisateur</a><a href="#confidentialite">Confidentialité</a></nav>
+    </div>
+    <div class="pied-bas"><span class="credit-tmdb">Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB. Plateformes de streaming : JustWatch.</span><span data-version></span></div>
+  </footer>
 
   <nav class="nav-bas" aria-label="Navigation principale">
     <a href="#accueil"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0 M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7 M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>Accueil</a>
@@ -80,5 +107,6 @@
 <script src="app.js"></script>
 <script src="pages.js"></script>
 <script src="decouvrir.js"></script>
+<script src="comptes.js"></script>
 </body>
 </html>

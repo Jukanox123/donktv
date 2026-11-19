@@ -1,6 +1,6 @@
 # État du projet DonkTV
 
-Mis à jour le 19 novembre 2026.
+Mis à jour le 20 novembre 2026.
 
 ## Liens
 - App en ligne : https://jukanox123.github.io/donktv/ (dépôt GitHub `Jukanox123/donktv`)
@@ -42,6 +42,7 @@ Mis à jour le 19 novembre 2026.
 - 19 novembre (version 1.2.5, choix de Valentin) : menu PC façon Stripe (liens à côté du logo sans capsule, onglet actif souligné, « Mon espace ▾ » = simple liste de liens sans icônes, champ « Rechercher un film » avec ⌘K / Ctrl K, en-tête collant transparent puis flouté au défilement, « + » qui tourne au survol) ; mobile inchangé ; fiche film, fond du bandeau unique : vert sapin #1F3327 (clair) et #1F3027 (sombre), plus de teinte lue sur l'affiche ; rétro, genre dominant en bandeau compact (image genre-*.jpg entière calée à droite, fondue dans le panneau, empilée au-dessus de la liste sur mobile), têtes d'affiche en une seule carte : 3 réalisateurs | 3 acteurs, portraits ronds 64 px.
 - 19 novembre (version 1.2.6) : fenêtres centrées dans l'écran sur PC (ajout d'un film, toutes étapes, et les autres fenêtres) ; la recherche rapide reste en haut.
 - 19 novembre (version 1.3, choix de Valentin) : icônes Tabler partout (trait 1,5, ou 1,75 sous 20 px ; navigation, Mon espace, accueil, fiche, tops, Watchlist, sagas…), sauf les étoiles de note et les tuiles de couleur des notes ; barre du bas mobile : onglet actif = petit trait au-dessus, icône teintée, libellé en vert foncé (--btn) ; Watchlist : « Qu'est-ce que je regarde ? » devient une section toujours ouverte sous la grille et la pagination (titre + phrase, filtres à gauche et tirage à droite au-dessus de 1000 px, empilés en dessous), plus de bouton.
+- 20 novembre (version 1.4, plusieurs comptes, maquettes Connexion / Inviter / Confidentialité / Footer PC) : écran de connexion en 2 colonnes (Baudet à droite, bandeau sur mobile), œil du mot de passe, « Mot de passe oublié ? » (lien par e-mail), création du compte depuis le lien d'invitation et nouveau mot de passe (même formulaire) ; page #inviter (administrateur seul : envoyer, renvoyer, retirer l'accès = compte et films effacés, liens valables 24 h, limite Supabase) ; page #confidentialite (aussi en fenêtre depuis la connexion) ; Réglages : « Sources des films » pour l'administrateur seul, carte « Mon compte » (changer le mot de passe par lien, se déconnecter, supprimer mon compte) ; pied de page PC (Cinéma, Mon espace, À propos, version) ; Mon espace mobile : ligne « Inviter » et pied (Confidentialité, Se déconnecter, mention TMDB, version). Les invités utilisent les clés TMDB / OMDb de l'administrateur (fonction SQL cles()).
 - 19 novembre (version 1.3.1) : bustes de genre de Baudet sur les affiches du tirage « Qu'est-ce que je regarde ? » (Watchlist) et des « Films à découvrir » (pages réalisateur / acteur, et films hors base des sagas), genres lus sur TMDB.
 - Numéros de version : 1.1 (fonctions du 18 novembre + retours), 1.2 (menu et page saga). Règle : majeur.mineur.correctif, augmenté à chaque mise en ligne.
 - 18 novembre (version 1.2.1) : accueil, blocs « Ce que DonkTV sait faire » non cliquables, descriptions plus longues, « Sur quelle plateforme le regarder ? » ; capsule du menu PC au rayon des boutons (10 px) ; page saga : jauge ronde X/Y à droite, résumé coupé à 220 caractères, frise Vu / Pas encore vu (affiches non vues en noir et blanc), bouton « Marquer comme vu » pour les films de la watchlist ; tous les tops en top 10 ; boutons « Marquer comme vu » alignés en bas des cartes ; plus de logos de plateforme sous les cartes de la Watchlist ; rétrospective : mur d'affiches sans doublon tant que possible, meilleurs films en blocs comme les tops, têtes d'affiche cliquables, rythme en courbe.
@@ -53,6 +54,14 @@ Mis à jour le 19 novembre 2026.
 - Service worker : cache des images séparé et plafonné à 400 fichiers ; l'ancien cache v1 est supprimé.
 - Démarrage attendu après le chargement de tous les scripts (`pagesChargees`).
 
+## Comptes (20 novembre)
+- Base : lancer une fois `supabase/migration-2026-11-20.sql` (table admin, fonction cles()). Sans elle, l'app reste en compte unique.
+- Fonction Supabase `comptes` (`supabase/functions/comptes/index.ts`) : liste, inviter, retirer, supprimer son compte. Utilise la clé service_role fournie par Supabase côté serveur.
+- Envoi des e-mails : le service intégré de Supabase n'envoie qu'aux membres de l'équipe (2 / heure) ; brancher un SMTP (Gmail ou Resend) pour inviter d'autres personnes.
+- Auth › URL Configuration : Site URL et Redirect URLs = https://jukanox123.github.io/donktv/
+- Limite assumée : les clés TMDB / OMDb sont lues par le navigateur des invités (masquées dans l'interface, pas secrètes techniquement).
+- En attente : images de Baudet (img/connexion.jpg, img/connexion-mobile.jpg, img/baudet-tete.png ; l'image de bienvenue sert en attendant), logo TMDB, région Supabase (REGION_BASE dans comptes.js).
+
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
 - La collection n'affiche que les films vus.
@@ -61,7 +70,7 @@ Mis à jour le 19 novembre 2026.
 - Réalisateurs : photo et genre (Réalisateur / Réalisatrice) lus sur TMDB à l'ouverture de la fiche, pas stockés en base.
 
 ## Technique
-- Site statique : `index.html`, `style.css`, `app.js` (base, fiche, collection, ajout), `pages.js` (autres pages), `decouvrir.js` (plateformes, tirage, personnes, sagas), `sw.js`, `img/`.
+- Site statique : `index.html`, `style.css`, `app.js` (base, fiche, collection, ajout), `pages.js` (autres pages), `decouvrir.js` (plateformes, tirage, personnes, sagas), `comptes.js` (inviter, confidentialité, pied de Mon espace), `supabase/functions/` (fonction serveur), `sw.js`, `img/`.
 - Schéma de la base : `supabase/schema.sql` (tables reglages, films, visionnages, tops ; sécurité par utilisateur).
 - Routage par `#page/param` ; table `PAGES`.
 - Clés TMDB et OMDb : saisies dans Réglages, stockées dans Supabase, jamais dans le code.

@@ -1,3 +1,8 @@
+// Retour d'un lien reçu par e-mail (invitation, mot de passe oublié) : lu avant que Supabase ne nettoie l'adresse.
+const retourLien = new URLSearchParams(location.hash.slice(1));
+let modeMdp = { invite: 'creer', recovery: 'nouveau' }[retourLien.get('type')] || null;
+const URL_APP = location.origin + location.pathname;
+
 // La clé « publishable » est faite pour être publique : les données sont protégées par les règles RLS (supabase/schema.sql).
 const sb = supabase.createClient('https://garqewteguzlrpujqcjc.supabase.co', 'sb_publishable_JUGsl_hVTnJm9E4MdSynDw_o6QL5B9d');
 
@@ -46,7 +51,7 @@ const buste = (g) => `img/buste-${g.toLowerCase().normalize('NFD').replace(/[̀-
 const GENRE_TMDB = { 28: 'Action', 12: 'Aventure', 16: 'Animation', 35: 'Comédie', 80: 'Thriller', 18: 'Drame', 14: 'Aventure', 36: 'Drame',
   27: 'Horreur', 9648: 'Thriller', 10749: 'Romantique', 878: 'SF', 53: 'Thriller', 10752: 'Guerre', 37: 'Western' };
 
-let uid = null, reglages = {}, films = [];
+let uid = null, moi = '', admin = true, reglages = {}, films = [];
 
 function toast(msg, action) {
   const t = $('#toast');
@@ -141,7 +146,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.3.1';
+const VERSION = '1.4';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -153,16 +158,20 @@ function pageReglages() {
     </section>
     <section class="carte"><div><h2>Mes plateformes</h2><p class="muted">Cherche celles auxquelles tu es abonné et ajoute-les : elles ressortent en vert dans « Où le regarder ? » et servent au filtre « Sur mes plateformes ».</p></div>
       <div id="pf-choix"><p class="muted">Chargement des plateformes…</p></div></section>
-    <section class="carte"><div><h2>Sources des films</h2><p class="muted">Deux clés gratuites : TMDB pour les fiches, OMDb pour la note des critiques.</p></div>
+    ${admin ? `<section class="carte"><div><h2>Sources des films</h2><p class="muted">Deux clés gratuites : TMDB pour les fiches, OMDb pour la note des critiques. Visible par toi seul : les autres utilisateurs ne les voient pas.</p></div>
       ${CLES.map((k) => `<div class="cle" data-cle="${k.champ}">
         <div class="cle-tete"><label for="${k.champ}">${k.nom}</label><span class="etat ${reglages[k.champ] ? 'ok' : ''}">${reglages[k.champ] ? 'Connectée' : 'À renseigner'}</span></div>
         <div class="cle-ligne"><input id="${k.champ}" type="password" value="${esc(reglages[k.champ])}" autocomplete="off" spellcheck="false">
           <button class="btn" type="button" data-voir>Afficher</button><button class="btn" type="button" data-tester>Tester et enregistrer</button></div>
         <small>${k.aide}</small></div>`).join('')}
+    </section>` : ''}
+    <section class="carte"><h2>Mon compte</h2>
+      <label class="compte-email">E-mail<input type="email" value="${esc(moi)}" readonly></label>
+      <div class="boutons"><button class="btn" type="button" data-changer-mdp>Changer mon mot de passe</button><button class="btn" type="button" data-deconnexion>Se déconnecter</button></div>
+      <div class="compte-suppr"><p class="muted">Ton compte et tous tes films seront effacés définitivement.</p><button class="btn danger-trait" type="button" data-supprimer-compte>Supprimer mon compte</button></div>
     </section>
     <section class="carte"><h2>À propos</h2><p style="font-size:15px">DonkTV · version ${VERSION}</p>
       <p class="muted" style="font-size:14px">Fiches, affiches et note des spectateurs : TMDB. Note des critiques : Rotten Tomatoes, via OMDb. Cette application utilise l'API TMDB mais n'est ni approuvée ni certifiée par TMDB.</p>
-      <button class="btn" type="button" data-deconnexion style="align-self:flex-start">Se déconnecter</button>
     </section>
   </div>`;
 }
@@ -191,7 +200,7 @@ async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
   const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace', decouverte: 'collection' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  const espace = ['tops', 'stats', 'retros', 'sagas', 'reglages', 'mon-espace'].includes(actif);
+  const espace = ['tops', 'stats', 'retros', 'sagas', 'reglages', 'mon-espace', 'inviter', 'confidentialite'].includes(actif);
   $('.capsule-espace').classList.toggle('actif', espace && actif !== 'mon-espace');
   if (espace) $('.nav-bas a[href="#mon-espace"]').setAttribute('aria-current', 'page');
   const rendu = (PAGES[nom] || pageIntrouvable)(id);
@@ -210,7 +219,7 @@ async function route() {
 }
 addEventListener('hashchange', () => {
   for (const d of [fen, $('#recherche')]) if (d.open) d.close(); // une fenêtre ouverte ne survit pas à un changement de page
-  if (uid) route();
+  if (uid && !modeMdp) route();
 });
 
 $('#page').addEventListener('click', async (e) => {
@@ -243,6 +252,17 @@ $('#page').addEventListener('click', async (e) => {
       } finally { b.disabled = false; }
     } else if ('deconnexion' in b.dataset) {
       await sb.auth.signOut();
+    } else if ('changerMdp' in b.dataset) {
+      b.disabled = true;
+      const { error } = await sb.auth.resetPasswordForEmail(moi, { redirectTo: URL_APP });
+      b.disabled = false;
+      toast(error ? 'Envoi impossible : ' + error.message : 'Baudet t’a envoyé un lien pour changer ton mot de passe.');
+    } else if ('supprimerCompte' in b.dataset) {
+      fen.classList.add('petit');
+      fenCorps.innerHTML = `<div class="confirmation" role="alertdialog" aria-labelledby="cpt-titre" aria-describedby="cpt-texte">
+        <div><h2 id="cpt-titre">Supprimer ton compte ?</h2><p id="cpt-texte" class="muted">Ton compte, tes films, tes notes et tes tops seront effacés définitivement. Impossible de revenir en arrière.</p></div>
+        <div class="boutons"><button class="btn" type="button" data-fermer autofocus>Annuler</button><button class="btn danger" type="button" data-confirmer-compte>Supprimer définitivement</button></div></div>`;
+      fen.showModal();
     }
   } catch (err) { toast(err.message); }
 });
@@ -946,23 +966,82 @@ dlg.addEventListener('close', () => uid && route());
 
 /* ---------- Connexion ---------- */
 
+// Un seul formulaire pour quatre écrans : connexion, mot de passe oublié, création du compte (invitation), nouveau mot de passe.
+const ECRANS_CX = {
+  connexion: { titre: 'Connecte-toi pour retrouver tes films', bouton: 'Se connecter' },
+  oublie: { titre: 'Mot de passe oublié', texte: 'Saisis ton e-mail : Baudet t’envoie un lien pour en choisir un nouveau.', bouton: 'Envoyer le lien' },
+  creer: { titre: 'Bienvenue sur DonkTV', texte: 'Tu as été invité. Choisis ton mot de passe pour créer ton compte : ta liste de films sera rien qu’à toi.', label: 'Choisis un mot de passe', bouton: 'Créer mon compte' },
+  nouveau: { titre: 'Nouveau mot de passe', texte: 'Choisis ton nouveau mot de passe.', label: 'Choisis un mot de passe', bouton: 'Enregistrer' },
+};
+let ecranCx = 'connexion';
+function afficherConnexion(ecran, { erreur = '', ok = '' } = {}) {
+  const c = ECRANS_CX[ecran], neuf = ecran === 'creer' || ecran === 'nouveau', mdp = $('#mdp');
+  ecranCx = ecran;
+  $('#cx-titre').textContent = c.titre;
+  $('#cx-texte').textContent = c.texte || ''; $('#cx-texte').hidden = !c.texte;
+  $('#email').readOnly = neuf; if (neuf) $('#email').value = moi;
+  $('#cx-mdp-bloc').hidden = ecran === 'oublie'; mdp.required = ecran !== 'oublie';
+  $('#cx-mdp-label').textContent = c.label || 'Mot de passe';
+  mdp.autocomplete = neuf ? 'new-password' : 'current-password'; mdp.minLength = neuf ? 8 : 6; mdp.value = ''; $('#mdp2').value = '';
+  $('#cx-oubli').hidden = ecran !== 'connexion';
+  $('#cx-aide').hidden = $('#cx-mdp2-bloc').hidden = !neuf; $('#mdp2').required = neuf;
+  $('#cx-bouton').textContent = c.bouton;
+  $('#cx-retour').hidden = ecran !== 'oublie';
+  $('#cx-invitation').hidden = ecran !== 'connexion';
+  $('#erreur-connexion').textContent = erreur; $('#erreur-connexion').hidden = !erreur;
+  $('#cx-ok').textContent = ok; $('#cx-ok').hidden = !ok;
+  $('#app').hidden = true; $('#connexion').hidden = false;
+}
+
+$('#connexion').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.cx) { afficherConnexion(b.dataset.cx); $('#email').focus(); }
+  else if ('oeil' in b.dataset) {
+    const voir = b.getAttribute('aria-pressed') !== 'true';
+    for (const i of [$('#mdp'), $('#mdp2')]) i.type = voir ? 'text' : 'password';
+    b.setAttribute('aria-pressed', voir); b.setAttribute('aria-label', voir ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+  } else if ('confidentialite' in b.dataset) ouvrirConfidentialite();
+});
+
 $('#form-connexion').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const err = $('#erreur-connexion'), b = $('button', e.target);
-  err.hidden = true; b.disabled = true;
-  const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#mdp').value });
-  b.disabled = false;
-  if (error) { err.textContent = error.status === 400 ? 'E-mail ou mot de passe incorrect.' : 'Connexion impossible : ' + error.message; err.hidden = false; }
+  const err = $('#erreur-connexion'), b = $('#cx-bouton'), email = $('#email').value.trim(), mdp = $('#mdp').value;
+  const echec = (m) => { err.textContent = m; err.hidden = false; };
+  err.hidden = true; $('#cx-ok').hidden = true;
+  if ((ecranCx === 'creer' || ecranCx === 'nouveau') && mdp !== $('#mdp2').value) return echec('Les deux mots de passe ne sont pas identiques.');
+  b.disabled = true;
+  try {
+    if (ecranCx === 'connexion') {
+      const { error } = await sb.auth.signInWithPassword({ email, password: mdp });
+      if (error) echec(error.status === 400 ? 'E-mail ou mot de passe incorrect.' : 'Connexion impossible : ' + error.message);
+    } else if (ecranCx === 'oublie') {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: URL_APP });
+      if (error) echec('Envoi impossible : ' + error.message); else afficherConnexion('oublie', { ok: 'Lien envoyé. Regarde ta boîte mail.' });
+    } else {
+      const { error } = await sb.auth.updateUser({ password: mdp });
+      if (error) return echec('Enregistrement impossible : ' + error.message);
+      modeMdp = null;
+      history.replaceState(null, '', URL_APP + '#accueil');
+      demarrer();
+    }
+  } finally { b.disabled = false; }
 });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 async function demarrer() {
-  const [r, f] = await Promise.all([
+  const [r, f, c] = await Promise.all([
     sb.from('reglages').select('*').maybeSingle(),
     sb.from('films').select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').order('ajoute_le', { ascending: false }),
+    sb.rpc('cles'),
   ]);
   reglages = r.data || {}; films = f.data || [];
+  // Les invités utilisent les clés de l'administrateur. Sans la migration du 20 novembre (pas de cles()), compte unique comme avant.
+  admin = c.error || !c.data ? true : c.data.admin;
+  if (!admin) Object.assign(reglages, { tmdb_token: c.data.tmdb_token, omdb_key: c.data.omdb_key });
+  document.body.classList.toggle('admin', admin);
+  document.querySelectorAll('[data-version]').forEach((e) => (e.textContent = 'DonkTV · version ' + VERSION));
   if (reglages.theme) appliquerTheme(reglages.theme);
   $('#connexion').hidden = true; $('#app').hidden = false;
   route();
@@ -971,11 +1050,19 @@ async function demarrer() {
 }
 
 const pagesChargees = new Promise((ok) => (document.readyState === 'loading' ? addEventListener('DOMContentLoaded', ok) : ok()));
-sb.auth.onAuthStateChange((_evt, session) => {
+let erreurLien = retourLien.get('error_code');
+if (erreurLien) history.replaceState(null, '', URL_APP);
+sb.auth.onAuthStateChange((evt, session) => {
+  if (evt === 'PASSWORD_RECOVERY') modeMdp = 'nouveau';
   const id = session?.user?.id || null;
   if (id === uid && id) return; // simple renouvellement du jeton
-  uid = id;
-  if (!uid) { if (dlg.open) dlg.close(); $('#app').hidden = true; $('#connexion').hidden = false; return; }
+  uid = id; moi = session?.user?.email || '';
+  if (!uid) {
+    if (dlg.open) dlg.close();
+    afficherConnexion('connexion', { erreur: erreurLien ? 'Ce lien a expiré ou a déjà servi. Demande-en un nouveau.' : '' });
+    erreurLien = null; return;
+  }
+  if (modeMdp) return afficherConnexion(modeMdp);
   // Pas d'appel Supabase dans ce rappel (il bloquerait la session), et pas avant que pages.js et decouvrir.js soient chargés.
   pagesChargees.then(() => setTimeout(demarrer, 0));
 });
