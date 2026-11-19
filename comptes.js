@@ -81,7 +81,7 @@ const htmlConfidentialite = () => `<div class="titre-page"><h1>Confidentialité<
   <section><h2>Où sont tes données ?</h2><p>Elles sont hébergées chez Supabase${REGION_BASE ? ', ' + REGION_BASE : ''}. Les affiches, résumés et castings viennent de TMDB ; les notes des critiques, d’OMDb ; les plateformes de streaming, de JustWatch. DonkTV leur demande des informations sur les films, jamais sur toi.</p></section>
   <section><h2>Supprimer ton compte</h2><p>Dans Réglages › Mon compte › « Supprimer mon compte ». Ton compte et tous tes films sont effacés définitivement.</p></section>
   <section><h2>Une question ?</h2><p>Écris à <a href="mailto:vgenauzeau@gmail.com">vgenauzeau@gmail.com</a>.</p></section>
-  <section class="carte"><h2>Crédits</h2><p class="credit-tmdb muted" style="font-size:15px">Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB. Données de plateformes fournies par JustWatch.</p></section>`;
+  <section class="carte"><h2>Crédits</h2><p class="credit-tmdb muted" style="font-size:15px"><img src="img/tmdb.png" alt="TMDB"><span>Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB. Données de plateformes fournies par JustWatch.</span></p></section>`;
 
 function ouvrirConfidentialite() {
   fen.classList.remove('petit');
@@ -94,7 +94,7 @@ const pageMonEspaceBase = pageMonEspace;
 PAGES['mon-espace'] = () => pageMonEspaceBase().replace('</nav>', (admin ? `<a href="#inviter"><span class="espace-ico" style="background:#2F7D6D" aria-hidden="true">${svgEspace('M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0M16 19h6M19 16v6M6 21v-2a4 4 0 0 1 4 -4h4')}</span><span><b>Inviter un utilisateur</b><small>Un DonkTV privé pour chacun</small></span>${ICO_FLECHE_D}</a>` : '') + '</nav>')
   + `<div class="pied-m"><div class="pied-m-tete" aria-hidden="true"><img src="img/baudet-tete.png" alt="" onerror="this.parentNode.remove()"></div>
     <div class="pied-m-liens"><a href="#confidentialite">Confidentialité</a><button type="button" data-deconnexion>Se déconnecter</button></div>
-    <span class="credit-tmdb">Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB. Plateformes de streaming : JustWatch.</span>
+    <span class="credit-tmdb"><img src="img/tmdb.png" alt="TMDB"><span>Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB. Plateformes de streaming : JustWatch.</span></span>
     <span>DonkTV · version ${VERSION}</span></div>`;
 
 Object.assign(PAGES, { inviter: () => pageInviter(), confidentialite: () => `<div class="confid etroit texte">${htmlConfidentialite()}</div>` });

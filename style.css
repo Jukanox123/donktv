@@ -1229,7 +1229,7 @@ nav .espace-menu a[aria-current] { background: none; color: var(--accent); font-
 .pied-bas { padding: 18px max(64px, calc(50% - 576px)) 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
 .pied-bas > :last-child { flex: 0 0 auto; }
 .credit-tmdb { display: flex; align-items: center; gap: 12px; }
-.credit-tmdb img { height: 14px; width: auto; flex: 0 0 auto; }
+.credit-tmdb img { height: 28px; width: auto; flex: 0 0 auto; }
 body:not(.admin) .si-admin { display: none !important; }
 @media (max-width: 760px) { .pied { display: none; } }
 @media (prefers-reduced-motion: reduce) { .pied-tete img { transition: none; } }
