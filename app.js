@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.3';
+const VERSION = '1.3.1';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';

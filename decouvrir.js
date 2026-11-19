@@ -61,7 +61,7 @@ const candidats = () => tg.films.filter((f) => !(f.date_sortie_fr > aujourdhui()
   && (!tg.duree || (f.duree && (tg.duree === 'moins' ? f.duree <= 120 : f.duree > 120)))
   && (!tg.genre || f.genres.includes(tg.genre)) && (!tg.mes || (f.plateformes || []).some((p) => aMoi(p.nom))));
 const melange = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(([, x]) => x);
-const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}</span>`;
+const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}${bustesHtml(f.genres)}</span>`;
 const zoneTirage = () => $('#tirage-zone');
 
 // Section toujours ouverte en bas de la Watchlist : filtres à gauche, tirage à droite (empilés sur mobile).
@@ -163,11 +163,14 @@ const ICO_RETOUR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" 
 const retour = (label) => `<button class="retour" type="button" data-retour>${ICO_RETOUR}${label}</button>`;
 const sansCle = () => videMascotte('Clé TMDB manquante', 'Cette page se remplit avec TMDB : renseigne ta clé dans les Réglages.', '<a class="btn primaire" href="#reglages">Ouvrir les réglages</a>');
 
+// Genres de l'app d'un film TMDB (sans doublon).
+const genresTmdb = (c) => [...new Set((c.genre_ids || []).map((g) => GENRE_TMDB[g]).filter(Boolean))];
+
 // Carte d'un film qui n'est pas (encore) dans ma base.
 // L'affiche mène à la fiche du film (sans note ni visionnage) ; « Vu » ouvre l'ajout avec la note.
 const carteTmdb = (c) => {
   const futur = c.release_date > aujourdhui();
-  return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}</a>
+  return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}${bustesHtml(genresTmdb(c))}</a>
   <a href="#decouverte/${c.id}" tabindex="-1"><b>${esc(c.title)}</b></a><span class="carte-bas"><span>${futur ? 'Sort le ' + dateLongue(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
   <div class="carte-actions"><button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button>${futur ? '' : `<button class="btn" type="button" data-tmdb-vu="${c.id}" aria-label="${esc(c.title)} : je l’ai vu">${ICO_VU}Je l’ai vu</button>`}</div></div>`;
 };

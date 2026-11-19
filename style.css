@@ -985,6 +985,10 @@ dialog.tirage-fen { width: min(720px, calc(100% - 32px)); margin: auto; }
 .bobine-piste { display: flex; gap: 14px; width: max-content; will-change: transform; }
 .bobine-item { flex: none; width: 118px; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: var(--chip); display: flex; align-items: center; justify-content: center;
   text-align: center; padding: 0; font-size: 13px; transition: transform .18s ease, filter .3s; box-shadow: 0 10px 22px -14px rgba(20,40,28,.5); }
+.bobine-item { position: relative; }
+.bobine-item .bustes { right: 6px; bottom: 6px; }
+.bobine-item .bustes > span[role=img] { width: 26px; height: 26px; margin-left: -6px; }
+.bobine-item .bustes .plus { height: 22px; min-width: 22px; font-size: 11px; }
 .bobine-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .bobine-item b { padding: 8px; }
 .bobine-item.centre { transform: scale(1.08); }
@@ -1027,6 +1031,8 @@ dialog.tirage-fen { width: min(720px, calc(100% - 32px)); margin: auto; }
   .tirage { padding: 20px; gap: 14px; }
   .tirage-tete h2 { font-size: 22px; }
   .bobine-item { width: 92px; }
+  .bobine-item .bustes > span[role=img] { width: 22px; height: 22px; }
+  .bobine-item .bustes .plus { display: none; }
   .avoir-tete .coll-tete-droite { width: 100%; justify-content: space-between; }
 }
 @media (prefers-reduced-motion: reduce) { .bobine-item, .tirage-elu { transition: none; animation: none; } }
