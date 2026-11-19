@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.2.4';
+const VERSION = '1.2.5';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -167,52 +167,14 @@ function pageReglages() {
   </div>`;
 }
 
-// Fond de la fiche : teinte moyenne de l'affiche, assombrie pour garder le texte clair lisible.
-const teintes = new Map();
-function teinterFiche() {
-  const affiche = $('.fiche-affiche img')?.getAttribute('src').replace(/^.*\/w500/, ''), hero = $('.fiche-hero');
-  if (!affiche || !hero || teintes.has(affiche)) return;
-  // Petite copie demandée en CORS : si TMDB refuse, l'affiche affichée n'est pas touchée et la couleur par défaut reste.
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  img.onload = () => {
-    try {
-      const c = document.createElement('canvas'), x = c.getContext('2d', { willReadFrequently: true });
-      c.width = 12; c.height = 18; x.drawImage(img, 0, 0, 12, 18);
-      const d = x.getImageData(0, 0, 12, 18).data;
-      let r = 0, g = 0, b = 0, poids = 0;
-      for (let i = 0; i < d.length; i += 4) { // les pixels colorés comptent plus que les gris
-        const w = 0.2 + Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]);
-        r += d[i] * w; g += d[i + 1] * w; b += d[i + 2] * w; poids += w;
-      }
-      [r, g, b] = [r / poids / 255, g / poids / 255, b / poids / 255];
-      const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, delta = max - min;
-      const h = !delta ? 0 : max === r ? ((g - b) / delta) % 6 : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
-      const s = !delta ? 0 : delta / (1 - Math.abs(2 * l - 1));
-      const teinte = `hsl(${Math.round((h * 60 + 360) % 360)} ${Math.round(Math.min(Math.max(s, 0.18), 0.5) * 100)}% 22%)`;
-      teintes.set(affiche, teinte);
-      hero.style.setProperty('--fiche-bg', teinte);
-    } catch {}
-  };
-  img.src = 'https://image.tmdb.org/t/p/w92' + affiche;
-}
-
 const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), decouverte: (id) => pageDecouverte(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
-PAGES.film.apres = PAGES.decouverte.apres = teinterFiche;
 
 const pageIntrouvable = () => `<div class="vide-mascotte introuvable"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
   <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
 
-// Menu PC : la pastille glisse sous l'onglet actif (ou sous « Mon espace » pour ses pages).
-function placerPastille() {
-  const cap = $('nav.capsule'), p = cap.querySelector('.capsule-pastille');
-  const cible = cap.querySelector(':scope > a[aria-current]') || cap.querySelector('.capsule-espace.actif');
-  if (!cible || !cap.offsetWidth) return (p.style.opacity = 0);
-  const r = cible.getBoundingClientRect(), c = cap.getBoundingClientRect();
-  Object.assign(p.style, { width: r.width + 'px', transform: `translateX(${r.left - c.left - 1}px)`, opacity: 1 });
-}
-addEventListener('resize', placerPastille);
-document.fonts?.ready.then(placerPastille);
+// Menu PC : fond flouté dès qu'on fait défiler ; raccourci affiché selon le système.
+addEventListener('scroll', () => $('.entete').classList.toggle('colle', scrollY > 4), { passive: true });
+if (/Mac|iP/.test(navigator.platform)) $('[data-raccourci]').textContent = '⌘K';
 
 function menuEspace(ouvrir) {
   const b = $('[data-espace-menu]');
@@ -232,7 +194,6 @@ async function route() {
   const espace = ['tops', 'stats', 'retros', 'sagas', 'reglages', 'mon-espace'].includes(actif);
   $('.capsule-espace').classList.toggle('actif', espace && actif !== 'mon-espace');
   if (espace) $('.nav-bas a[href="#mon-espace"]').setAttribute('aria-current', 'page');
-  placerPastille();
   const rendu = (PAGES[nom] || pageIntrouvable)(id);
   if (rendu instanceof Promise) {
     if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement…</p>';
@@ -336,7 +297,7 @@ function htmlFilm(f) {
   const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
   return `<div class="fiche-tete">
-  <section class="fiche-hero"${teintes.has(f.affiche) ? ` style="--fiche-bg:${teintes.get(f.affiche)}"` : ''}>
+  <section class="fiche-hero">
     <div class="fiche-retour">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>`}</div>
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
