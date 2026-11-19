@@ -6,7 +6,7 @@ const pfListe = memo(async () => {
   const { results } = await tmdb('/watch/providers/movie', { watch_region: 'FR' });
   return uniques(results.map((p) => ({ ...p, display_priority: p.display_priorities?.FR ?? p.display_priority })));
 });
-const ICO_RETIRER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+const ICO_RETIRER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg>';
 
 // Recherche en haut, mes plateformes en dessous : seules celles choisies sont affichées.
 async function remplirPlateformes() {
@@ -52,8 +52,8 @@ async function basculerPlateforme(b) {
 
 /* ---------- Qu'est-ce que je regarde ? ---------- */
 
-const ICO_DE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><circle cx="16" cy="8" r="1.2" fill="currentColor"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/></svg>';
-const tg = { duree: '', genre: '', mes: null, ouvert: false, films: [], enCours: false };
+const ICO_DE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14 M8 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M15 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M15 15.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M8 15.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M11.5 12a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0"/></svg>';
+const tg = { duree: '', genre: '', mes: null, films: [], enCours: false };
 const DUREES = [['', 'Peu importe'], ['moins', 'Moins de 2 h'], ['plus', 'Plus de 2 h']];
 
 // Par défaut : seulement les films disponibles aujourd'hui sur mes plateformes. Les films pas encore sortis ne peuvent pas être tirés.
@@ -64,34 +64,31 @@ const melange = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[
 const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}</span>`;
 const zoneTirage = () => $('#tirage-zone');
 
-// Encart de la Watchlist, replié par défaut : il se déplie sous le bouton « Qu'est-ce que je regarde ? ».
+// Section toujours ouverte en bas de la Watchlist : filtres à gauche, tirage à droite (empilés sur mobile).
 function tirageHtml() {
   tg.mes ??= !!(reglages.plateformes || []).length;
   const genres = GENRES.filter((g) => tg.films.some((f) => f.genres.includes(g)));
   if (!genres.includes(tg.genre)) tg.genre = '';
-  return `<section class="tirage carte">
+  return `<div class="tirage carte">
     <div class="tirage-filtres">
-      <div class="bascule" role="group" aria-label="Durée">${DUREES.map(([v, l]) => `<button type="button" data-tg-duree="${v}" aria-pressed="${tg.duree === v}">${l}</button>`).join('')}</div>
-      ${(reglages.plateformes || []).length ? `<button class="btn" type="button" data-tg-mes aria-pressed="${tg.mes}">${ICO_VU}Sur mes plateformes</button>` : ''}
+      <div><p class="tirage-lab">Durée</p><div class="bascule" role="group" aria-label="Durée">${DUREES.map(([v, l]) => `<button type="button" data-tg-duree="${v}" aria-pressed="${tg.duree === v}">${l}</button>`).join('')}</div></div>
+      ${(reglages.plateformes || []).length ? `<div><p class="tirage-lab">Plateformes</p><button class="btn" type="button" data-tg-mes aria-pressed="${tg.mes}">${ICO_VU}Sur mes plateformes</button></div>` : ''}
+      <div><p class="tirage-lab">Genre</p><div class="puces" role="group" aria-label="Genre">${['', ...genres].map((g) => `<button type="button" data-tg-genre="${g}" aria-pressed="${tg.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div></div>
     </div>
-    <div class="puces" role="group" aria-label="Genre">${['', ...genres].map((g) => `<button type="button" data-tg-genre="${g}" aria-pressed="${tg.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div>
-    <div class="bobine"><div class="bobine-piste" id="piste"></div><span class="bobine-cadre" aria-hidden="true"></span></div>
-    <p class="muted tirage-compte" id="tg-compte" aria-live="polite"></p>
-    <div id="tg-resultat" aria-live="polite"></div>
-    <button class="btn primaire grand" type="button" data-tg-lancer>${ICO_DE}Lancer</button></section>`;
+    <div class="tirage-droite">
+      <div class="bobine"><div class="bobine-piste" id="piste"></div><span class="bobine-cadre" aria-hidden="true"></span></div>
+      <p class="muted tirage-compte" id="tg-compte" aria-live="polite"></p>
+      <div id="tg-resultat" aria-live="polite"></div>
+      <button class="btn primaire grand" type="button" data-tg-lancer>${ICO_DE}Lancer</button>
+    </div></div>`;
 }
 
-function basculerTirage(b) {
-  tg.ouvert = !tg.ouvert;
-  b.setAttribute('aria-expanded', tg.ouvert);
-  afficherTirage();
-}
 function afficherTirage() {
   const z = zoneTirage();
   if (!z) return;
   tg.films = av.films;
-  z.innerHTML = tg.ouvert ? tirageHtml() : '';
-  if (tg.ouvert) majTirage();
+  z.innerHTML = tirageHtml();
+  majTirage();
 }
 
 function majTirage() {
@@ -124,7 +121,7 @@ function lancerTirage() {
   piste.classList.remove('arrete');
   $('#tg-resultat').innerHTML = '';
   piste.innerHTML = bande.map(affichePiste).join('');
-  zoneTirage().querySelectorAll('.tirage button').forEach((x) => (x.disabled = true));
+  zoneTirage().querySelectorAll('button').forEach((x) => (x.disabled = true));
   const depart = decalage(piste, 2), arrivee = decalage(piste, fin) + (Math.random() - 0.5) * piste.children[0].offsetWidth * 0.5;
   const duree = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 3800, t0 = performance.now(), items = [...piste.children];
   let centre = -1;
@@ -142,7 +139,7 @@ function lancerTirage() {
     setTimeout(() => {
       piste.style.transition = ''; piste.classList.add('arrete');
       afficherElu(elu);
-      zoneTirage().querySelectorAll('.tirage button').forEach((x) => (x.disabled = false));
+      zoneTirage().querySelectorAll('button').forEach((x) => (x.disabled = false));
       bouton.disabled = false; bouton.innerHTML = ICO_DE + 'Relancer';
       tg.enCours = false;
     }, duree ? 480 : 0);
@@ -162,7 +159,7 @@ function afficherElu(f) {
 
 const personneTmdb = memo((id) => tmdb(`/person/${id}`, { append_to_response: 'movie_credits' }));
 const pers = { id: null, page: 1 };
-const ICO_RETOUR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+const ICO_RETOUR = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"/></svg>';
 const retour = (label) => `<button class="retour" type="button" data-retour>${ICO_RETOUR}${label}</button>`;
 const sansCle = () => videMascotte('Clé TMDB manquante', 'Cette page se remplit avec TMDB : renseigne ta clé dans les Réglages.', '<a class="btn primaire" href="#reglages">Ouvrir les réglages</a>');
 
@@ -209,7 +206,7 @@ async function pagePersonne(p) {
 
 /* ---------- Sagas ---------- */
 
-const FL = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const FL = (d) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
 // Garde les phrases entières qui tiennent dans n caractères (au moins la première).
 const couper = (t, n) => {
@@ -218,7 +215,7 @@ const couper = (t, n) => {
   for (const ph of phrases.slice(1)) { if ((r + ph).length > n) break; r += ph; }
   return r.trim();
 };
-const ICO_VU = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+const ICO_VU = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg>';
 
 // Jauge ronde : « 2/4 » au centre.
 function jaugeRonde(vus, total) {
@@ -245,7 +242,7 @@ async function pageSaga(id) {
     ${jaugeRonde(vus, l.length)}
     ${c.overview ? `<p class="saga-resume muted">${esc(couper(c.overview, 480))}</p>` : ''}</section>
   <section class="bloc"><div class="section-tete"><div><h2 class="section">Dans l’ordre de sortie</h2></div>
-      <div class="frise-fleches"><button class="btn carre" type="button" data-frise="-1" aria-label="Films précédents">${FL('M15 18l-6-6 6-6')}</button><button class="btn carre" type="button" data-frise="1" aria-label="Films suivants">${FL('M9 18l6-6-6-6')}</button></div></div>
+      <div class="frise-fleches"><button class="btn carre" type="button" data-frise="-1" aria-label="Films précédents">${FL('M15 6l-6 6l6 6')}</button><button class="btn carre" type="button" data-frise="1" aria-label="Films suivants">${FL('M9 6l6 6l-6 6')}</button></div></div>
     <ol class="frise">${parts.map(item).join('')}</ol>
     <p class="frise-legende muted"><span><i class="frise-point vu"></i>Vu</span><span><i class="frise-point"></i>Pas encore vu</span></p></section>`;
 }
@@ -278,7 +275,6 @@ $('#page').addEventListener('click', (e) => {
   if (!b) return;
   const d = b.dataset;
   if (d.pf) basculerPlateforme(b);
-  else if ('tirage' in d) basculerTirage(b);
   else if (d.tgDuree != null) { tg.duree = d.tgDuree; b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
   else if (d.tgGenre != null) { tg.genre = d.tgGenre; b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
   else if ('tgMes' in d) { tg.mes = !tg.mes; b.setAttribute('aria-pressed', tg.mes); majTirage(); }

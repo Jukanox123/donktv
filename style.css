@@ -1108,11 +1108,12 @@ nav .espace-menu a[aria-current] { background: none; color: var(--accent); font-
 .carte-actions .btn { flex: 1 1 auto; padding: 0 10px; }
 .carte-actions .btn svg { flex: none; }
 .frise-item .carte-tmdb .carte-actions { margin-top: auto; }
-/* Barre du bas : onglet actif dans une pastille */
+/* Barre du bas : onglet actif = trait au-dessus, icône teintée, vert foncé de la charte */
 @media (max-width: 760px) {
-  .nav-bas a svg { box-sizing: content-box; padding: 4px 18px; border-radius: 10px; transition: background .3s, color .3s; }
-  .nav-bas a[aria-current] { color: var(--accent); }
-  .nav-bas a[aria-current] svg { background: var(--active); color: var(--active-text); }
+  .nav-bas a { position: relative; }
+  .nav-bas a[aria-current] { color: var(--btn); }
+  .nav-bas a[aria-current]::before { content: ""; position: absolute; top: -7px; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--btn); }
+  .nav-bas a[aria-current] svg path { fill: currentColor; fill-opacity: .18; }
 }
 .etiquettes.bords { justify-content: space-between; }
 .etiquettes.bords span { flex: 0 0 0; display: flex; justify-content: center; }
@@ -1147,3 +1148,15 @@ nav .espace-menu a[aria-current] { background: none; color: var(--accent); font-
   .phares > .phare + .phare { border-left: 0; border-top: 1px solid var(--line); padding-top: 20px; }
   .phare-ligne .initiales { width: 56px; height: 56px; }
 }
+/* Watchlist : « Qu'est-ce que je regarde ? » toujours ouvert sous la grille, filtres à gauche et tirage à droite sur PC */
+.tirage-section { display: flex; flex-direction: column; gap: 6px; }
+.tirage-section > .muted { margin: 0 0 10px; }
+.tirage-lab { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.tirage-droite { display: flex; flex-direction: column; gap: 14px; }
+.tirage-droite .tirage-compte { margin: 0; }
+@media (min-width: 1001px) {
+  .tirage { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; align-items: start; }
+  .tirage-filtres { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .tirage .puces { flex-wrap: wrap; overflow: visible; }
+}
+.tirage-filtres > div:has(.puces) { flex-basis: 100%; }

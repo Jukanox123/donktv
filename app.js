@@ -110,9 +110,9 @@ const duree = (m) => (m ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, 
 /* ---------- Pages ---------- */
 
 const ETAPES = [
-  ['#3F7A4F', 'M12 5v14M5 12h14', 'Ajoute tes films', 'Tape un titre : affiche, synopsis, réalisateur et casting arrivent tout seuls depuis TMDB.'],
-  ['#E3A72F', 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z', 'Note-les', 'Une note en demi-étoiles, un coup de cœur si le film le mérite, et la date où tu l’as vu.'],
-  ['#3E8ED0', 'M4 20V10M10 20V4M16 20v-7M22 20H2', 'Découvre tes stats', 'Mes genres préférés, mes réalisateurs fétiches, ma carte du monde et mes rétrospectives.'],
+  ['#3F7A4F', 'M12 5l0 14 M5 12l14 0', 'Ajoute tes films', 'Tape un titre : affiche, synopsis, réalisateur et casting arrivent tout seuls depuis TMDB.'],
+  ['#E3A72F', 'M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245', 'Note-les', 'Une note en demi-étoiles, un coup de cœur si le film le mérite, et la date où tu l’as vu.'],
+  ['#3E8ED0', 'M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6 M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10 M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14 M4 20h14', 'Découvre tes stats', 'Mes genres préférés, mes réalisateurs fétiches, ma carte du monde et mes rétrospectives.'],
 ];
 
 function pageAccueil() {
@@ -130,7 +130,7 @@ function pageAccueil() {
       <button class="btn primaire grand" type="button" data-ajout>Ajouter un film</button></div></section>
     <section style="display:flex;flex-direction:column;gap:24px"><div><p class="sur-titre">Comment ça marche</p><h2 class="section">Trois étapes, c'est tout</h2></div>
     <ol class="etapes">${ETAPES.map(([bg, ico, titre, texte]) => `<li><span class="ico" style="background:${bg}" aria-hidden="true">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${ico}"/></svg></span>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${ico}"/></svg></span>
       <div><h3>${titre}</h3><p>${texte}</p></div></li>`).join('')}</ol></section>`;
 }
 
@@ -141,7 +141,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.2.6';
+const VERSION = '1.3';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -256,8 +256,8 @@ const etoilesTxt = (n) => '★'.repeat(Math.floor(n)) + (n % 1 ? '½' : '');
 const ICO_ETOILE = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#F2B84B"/><path d="M26 13l3.9 8.2 8.9 1.1-6.6 6.1 1.8 8.8L26 32.8l-8 4.4 1.8-8.8-6.6-6.1 8.9-1.1z" fill="#5A3A08"/></svg>';
 const ICO_RT = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#E8664A"/><path d="M17 36l3.5-10.5L33 13l6 6-12.5 12.5z" fill="#FFF"/><path d="M20.5 25.5l6 6" stroke="#E8664A" stroke-width="2.4" stroke-linecap="round"/><circle cx="27.5" cy="24.5" r="2" fill="#E8664A"/><path d="M14 39h12" stroke="#FFF" stroke-width="2.6" stroke-linecap="round"/></svg>';
 const ICO_TMDB = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#3E8ED0"/><path d="M13 19h26v4.5a3.5 3.5 0 0 0 0 7V35H13v-4.5a3.5 3.5 0 0 0 0-7z" fill="#FFF"/><path d="M31 20v14" stroke="#3E8ED0" stroke-width="2.2" stroke-dasharray="2.5 2.5"/></svg>';
-const ICO_COEUR = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="#F07A6E"/></svg>';
-const ICO_POUBELLE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const ICO_COEUR = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" fill="#F07A6E"/></svg>';
+const ICO_POUBELLE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0 M10 11l0 6 M14 11l0 6 M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12 M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
 
 function etoilesHtml(note, id) {
   return `<div class="note"><div class="etoiles" role="radiogroup" aria-labelledby="${id}">${[1, 2, 3, 4, 5].map((i) => `<span class="etoile">
@@ -266,7 +266,7 @@ function etoilesHtml(note, id) {
     <button type="button" role="radio" style="right:0" data-note="${i}" aria-checked="${note === i}" aria-label="${i} sur 5"></button></span>`).join('')}</div>
     <span class="chiffre">${note ? fr(note) + ' / 5' : ''}</span></div>`;
 }
-const coeurHtml = (on) => `<button class="btn coeur" type="button" data-coeur aria-pressed="${on}"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.5A4 4 0 0 1 12 8a4 4 0 0 1 7 2.5C19 15.7 12 20 12 20z" fill="none" stroke="#D2483B" stroke-width="1.8"/></svg>Coup de cœur</button>`;
+const coeurHtml = (on) => `<button class="btn coeur" type="button" data-coeur aria-pressed="${on}"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" fill="none" stroke="#D2483B" stroke-width="1.8"/></svg>Coup de cœur</button>`;
 // Genres en lecture seule : ceux que TMDB donne au film.
 const genresHtml = (sel) => (sel.length ? `<ul class="genres">${sel.map((g) => `<li><img src="${buste(g)}" alt="">${g}</li>`).join('')}</ul>` : '<p class="muted">Aucun genre de l’app pour ce film.</p>');
 
@@ -298,7 +298,7 @@ function htmlFilm(f) {
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
   return `<div class="fiche-tete">
   <section class="fiche-hero">
-    <div class="fiche-retour">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Mes films</a>`}</div>
+    <div class="fiche-retour">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"/></svg>Mes films</a>`}</div>
     <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
     <div class="fiche-infos">
       <h1>${esc(f.titre)}</h1>
@@ -323,7 +323,7 @@ function htmlFilm(f) {
       ${f.synopsis || pasSorti ? `<section><h2 class="section">Synopsis</h2><p class="synopsis${f.synopsis ? '' : ' muted'}">${f.synopsis ? esc(f.synopsis) : 'Le film n’est pas encore sorti : son synopsis sera bientôt disponible.'}</p></section>` : ''}
       ${ouRegarderHtml(f.offres)}
       ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
-        <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path d="M33 26l23 14-23 14z" fill="#1A2730"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
+        <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path transform="translate(20.75 19) scale(1.75)" d="M7 4v16l13 -8z" fill="#1A2730" stroke="#1A2730" stroke-width="1" stroke-linejoin="round"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
       ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '', r.id)).join('')}</ul></section>` : ''}
       ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
@@ -460,7 +460,7 @@ function afficherEdition() {
   const d = edition, vu = d.statut === 'vu';
   fenCorps.innerHTML = `<div class="ajout-tete"><span class="mini-affiche">${affiche(fiche.affiche)}</span>
     <div class="ajout-titres"><span class="sur-titre">${esc(fiche.titre)}</span><h2>${fiche.statut === 'vu' ? 'Modifier le film' : vu ? 'Ton avis' : 'Modifier le film'}</h2></div>
-    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg></button></div>
   <div class="edition">
     ${vu ? `<div class="avis"><div><span class="etiquette" id="edit-note">Ma note</span>${etoilesHtml(d.note, 'edit-note')}<p class="erreur" id="err-edit-note" role="alert" hidden></p></div>${coeurHtml(d.coeur)}</div>` : ''}
     <fieldset><legend>Genres</legend>${genresHtml(d.genres)}</fieldset>
@@ -474,7 +474,7 @@ function visionsHtml() {
   const d = edition;
   return `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
         <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v}" max="${aujourdhui()}"></label>
-        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button></div>`).join('')}
+        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12l14 0"/></svg></button></div>`).join('')}
       <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button><p class="erreur" id="err-edit-visions" role="alert" hidden></p></fieldset>`;
 }
 
@@ -605,7 +605,7 @@ function habillerMenu(sel) {
   const nom = sel.getAttribute('aria-label') || sel.previousElementSibling?.textContent || '';
   const b = document.createElement('button');
   b.type = 'button'; b.className = 'menu-btn'; b.setAttribute('aria-haspopup', 'listbox'); b.setAttribute('aria-expanded', 'false');
-  const maj = () => { b.innerHTML = `${esc(sel.selectedOptions[0]?.text)}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`; b.setAttribute('aria-label', `${nom} : ${sel.selectedOptions[0]?.text}`); };
+  const maj = () => { b.innerHTML = `${esc(sel.selectedOptions[0]?.text)}<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6 -6"/></svg>`; b.setAttribute('aria-label', `${nom} : ${sel.selectedOptions[0]?.text}`); };
   b.disabled = sel.disabled;
   maj(); sel.after(b);
   b.addEventListener('click', () => (b.nextElementSibling ? fermerMenu(b) : ouvrirMenu(sel, b, maj)));
@@ -615,7 +615,7 @@ function ouvrirMenu(sel, b, maj) {
   document.querySelectorAll('.menu-liste').forEach((l) => fermerMenu(l.previousElementSibling));
   const ul = document.createElement('ul');
   ul.className = 'menu-liste'; ul.setAttribute('role', 'listbox');
-  ul.innerHTML = [...sel.options].map((o, i) => `<li role="option" tabindex="-1" data-i="${i}" aria-selected="${o.selected}">${esc(o.text)}${o.selected ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>' : ''}</li>`).join('');
+  ul.innerHTML = [...sel.options].map((o, i) => `<li role="option" tabindex="-1" data-i="${i}" aria-selected="${o.selected}">${esc(o.text)}${o.selected ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg>' : ''}</li>`).join('');
   b.after(ul); b.setAttribute('aria-expanded', 'true');
   ul.children[sel.selectedIndex]?.focus();
   const choisir = (li) => {
@@ -646,9 +646,9 @@ new MutationObserver(() => document.querySelectorAll('select[data-menu=""]').for
 
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const pluriel = (n, mot, motP = mot + 's') => `${n} ${n > 1 ? motP : mot}`;
-const ICO_COEUR_CARTE = '<svg role="img" aria-label="Coup de cœur" class="coeur-carte" width="28" height="28" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#FFFDF7"/><path d="M12 18s-6-3.6-6-8a3.3 3.3 0 0 1 6-1.9A3.3 3.3 0 0 1 18 10c0 4.4-6 8-6 8z" fill="#D2483B"/></svg>';
-const ICO_REVU = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>';
-const FLECHE = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d === 'g' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'}"/></svg>`;
+const ICO_COEUR_CARTE = '<svg role="img" aria-label="Coup de cœur" class="coeur-carte" width="28" height="28" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#FFFDF7"/><path transform="translate(4.8 4.6) scale(.6)" d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" fill="#D2483B"/></svg>';
+const ICO_REVU = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v-3a3 3 0 0 1 3 -3h13m-3 -3l3 3l-3 3 M20 12v3a3 3 0 0 1 -3 3h-13m3 3l-3 -3l3 -3"/></svg>';
+const FLECHE = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d === 'g' ? 'M15 6l-6 6l6 6' : 'M9 6l6 6l-6 6'}"/></svg>`;
 
 const coll = { q: '', tri: 'date', genre: '', pf: '', page: 1, films: [] };
 
@@ -668,8 +668,8 @@ function entete(vue, compteur = '') {
   const lien = (v, label, ico) => `<a href="#${v}" ${v === vue ? 'aria-current="page"' : ''}>${ico}${label}</a>`;
   return `<div class="coll-tete"><div class="titre-page"><h1>Mes films</h1></div>
     <div class="coll-tete-droite">${compteur}<nav class="bascule bascule-liens" aria-label="Affichage">
-      ${lien('collection', 'Grille', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>')}
-      ${lien('calendrier', 'Calendrier', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>')}
+      ${lien('collection', 'Grille', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><path d="M4 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4 M14 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4 M4 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4 M14 15a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -4"/></svg>')}
+      ${lien('calendrier', 'Calendrier', '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12 M16 3v4 M8 3v4 M4 11h16"/></svg>')}
     </nav></div></div>`;
 }
 
@@ -681,7 +681,7 @@ async function pageCollection() {
   return entete('collection', `<p class="muted"><strong>${coll.films.length}</strong> ${coll.films.length > 1 ? 'films vus' : 'film vu'}</p>`) + `
   <div class="filtres">
     <div class="filtres-ligne">
-      <label class="champ champ-recherche"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <label class="champ champ-recherche"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6"/></svg>
         <input id="coll-q" type="search" placeholder="Titre, réalisateur, acteur…" aria-label="Rechercher dans la collection" value="${esc(coll.q)}" autocomplete="off"></label>
       <label class="champ"><span>Trier par</span><select id="coll-tri" data-menu>${TRIS.map(([v, l]) => `<option value="${v}" ${v === coll.tri ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       ${champPf('coll-pf', coll.films, coll.pf)}
@@ -833,7 +833,7 @@ function ouvrirRecherche() {
   if (!reglages.tmdb_token) {
     corps.innerHTML = `<p class="vide">Il manque ta clé TMDB pour chercher des films.<br><br><a class="btn primaire" href="#reglages" data-fermer>Ouvrir les réglages</a></p>`;
   } else {
-    corps.innerHTML = `<label class="recherche"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    corps.innerHTML = `<label class="recherche"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6"/></svg>
       <input id="q" type="search" placeholder="Tape le titre d'un film…" aria-label="Titre du film" autocomplete="off"><small>via TMDB</small></label>
       <ul class="resultats" id="resultats"></ul>`;
   }
@@ -852,7 +852,7 @@ async function chercher(q) {
       const connu = films.find((f) => f.tmdb_id === r.id);
       return `<li><button type="button" ${connu?.statut === 'vu' ? `data-fiche="${connu.id}"` : `data-id="${r.id}"`}>${affiche(r.poster_path)}
         <span><b>${esc(r.title)}</b><small>${esc((r.release_date || '').slice(0, 4) || 'Date inconnue')}</small></span>
-        ${connu ? `<span class="badge ${connu.statut === 'vu' ? 'vu' : ''}">${connu.statut === 'vu' ? 'Déjà vu' : 'Dans ta watchlist'}</span>` : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>'}
+        ${connu ? `<span class="badge ${connu.statut === 'vu' ? 'vu' : ''}">${connu.statut === 'vu' ? 'Déjà vu' : 'Dans ta watchlist'}</span>` : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>'}
       </button></li>`;
     }).join('') : `<li class="vide">Aucun film trouvé pour « ${esc(q)} ». Vérifie l'orthographe ou essaie le titre original.</li>`;
   } catch (err) {

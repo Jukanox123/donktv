@@ -4,9 +4,9 @@
 /* ---------- Outils communs ---------- */
 
 const mobile = () => matchMedia('(max-width: 760px)').matches;
-const ICO_TROPHEE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg>';
-const ICO_LOUPE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>';
-const ICO_FLECHE_D = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+const ICO_TROPHEE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21l8 0 M12 17l0 4 M7 4l10 0 M17 4v8a5 5 0 0 1 -10 0v-8 M3 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M17 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/></svg>';
+const ICO_LOUPE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6"/></svg>';
+const ICO_FLECHE_D = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>';
 const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const iso = (d) => d.toLocaleDateString('sv');
 const ajoutJours = (isoDate, n) => { const d = new Date(isoDate + 'T12:00'); d.setDate(d.getDate() + n); return iso(d); };
@@ -73,8 +73,7 @@ async function pageAVoir() {
   const n = av.films.length;
   return `<div class="coll-tete avoir-tete"><div class="titre-page"><h1>Watchlist</h1></div>
     <div class="coll-tete-droite"><p class="muted"><strong>${n}</strong> ${n > 1 ? 'films à voir' : 'film à voir'}</p>
-    ${n ? `<button class="btn primaire" type="button" data-tirage aria-expanded="${tg.ouvert}" aria-controls="tirage-zone">${ICO_DE}Qu’est-ce que je regarde ?</button>` : ''}</div></div>
-  ${n ? '<div id="tirage-zone"></div>' : ''}
+</div></div>
   ${n ? `<div class="filtres"><div class="filtres-ligne">${champRecherche('av-q', av.q, 'Rechercher dans la watchlist')}
       ${champTri('av-tri', [['ajout', 'Date d’ajout'], ['genre', 'Genre'], ['annee', 'Année de sortie'], ['duree', 'Durée'], ['titre', 'Titre']], av.tri)}${champPf('av-pf', av.films, av.pf)}</div>
     <div class="puces" role="group" aria-label="Filtrer par genre">${['', ...GENRES].map((g) => {
@@ -82,7 +81,8 @@ async function pageAVoir() {
       if (!c && av.genre !== g) return ''; // un genre absent de la watchlist ne filtrerait rien
       return `<button type="button" data-av-genre="${g}" aria-pressed="${av.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}<small>${c}</small></button>`;
     }).join('')}</div></div>` : ''}
-  <div id="av-resultats">${htmlAVoir()}</div>`;
+  <div id="av-resultats">${htmlAVoir()}</div>
+  ${n ? '<section class="tirage-section" aria-labelledby="tg-titre"><h2 class="section" id="tg-titre">Qu’est-ce que je regarde ?</h2><p class="muted">Baudet tire au sort un film de ma watchlist.</p><div id="tirage-zone"></div></section>' : ''}`;
 }
 
 function htmlAVoir() {
@@ -99,7 +99,7 @@ function htmlAVoir() {
   <div class="grille-films grille-avoir">${items.map((f) => `<div class="carte-avoir">
     <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f)}</a>
     <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small></div>
-    <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="${esc(f.titre)} : je l’ai vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg><span>Je l’ai vu</span></button>
+    <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="${esc(f.titre)} : je l’ai vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg><span>Je l’ai vu</span></button>
   </div>`).join('')}</div>${paginationHtml(p, nbPages, 'data-av-page')}`;
 }
 
@@ -213,9 +213,9 @@ async function pageTops(s) {
 function htmlTops() {
   const l = tp.liste, taille = tailleTop(l), rangs = topDe(l), liste = rangs.map((r) => tp.films.find((f) => f.id === r.film_id)).filter(Boolean);
   const medailles = ['var(--or)', 'var(--argent)', 'var(--bronze)'];
-  const fleches = (f, i) => `<div class="fleches"><button class="btn carre" type="button" data-top-monter="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Faire monter ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
-    <button class="btn carre" type="button" data-top-descendre="${i}" ${i === liste.length - 1 ? 'disabled' : ''} aria-label="Faire descendre ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
-    <button class="btn carre" type="button" data-top-retirer="${i}" aria-label="Retirer ${esc(f.titre)} du classement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`;
+  const fleches = (f, i) => `<div class="fleches"><button class="btn carre" type="button" data-top-monter="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Faire monter ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6 -6l6 6"/></svg></button>
+    <button class="btn carre" type="button" data-top-descendre="${i}" ${i === liste.length - 1 ? 'disabled' : ''} aria-label="Faire descendre ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6 -6"/></svg></button>
+    <button class="btn carre" type="button" data-top-retirer="${i}" aria-label="Retirer ${esc(f.titre)} du classement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg></button></div>`;
   const note = (f) => (f.note ? `<span aria-hidden="true" class="etoile-txt">★</span> ${fr(f.note)}` : 'Pas noté');
   return `<div class="titre-page"><h1>Mes tops</h1><p class="muted">Ton classement à toi, dans l'ordre que tu veux. Utilise les flèches pour faire monter ou descendre un film.</p></div>
   <nav class="puces" aria-label="Choisir un classement">${['tous', ...GENRES].map((x) => `<a href="#tops/${x === 'tous' ? 'tous' : slugGenre(x)}" ${x === l ? 'aria-current="page"' : ''}>${x === 'tous' ? `<span class="trophee">${ICO_TROPHEE}</span>Tous les temps` : `<img src="${buste(x)}" alt="">${x}`}</a>`).join('')}</nav>
@@ -238,7 +238,7 @@ function ouvrirAjoutTop() {
   const candidats = tp.films.filter((f) => f.statut === 'vu' && !dedans.has(f.id) && (l === 'tous' || f.genres.includes(l))).sort((a, b) => (b.note ?? -1) - (a.note ?? -1));
   fen.classList.remove('petit');
   fenCorps.innerHTML = `<div class="ajout-tete"><div class="ajout-titres"><span class="sur-titre">${nomTop(l)}</span><h2>Ajouter au top</h2></div>
-    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg></button></div>
     <label class="recherche">${ICO_LOUPE}<input id="top-q" type="search" placeholder="Rechercher parmi mes films vus…" aria-label="Rechercher parmi mes films vus" autocomplete="off"></label>
     <ul class="resultats" id="top-candidats">${candidats.length ? candidats.map((f) => `<li data-cherche="${esc(f.cherche)}"><button type="button" data-top-choisir="${f.id}">${affiche(f.affiche)}
       <span><b>${esc(f.titre)}</b><small>${[f.annee, f.genres.join(', ')].filter(Boolean).join(' · ')}</small></span><span class="badge vu">Ajouter</span></button></li>`).join('')
@@ -268,7 +268,7 @@ async function ouvrirTopsFiche() {
   const listes = ['tous', ...f.genres];
   fen.classList.remove('petit');
   fenCorps.innerHTML = `<div class="ajout-tete"><span class="mini-affiche">${affiche(f.affiche)}</span><div class="ajout-titres"><span class="sur-titre">${esc(f.titre)}</span><h2>Ajouter à mes tops</h2></div>
-    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <button class="btn carre" type="button" data-fermer aria-label="Fermer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg></button></div>
   <div class="edition"><p class="muted">Le classement général et les genres du film. Choisis une place puis valide.</p>
   ${listes.map((l) => {
     const rangs = topDe(l), taille = tailleTop(l), moi = rangs.find((r) => r.film_id === f.id), n = rangs.length;
@@ -680,8 +680,8 @@ function fonctionnalitesHtml() {
 /* ---------- Mon espace (mobile) ---------- */
 
 // Icônes des pages, partagées par Mon espace et la section « Ce que DonkTV sait faire » de l'accueil.
-const CHEMINS = { tops: 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3', stats: 'M3 17l6-6 4 4 8-8M15 7h6v6', retros: 'M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.6 6.6 19.5l1.2-6-4.5-4.2 6.1-.7z', sagas: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5' };
-const svgEspace = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+const CHEMINS = { tops: 'M8 21l8 0 M12 17l0 4 M7 4l10 0 M17 4v8a5 5 0 0 1 -10 0v-8 M3 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M17 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0', stats: 'M3 17l6 -6l4 4l8 -8 M14 7l7 0l0 7', retros: 'M12 8l0 4l2 2 M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5', sagas: 'M12 4l-8 4l8 4l8 -4l-8 -4 M4 12l8 4l8 -4 M4 16l8 4l8 -4' };
+const svgEspace = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
 
 function pageMonEspace() {
   const lien = (href, couleur, ico, titre, sous) => `<a href="${href}"><span class="espace-ico" style="background:${couleur}" aria-hidden="true">${ico}</span><span><b>${titre}</b><small>${sous}</small></span>${ICO_FLECHE_D}</a>`;
@@ -690,8 +690,8 @@ function pageMonEspace() {
     ${lien('#stats', '#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Mes chiffres, mes genres et mes pays')}
     ${lien('#retros', '#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Semaine, mois et année')}
     ${lien('#sagas', '#7A5AA6', svgEspace(CHEMINS.sagas), 'Mes sagas', 'Star Wars, Harry Potter… où j’en suis')}
-    ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svgEspace('M7 2h10a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM12 7v7M9 11l3 3 3-3M11 19h2')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
-    ${lien('#reglages', '#56685A', svgEspace('M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'), 'Réglages', 'Thème, clés TMDB et OMDb')}
+    ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svgEspace('M12.5 21h-4.5a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v7 M11 4h2 M12 17v.01 M19 16v6 M22 19l-3 3l-3 -3')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
+    ${lien('#reglages', '#56685A', svgEspace('M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065 M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0'), 'Réglages', 'Thème, clés TMDB et OMDb')}
   </nav>`;
 }
 
