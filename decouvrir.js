@@ -12,7 +12,7 @@ const ICO_RETIRER = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"
 async function remplirPlateformes() {
   const zone = $('#pf-choix');
   if (!zone) return;
-  if (!reglages.tmdb_token) return (zone.innerHTML = '<p class="muted">Renseigne d’abord ta clé TMDB ci-dessous.</p>');
+  if (!sources.tmdb) return (zone.innerHTML = '<p class="muted">Renseigne d’abord ta clé TMDB ci-dessous.</p>');
   zone.innerHTML = `<div class="pf-recherche"><label class="champ champ-recherche">${ICO_LOUPE}<input id="pf-q" type="search" placeholder="Rechercher une plateforme" aria-label="Rechercher une plateforme" autocomplete="off" aria-controls="pf-sugg"></label>
     <ul class="pf-sugg" id="pf-sugg" hidden></ul></div><ul class="pfs pf-choix" id="pf-mes" aria-label="Mes plateformes"></ul>`;
   majMesPlateformes();
@@ -177,7 +177,7 @@ const carteTmdb = (c) => {
 const grille = (l) => `<div class="grille-films">${l.join('')}</div>`;
 
 async function pagePersonne(p) {
-  if (!reglages.tmdb_token) return sansCle();
+  if (!sources.tmdb) return sansCle();
   let id = p;
   if (!/^\d+$/.test(p)) {
     const nom = decodeURIComponent(p), r = await tmdb('/search/person', { query: nom });
@@ -230,7 +230,7 @@ function jaugeRonde(vus, total) {
 
 // Saga : titre, résumé court et jauge ronde, puis une frise d'affiches dans l'ordre de sortie.
 async function pageSaga(id) {
-  if (!reglages.tmdb_token) return sansCle();
+  if (!sources.tmdb) return sansCle();
   const [c, F] = await Promise.all([collection(id), chargerFilms()]);
   const mien = new Map(F.map((f) => [f.tmdb_id, f])), parts = [...c.parts].sort((a, b) => (a.release_date || '9999').localeCompare(b.release_date || '9999'));
   const l = sortis(parts), vus = l.filter((p) => mien.get(p.id)?.statut === 'vu').length;
@@ -254,7 +254,7 @@ async function pageSagas() {
   const F = await chargerFilms(), ids = [...new Set(F.filter((f) => f.saga_id).map((f) => f.saga_id))];
   const titre = '<div class="titre-page"><h1>Mes sagas</h1></div>';
   if (!ids.length) return titre + videMascotte('Aucune saga pour l’instant', 'Dès qu’un film de ta collection fait partie d’une saga (Star Wars, Harry Potter…), elle apparaît ici. Les films déjà ajoutés sont vérifiés au fil des démarrages.', '<a class="btn primaire" href="#collection">Voir mes films</a>');
-  if (!reglages.tmdb_token) return titre + sansCle();
+  if (!sources.tmdb) return titre + sansCle();
   const vusIds = new Set(F.filter((f) => f.statut === 'vu').map((f) => f.tmdb_id));
   const sagas = (await Promise.allSettled(ids.map(collection))).filter((r) => r.status === 'fulfilled').map(({ value: c }) => {
     const l = sortis(c.parts), vus = l.filter((p) => vusIds.has(p.id)).length;

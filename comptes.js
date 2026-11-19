@@ -72,7 +72,7 @@ fen.addEventListener('click', async (e) => {
 });
 
 /* Confidentialité : une page dans l'app, une fenêtre depuis l'écran de connexion. */
-const REGION_BASE = ''; // shortcut: région du serveur Supabase à renseigner (ex. « en Europe (Paris) »)
+const REGION_BASE = 'en Europe (Irlande)'; // région du projet Supabase : eu-west-1
 const htmlConfidentialite = () => `<div class="titre-page"><h1>Confidentialité</h1><p class="muted">Mise à jour le 19 novembre 2026. En bref : tes films restent à toi.</p></div>
   <section><h2>Ce que DonkTV garde</h2><ul><li>Ton adresse e-mail et ton mot de passe (chiffré), pour te connecter.</li>
     <li>Les films que tu ajoutes : vus, watchlist, notes, coups de cœur, dates, tops et sagas.</li><li>Tes réglages : thème, plateformes choisies.</li></ul></section>

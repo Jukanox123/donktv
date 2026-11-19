@@ -4,7 +4,8 @@ let modeMdp = { invite: 'creer', recovery: 'nouveau' }[retourLien.get('type')] |
 const URL_APP = location.origin + location.pathname;
 
 // La clé « publishable » est faite pour être publique : les données sont protégées par les règles RLS (supabase/schema.sql).
-const sb = supabase.createClient('https://garqewteguzlrpujqcjc.supabase.co', 'sb_publishable_JUGsl_hVTnJm9E4MdSynDw_o6QL5B9d');
+const SB_URL = 'https://garqewteguzlrpujqcjc.supabase.co', SB_CLE = 'sb_publishable_JUGsl_hVTnJm9E4MdSynDw_o6QL5B9d';
+const sb = supabase.createClient(SB_URL, SB_CLE);
 
 // Lectures gardées en mémoire : une page déjà vue s'affiche tout de suite, puis la base est relue en arrière-plan.
 // Toute écriture (insert, update, upsert, delete) vide le cache.
@@ -52,6 +53,7 @@ const GENRE_TMDB = { 28: 'Action', 12: 'Aventure', 16: 'Animation', 35: 'Comédi
   27: 'Horreur', 9648: 'Thriller', 10749: 'Romantique', 878: 'SF', 53: 'Thriller', 10752: 'Guerre', 37: 'Western' };
 
 let uid = null, moi = '', admin = true, reglages = {}, films = [];
+let sources = { tmdb: false, omdb: false }; // clés renseignées par l'administrateur (elles restent sur le serveur)
 
 function toast(msg, action) {
   const t = $('#toast');
@@ -79,16 +81,24 @@ async function enregistrerReglages(patch) {
 
 /* ---------- TMDB et OMDb ---------- */
 
-async function tmdb(chemin, params = {}, cle = reglages.tmdb_token) {
+// Sans clé explicite (test dans les Réglages), TMDB et OMDb passent par la fonction Supabase « sources » qui garde les clés.
+async function viaServeur(corps) {
+  const { data: { session } } = await sb.auth.getSession();
+  return fetch(SB_URL + '/functions/v1/sources', { method: 'POST', body: JSON.stringify(corps),
+    headers: { Authorization: 'Bearer ' + session?.access_token, apikey: SB_CLE, 'Content-Type': 'application/json' } });
+}
+
+async function tmdb(chemin, params = {}, cle) {
   const jeton = cle?.startsWith('eyJ');
-  const q = new URLSearchParams({ language: 'fr-FR', ...params, ...(jeton ? {} : { api_key: cle }) });
-  const r = await fetch(`https://api.themoviedb.org/3${chemin}?${q}`, jeton ? { headers: { Authorization: `Bearer ${cle}` } } : {});
+  const q = { language: 'fr-FR', ...params };
+  const r = cle ? await fetch(`https://api.themoviedb.org/3${chemin}?${new URLSearchParams({ ...q, ...(jeton ? {} : { api_key: cle }) })}`, jeton ? { headers: { Authorization: `Bearer ${cle}` } } : {})
+    : await viaServeur({ tmdb: chemin, params: q });
   if (!r.ok) throw new Error(r.status === 401 ? 'TMDB refuse cette clé.' : `TMDB ne répond pas (erreur ${r.status}).`);
   return r.json();
 }
 
-async function omdb(imdbId, cle = reglages.omdb_key) {
-  const r = await fetch(`https://www.omdbapi.com/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(cle)}`);
+async function omdb(imdbId, cle) {
+  const r = cle ? await fetch(`https://www.omdbapi.com/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(cle)}`) : await viaServeur({ omdb: imdbId });
   const j = await r.json().catch(() => ({}));
   if (j.Response !== 'True') throw new Error(j.Error === 'Invalid API key!' ? 'OMDb refuse cette clé : vérifie qu’elle est activée (lien dans le mail d’OMDb).' : 'OMDb : ' + (j.Error || `erreur ${r.status}`));
   return j;
@@ -146,7 +156,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.4';
+const VERSION = '1.4.1';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -178,7 +188,12 @@ function pageReglages() {
 
 const PAGES = { accueil: pageAccueil, reglages: pageReglages, film: (id) => pageFilm(id), decouverte: (id) => pageDecouverte(id), collection: () => pageCollection(), calendrier: () => pageCalendrier() };
 
-const pageIntrouvable = () => `<div class="vide-mascotte introuvable"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV">
+// 404 : le zéro est une bobine qui tourne, sa pellicule cassée se balance (couleurs du thème).
+const pageIntrouvable = () => `<div class="introuvable"><svg viewBox="0 0 480 330" role="img" aria-label="404 : le zéro est une bobine de film">
+  <text x="0" y="232">4</text><text x="330" y="232">4</text>
+  <g class="bout"><path d="M246 214 q 14 50 4 96 l 7 2 l -5 8 l 7 4" fill="none" stroke="var(--text)" stroke-width="18" stroke-linejoin="round"/><path class="pellicule" d="M246 214 q 14 50 4 96" fill="none" stroke="var(--bg)" stroke-width="7" stroke-dasharray="8 4"/></g>
+  <g transform="translate(236 150)"><g class="reel"><circle r="76" fill="var(--text)"/><circle r="68" fill="none" stroke="#E3B23C" stroke-width="3.5"/><circle r="12" fill="#E3B23C"/>
+    <g fill="var(--bg)"><circle cx="0" cy="-39" r="16"/><circle cx="37.1" cy="-12.1" r="16"/><circle cx="22.9" cy="31.6" r="16"/><circle cx="-22.9" cy="31.6" r="16"/><circle cx="-37.1" cy="-12.1" r="16"/></g></g></g></svg>
   <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
 
 // Menu PC : fond flouté dès qu'on fait défiler ; raccourci affiché selon le système.
@@ -244,6 +259,7 @@ $('#page').addEventListener('click', async (e) => {
       try {
         await k.test(v);
         await enregistrerReglages({ [k.champ]: v });
+        sources[k.champ === 'tmdb_token' ? 'tmdb' : 'omdb'] = true;
         etat.className = 'etat ok'; etat.textContent = 'Connectée';
         toast(k.nom + ' : connexion réussie, clé enregistrée.');
       } catch (err) {
@@ -330,8 +346,9 @@ function htmlFilm(f) {
         ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`, niveau(f.note_tmdb && f.note_tmdb * 10))}
       </div>
       <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
-      ${decouverte ? `<div class="fiche-actions"><button class="btn clair" type="button" data-tmdb-vu="${f.tmdb_id}">${ICO_VU}Je l’ai vu</button><button class="btn contour large" type="button" data-rr-avoir="${f.tmdb_id}">+ Watchlist</button></div>` : `<div class="fiche-actions">
-        <button class="btn clair" type="button" data-action="${vu ? 'revu' : 'vu'}">${vu ? 'Je l’ai revu' : 'Je l’ai vu'}</button>
+      ${decouverte ? `<div class="fiche-actions">${f.bande_annonce ? `<button class="btn clair" type="button" data-action="ba" data-ba="${esc(f.bande_annonce)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13 -8z"/></svg>Bande-annonce</button>` : ''}<button class="btn ${f.bande_annonce ? 'contour' : 'clair'}" type="button" data-tmdb-vu="${f.tmdb_id}">${ICO_VU}Je l’ai vu</button><button class="btn contour large" type="button" data-rr-avoir="${f.tmdb_id}">+ Watchlist</button></div>` : `<div class="fiche-actions">
+        ${f.bande_annonce ? `<button class="btn clair" type="button" data-action="ba" data-ba="${esc(f.bande_annonce)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4v16l13 -8z"/></svg>Bande-annonce</button>` : ''}
+        <button class="btn ${f.bande_annonce ? 'contour' : 'clair'}" type="button" data-action="${vu ? 'revu' : 'vu'}">${vu ? 'Je l’ai revu' : 'Je l’ai vu'}</button>
         <button class="btn contour ${vu ? '' : 'large'}" type="button" data-action="modifier">Modifier</button>
         ${vu ? `<button class="btn contour" type="button" data-action="tops">${ICO_TROPHEE}${libelleTops(f.tops)}</button>` : ''}
         <button class="btn contour carre" type="button" data-action="supprimer" aria-label="Supprimer le film">${ICO_POUBELLE}</button>
@@ -342,8 +359,6 @@ function htmlFilm(f) {
     <div class="fiche-main">
       ${f.synopsis || pasSorti ? `<section><h2 class="section">Synopsis</h2><p class="synopsis${f.synopsis ? '' : ' muted'}">${f.synopsis ? esc(f.synopsis) : 'Le film n’est pas encore sorti : son synopsis sera bientôt disponible.'}</p></section>` : ''}
       ${ouRegarderHtml(f.offres)}
-      ${f.bande_annonce ? `<section><h2 class="section">Bande-annonce</h2><a class="ba" href="https://www.youtube.com/watch?v=${encodeURIComponent(f.bande_annonce)}" target="_blank" rel="noopener" style="background-image:url(https://i.ytimg.com/vi/${encodeURIComponent(f.bande_annonce)}/hqdefault.jpg)">
-        <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="40" fill="#F3EEDD"/><path transform="translate(20.75 19) scale(1.75)" d="M7 4v16l13 -8z" fill="#1A2730" stroke="#1A2730" stroke-width="1" stroke-linejoin="round"/></svg><span>Regarder sur YouTube ↗</span></a></section>` : ''}
       ${f.reals.length ? `<section><h2 class="section">${titreReal(f.reals)}</h2><ul class="casting">${f.reals.map((r) => personne(r.nom, r.photo, '', r.id)).join('')}</ul></section>` : ''}
       ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
@@ -376,7 +391,7 @@ function sagaFicheHtml(sg) {
 async function pageDecouverte(tmdbId) {
   const connu = films.find((x) => x.tmdb_id === Number(tmdbId));
   if (connu) { location.replace('#film/' + connu.id); return ''; }
-  if (!reglages.tmdb_token) return sansCle();
+  if (!sources.tmdb) return sansCle();
   const d = await details(tmdbId), f = { ...versFilm(d), statut: 'decouverte', visionnages: [] };
   f.reals = d.credits.crew.filter((c) => c.job === 'Director').map((c) => ({ id: c.id, nom: c.name, photo: c.profile_path, genre: c.gender }));
   f.idActeurs = new Map(d.credits.cast.map((c) => [c.name, c.id]));
@@ -389,7 +404,7 @@ async function pageDecouverte(tmdbId) {
 async function pageFilm(id) {
   const f = await lire('film/' + id, () => sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle());
   if (f) {
-    const [d, tops] = await Promise.all([reglages.tmdb_token ? details(f.tmdb_id).catch(() => null) : null,
+    const [d, tops] = await Promise.all([sources.tmdb ? details(f.tmdb_id).catch(() => null) : null,
       lire('tops/' + id, () => sb.from('tops').select('liste,position').eq('film_id', f.id))]);
     f.tops = tops || [];
     f.reals = d ? d.credits.crew.filter((c) => c.job === 'Director').map((c) => ({ id: c.id, nom: c.name, photo: c.profile_path, genre: c.gender })) : f.realisateurs.map((nom) => ({ nom }));
@@ -429,7 +444,7 @@ async function mettreAJour(f, d, avecOmdb = true) {
   const vueDepuis = f.statut === 'vu' && f.visionnages.some((x) => x.date > (f.maj_le || ''));
   const rtVieille = f.note_rt == null || !f.maj_le || joursEntre(f.maj_le, auj) > 30 || vueDepuis;
   let rt = null;
-  if (avecOmdb && rtVieille && f.imdb_id && reglages.omdb_key && !mettreAJour.essayes.has(f.id)) {
+  if (avecOmdb && rtVieille && f.imdb_id && sources.omdb && !mettreAJour.essayes.has(f.id)) {
     mettreAJour.essayes.add(f.id);
     try { rt = parseInt((await omdb(f.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value); } catch {}
     if (rt >= 0 && rt !== f.note_rt) patch.note_rt = rt;
@@ -444,7 +459,7 @@ mettreAJour.essayes = new Set();
 
 // Au démarrage : complète en arrière-plan les films dont les plateformes datent de plus de 7 jours (pour les filtres et les sagas).
 async function completerFilms() {
-  if (!reglages.tmdb_token) return;
+  if (!sources.tmdb) return;
   const { data, error } = await sb.from('films').select('id,tmdb_id,statut,note_tmdb,votes_tmdb,date_sortie_fr,plateformes,plateformes_le,saga_id,note_rt,maj_le,imdb_id,visionnages(date)');
   if (error) return; // colonnes pas encore créées
   const auj = aujourdhui(), file = data.filter((f) => !f.plateformes_le || joursEntre(f.plateformes_le, auj) >= 7);
@@ -503,6 +518,18 @@ function majListe(id, patch) {
   if (i >= 0) films[i] = { ...films[i], ...patch };
 }
 
+// Tête de Baudet qui saute et étoiles qui jaillissent, au-dessus du message de confirmation.
+function feter() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const etoile = (dx, dy, c) => `<span class="etoile" style="--dx:${dx}px;--dy:${dy}px"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17l-5.9 3.1 1.3-6.6L2.5 8.9l6.6-.8z" fill="${c}"/></svg></span>`;
+  const f = document.createElement('div');
+  f.className = 'fete'; f.setAttribute('aria-hidden', 'true');
+  f.innerHTML = etoile(-70, -60, '#E3A72F') + etoile(72, -54, '#E3A72F') + etoile(-12, -88, '#7FAE5F') + etoile(-84, 6, '#7FAE5F') + etoile(84, 10, '#E3A72F')
+    + '<img class="saut" src="img/baudet-tete.png" alt="" onerror="this.remove()">';
+  document.body.append(f);
+  setTimeout(() => f.remove(), 1800);
+}
+
 async function enregistrerEdition(b) {
   const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
   if (!valider([...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
@@ -523,6 +550,7 @@ async function enregistrerEdition(b) {
     }
     majListe(fiche.id, patch);
     fen.close();
+    if (fiche.statut !== 'vu' && vu) feter(); // « Ton avis » enregistré : Baudet saute de joie
     toast(fiche.statut === 'vu' || !vu ? 'Modifications enregistrées.' : `${fiche.titre} est maintenant dans mes films vus.`);
     route();
   } catch (e) {
@@ -590,9 +618,23 @@ async function enregistrerRevisionnage(b) {
   route();
 }
 
+// Bande-annonce au clic seulement, par-dessus le bandeau de la fiche (pas de chargement YouTube avant).
+function ouvrirBandeAnnonce() {
+  const hero = $('.fiche-hero'), cle = $('[data-ba]')?.dataset.ba, titre = $('.fiche-hero h1')?.textContent || '';
+  if (!hero || !cle || $('.ba-calque')) return;
+  hero.insertAdjacentHTML('beforeend', `<div class="ba-calque" role="region" aria-label="Bande-annonce de ${esc(titre)}">
+    <div class="ba-tete"><span>Bande-annonce · YouTube</span><button class="btn contour carre" type="button" data-action="fermer-ba" aria-label="Fermer la bande-annonce"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12M6 6l12 12"/></svg></button></div>
+    <div class="ba-video"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(cle)}?autoplay=1&rel=0" title="Bande-annonce de ${esc(titre)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div></div>`);
+  $('[data-action="fermer-ba"]').focus();
+}
+function fermerBandeAnnonce() { $('.ba-calque')?.remove(); $('[data-action="ba"]')?.focus(); }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('.ba-calque') && !document.querySelector('dialog[open]')) fermerBandeAnnonce(); });
+
 $('#page').addEventListener('click', (e) => {
   const a = e.target.closest('[data-action]')?.dataset.action;
-  if (a === 'revu') ouvrirRevisionnage();
+  if (a === 'ba') ouvrirBandeAnnonce();
+  else if (a === 'fermer-ba') fermerBandeAnnonce();
+  else if (a === 'revu') ouvrirRevisionnage();
   else if (a === 'vu') ouvrirEdition(true);
   else if (a === 'modifier') ouvrirEdition(false);
   else if (a === 'tops') ouvrirTopsFiche().catch((err) => toast(err.message));
@@ -850,7 +892,7 @@ function etape(n, titre) {
 
 function ouvrirRecherche() {
   etape(1, 'Ajouter un film');
-  if (!reglages.tmdb_token) {
+  if (!sources.tmdb) {
     corps.innerHTML = `<p class="vide">Il manque ta clé TMDB pour chercher des films.<br><br><a class="btn primaire" href="#reglages" data-fermer>Ouvrir les réglages</a></p>`;
   } else {
     corps.innerHTML = `<label class="recherche"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6"/></svg>
@@ -918,7 +960,7 @@ async function enregistrer(bouton) {
   bouton.disabled = true;
   try {
     let note_rt = null;
-    if (reglages.omdb_key && film.imdb_id) {
+    if (sources.omdb && film.imdb_id) {
       // La note des critiques est facultative : un échec OMDb ne doit pas empêcher l'ajout.
       try { note_rt = parseInt((await omdb(film.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value) || null; } catch {}
     }
@@ -1037,9 +1079,10 @@ async function demarrer() {
     sb.rpc('cles'),
   ]);
   reglages = r.data || {}; films = f.data || [];
-  // Les invités utilisent les clés de l'administrateur. Sans la migration du 20 novembre (pas de cles()), compte unique comme avant.
-  admin = c.error || !c.data ? true : c.data.admin;
-  if (!admin) Object.assign(reglages, { tmdb_token: c.data.tmdb_token, omdb_key: c.data.omdb_key });
+  // Les clés de l'administrateur servent à tous ; le navigateur sait seulement si elles existent.
+  if (c.error) toast('Lecture du compte impossible : ' + c.error.message);
+  admin = !!c.data?.admin;
+  sources = { tmdb: !!c.data?.tmdb, omdb: !!c.data?.omdb };
   document.body.classList.toggle('admin', admin);
   document.querySelectorAll('[data-version]').forEach((e) => (e.textContent = 'DonkTV · version ' + VERSION));
   if (reglages.theme) appliquerTheme(reglages.theme);

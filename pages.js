@@ -341,7 +341,7 @@ const st = { films: [], annee: null, mesure: 'films', periodeReal: 'annee', peri
 // Les photos des réalisateurs ne sont pas en base : une recherche TMDB par nom, une fois par session, puis on redessine.
 function photosReals(noms) {
   const manquants = noms.filter((n) => !st.cherches.has(n));
-  if (!manquants.length || !reglages.tmdb_token) return;
+  if (!manquants.length || !sources.tmdb) return;
   manquants.forEach((n) => st.cherches.add(n));
   Promise.all(manquants.map((n) => tmdb('/search/person', { query: n }).then((r) => {
     const p = r.results?.find((x) => x.known_for_department === 'Directing' && x.profile_path) || r.results?.find((x) => x.profile_path);
@@ -762,7 +762,7 @@ function afficherRecherche() {
 
 async function chercherTmdbRapide() {
   const q = rr.q.trim();
-  if (!q || !reglages.tmdb_token) { rr.tmdb = []; return afficherRecherche(); }
+  if (!q || !sources.tmdb) { rr.tmdb = []; return afficherRecherche(); }
   try { const { results } = await tmdb('/search/movie', { query: q }); if (rr.q.trim() === q) rr.tmdb = results; } catch { rr.tmdb = []; }
   afficherRecherche();
 }
@@ -772,7 +772,7 @@ async function ajouterAVoirRapide(id, b) {
   try {
     const film = versFilm(await tmdb(`/movie/${id}`, { append_to_response: 'credits,videos,release_dates', include_video_language: 'fr,en' }));
     let note_rt = null;
-    if (reglages.omdb_key && film.imdb_id) try { note_rt = parseInt((await omdb(film.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value) || null; } catch {}
+    if (sources.omdb && film.imdb_id) try { note_rt = parseInt((await omdb(film.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value) || null; } catch {}
     const { data, error } = await sb.from('films').upsert({ ...film, user_id: uid, statut: 'a_voir', note: null, coup_de_coeur: false, note_rt }, { onConflict: 'user_id,tmdb_id' }).select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').single();
     if (error) throw error;
     films = [data, ...films.filter((f) => f.id !== data.id)];
