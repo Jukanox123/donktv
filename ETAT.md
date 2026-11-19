@@ -60,7 +60,7 @@ Mis à jour le 20 novembre 2026.
 - Envoi des e-mails : le service intégré de Supabase n'envoie qu'aux membres de l'équipe (2 / heure) ; brancher un SMTP (Gmail ou Resend) pour inviter d'autres personnes.
 - Auth › URL Configuration : Site URL et Redirect URLs = https://jukanox123.github.io/donktv/
 - Limite assumée : les clés TMDB / OMDb sont lues par le navigateur des invités (masquées dans l'interface, pas secrètes techniquement).
-- En attente : images de Baudet (img/connexion.jpg, img/connexion-mobile.jpg, img/baudet-tete.png ; l'image de bienvenue sert en attendant), logo TMDB, région Supabase (REGION_BASE dans comptes.js).
+- En attente : tête de Baudet du footer (img/baudet-tete.png), logo TMDB, région Supabase (REGION_BASE dans comptes.js).
 
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
