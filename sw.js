@@ -10,7 +10,9 @@ self.addEventListener('fetch', (e) => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== 'GET') return;
   // Réseau d'abord pour l'app et la base (données à jour), cache en secours hors connexion.
-  if (u.origin === location.origin || (u.hostname.endsWith('.supabase.co') && u.pathname.startsWith('/rest/'))) e.respondWith(reseauDabord(r));
+  // Images de l'app : affichées depuis le cache tout de suite, mises à jour en arrière-plan.
+  if (u.origin === location.origin && u.pathname.includes('/img/')) e.respondWith(cacheEtMaj(r, e));
+  else if (u.origin === location.origin || (u.hostname.endsWith('.supabase.co') && u.pathname.startsWith('/rest/'))) e.respondWith(reseauDabord(r));
   // Cache d'abord pour les affiches, polices et bibliothèques, qui ne changent pas.
   else if (IMAGES_ET_LIBS.includes(u.hostname)) e.respondWith(cacheDabord(r, e));
 });
@@ -24,6 +26,14 @@ async function reseauDabord(r) {
   } catch {
     return (await caches.match(r)) || Response.error();
   }
+}
+
+async function cacheEtMaj(r, e) {
+  const c = await caches.match(r);
+  const maj = fetch(r).then(async (rep) => { if (rep.ok) await (await caches.open(CACHE)).put(r, rep.clone()); return rep; });
+  if (!c) return maj;
+  e.waitUntil(maj.catch(() => {}));
+  return c;
 }
 
 async function cacheDabord(r, e) {

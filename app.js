@@ -9,7 +9,7 @@ const sb = supabase.createClient(SB_URL, SB_CLE);
 
 // Lectures gardées en mémoire : une page déjà vue s'affiche tout de suite, puis la base est relue en arrière-plan.
 // Toute écriture (insert, update, upsert, delete) vide le cache.
-const lectures = new Map();
+const lectures = new Map(), enCours = new Map(); // enCours : une même lecture lancée deux fois ne part qu'une fois
 let generation = 0;
 const fromBase = sb.from.bind(sb);
 sb.from = (table) => {
@@ -26,7 +26,9 @@ async function lire(cle, requete) {
     if (Date.now() - c.t > 30e3) revalider(cle, requete, c);
     return structuredClone(c.data);
   }
-  const g = generation, { data, error } = await requete();
+  const g = generation;
+  if (!enCours.has(cle)) enCours.set(cle, Promise.resolve(requete()).finally(() => enCours.delete(cle)));
+  const { data, error } = await enCours.get(cle);
   if (error) throw error;
   if (g === generation) lectures.set(cle, { data, t: Date.now() });
   return structuredClone(data);
@@ -84,8 +86,9 @@ async function enregistrerReglages(patch) {
 // Sans clé explicite (test dans les Réglages), TMDB et OMDb passent par la fonction Supabase « sources » qui garde les clés.
 async function viaServeur(corps) {
   const { data: { session } } = await sb.auth.getSession();
-  return fetch(SB_URL + '/functions/v1/sources', { method: 'POST', body: JSON.stringify(corps),
-    headers: { Authorization: 'Bearer ' + session?.access_token, apikey: SB_CLE, 'Content-Type': 'application/json' } });
+  // GET pour que le navigateur garde les réponses TMDB (6 h) : une fiche déjà vue s'ouvre sans attendre.
+  return fetch(SB_URL + '/functions/v1/sources?q=' + encodeURIComponent(JSON.stringify(corps)),
+    { headers: { Authorization: 'Bearer ' + session?.access_token, apikey: SB_CLE } });
 }
 
 async function tmdb(chemin, params = {}, cle) {
@@ -156,7 +159,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.4.3';
+const VERSION = '1.4.4';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -404,6 +407,7 @@ async function pageDecouverte(tmdbId) {
 async function pageFilm(id) {
   const f = await lire('film/' + id, () => sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle());
   if (f) {
+    if (sources.tmdb && f.saga_id) collection(f.saga_id).catch(() => {}); // lancée tout de suite, sans attendre la fiche TMDB
     const [d, tops] = await Promise.all([sources.tmdb ? details(f.tmdb_id).catch(() => null) : null,
       lire('tops/' + id, () => sb.from('tops').select('liste,position').eq('film_id', f.id))]);
     f.tops = tops || [];
@@ -439,7 +443,7 @@ async function mettreAJour(f, d, avecOmdb = true) {
   const v = versFilm(d), auj = aujourdhui(), patch = {}, nouveau = {};
   for (const k of ['note_tmdb', 'votes_tmdb', 'date_sortie_fr']) if (v[k] != null && String(v[k]) !== String(f[k] ?? '')) patch[k] = f[k] = v[k];
   const pf = offres(d).abo.map(({ nom, logo }) => ({ nom, logo }));
-  if (JSON.stringify(pf) !== JSON.stringify(f.plateformes) || f.plateformes_le !== auj) Object.assign(nouveau, { plateformes: pf, plateformes_le: auj });
+  if (JSON.stringify(pf) !== JSON.stringify(f.plateformes) || !f.plateformes_le || joursEntre(f.plateformes_le, auj) >= 7) Object.assign(nouveau, { plateformes: pf, plateformes_le: auj });
   if ((d.belongs_to_collection?.id ?? null) !== (f.saga_id ?? null)) Object.assign(nouveau, { saga_id: d.belongs_to_collection?.id ?? null, saga_nom: d.belongs_to_collection?.name ?? null });
   const vueDepuis = f.statut === 'vu' && f.visionnages.some((x) => x.date > (f.maj_le || ''));
   const rtVieille = f.note_rt == null || !f.maj_le || joursEntre(f.maj_le, auj) > 30 || vueDepuis;
@@ -1073,6 +1077,7 @@ $('#form-connexion').addEventListener('submit', async (e) => {
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 async function demarrer() {
+  chargerFilms().catch(() => {}); // lue par la plupart des pages : partie en même temps que le reste
   const [r, f, c] = await Promise.all([
     sb.from('reglages').select('*').maybeSingle(),
     sb.from('films').select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').order('ajoute_le', { ascending: false }),
@@ -1088,7 +1093,7 @@ async function demarrer() {
   if (reglages.theme) appliquerTheme(reglages.theme);
   $('#connexion').hidden = true; $('#app').hidden = false;
   route();
-  completerFilms();
+  setTimeout(completerFilms, 4000); // après l'affichage de la page, pour ne pas lui prendre la bande passante
   if (r.error || f.error) toast('Lecture de la base impossible : ' + (r.error || f.error).message);
 }
 
