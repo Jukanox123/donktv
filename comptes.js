@@ -1,4 +1,4 @@
-/* ---------- Comptes : inviter, confidentialité, pied de page ---------- */
+/* ---------- Comptes : inviter, confidentialité, pied de Mon espace ---------- */
 
 // Fonction Supabase « comptes » (supabase/functions/comptes) : seule à pouvoir créer ou effacer un compte.
 async function comptes(corps) {
@@ -89,15 +89,11 @@ function ouvrirConfidentialite() {
   fen.showModal();
 }
 
-// Mon espace (mobile) : ligne « Inviter » pour l'administrateur.
+// Mon espace (mobile) : ligne « Inviter » pour l'administrateur et pied de page.
 const pageMonEspaceBase = pageMonEspace;
-PAGES['mon-espace'] = () => pageMonEspaceBase().replace('</nav>', (admin ? `<a href="#inviter"><span class="espace-ico" style="background:#2F7D6D" aria-hidden="true">${svgEspace('M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0M16 19h6M19 16v6M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2')}</span><span><b>Inviter un utilisateur</b><small>Un DonkTV privé pour chacun</small></span>${ICO_FLECHE_D}</a>` : '') + '</nav>');
-
-// Pied de page : rubriques en accordéon sur mobile, déconnexion.
-$('.pied').addEventListener('click', (e) => {
-  const b = e.target.closest('button');
-  if (b?.dataset.piedPlier !== undefined) b.setAttribute('aria-expanded', b.getAttribute('aria-expanded') !== 'true');
-  else if (b && 'deconnexion' in b.dataset) sb.auth.signOut();
-});
+PAGES['mon-espace'] = () => pageMonEspaceBase().replace('</nav>', (admin ? `<a href="#inviter"><span class="espace-ico" style="background:#2F7D6D" aria-hidden="true">${svgEspace('M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0M16 19h6M19 16v6M6 21v-2a4 4 0 0 1 4 -4h4')}</span><span><b>Inviter un utilisateur</b><small>Un DonkTV privé pour chacun</small></span>${ICO_FLECHE_D}</a>` : '') + '</nav>')
+  + `<div class="pied-m"><div class="pied-m-tete" aria-hidden="true"><img src="img/baudet-tete.png" alt="" onerror="this.parentNode.remove()"></div>
+    <div class="pied-m-liens"><a href="#confidentialite">Confidentialité</a><button type="button" data-deconnexion>Se déconnecter</button></div>
+    <span>DonkTV · version ${VERSION}</span></div>`;
 
 Object.assign(PAGES, { inviter: () => pageInviter(), confidentialite: () => `<div class="confid etroit texte">${htmlConfidentialite()}</div>` });
