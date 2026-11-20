@@ -159,7 +159,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.4.5';
+const VERSION = '1.4.6';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -530,7 +530,8 @@ function feter() {
   f.className = 'fete'; f.setAttribute('aria-hidden', 'true');
   f.innerHTML = etoile(-70, -60, '#E3A72F') + etoile(72, -54, '#E3A72F') + etoile(-12, -88, '#7FAE5F') + etoile(-84, 6, '#7FAE5F') + etoile(84, 10, '#E3A72F')
     + '<img class="saut" src="img/baudet-tete.png" alt="" onerror="this.remove()">';
-  document.body.append(f);
+  // Dans une fenêtre encore ouverte (ajout d'un film), la fête doit passer par-dessus : on l'y place.
+  (document.querySelector('dialog[open]') || document.body).append(f);
   setTimeout(() => f.remove(), 1800);
 }
 
@@ -978,6 +979,7 @@ async function enregistrer(bouton) {
     }
     films = [data, ...films.filter((f) => f.id !== data.id)];
     etape(3, 'C’est ajouté !');
+    if (vu) feter(); // « Ton avis » de l'ajout enregistré
     corps.innerHTML = `<div class="fini"><div><h3>${esc(film.titre)} ${vu ? 'est dans ta collection !' : 'rejoint ta watchlist !'}</h3>
       <div class="boutons"><a class="btn primaire" href="#film/${data.id}" data-fermer style="height:48px">Voir la fiche</a><button class="btn" type="button" data-retour style="height:48px">Ajouter un autre film</button></div></div></div>`;
   } catch (err) {
