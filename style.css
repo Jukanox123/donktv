@@ -1216,9 +1216,9 @@ nav .espace-menu a[aria-current] { background: none; color: var(--accent); font-
 
 /* Pied de page (PC) */
 .pied { position: relative; margin-top: 40px; background: var(--surface); border-top: 1px solid var(--line); font-size: 15px; }
-.pied-tete { position: absolute; right: max(96px, calc(50% - 544px)); top: -118px; width: 100px; height: 118px; overflow: hidden; pointer-events: none; }
-.pied-tete img { width: 100px; display: block; transform: translateY(14px); transition: transform .5s cubic-bezier(.22,1,.36,1); }
-.pied:hover .pied-tete img { transform: translateY(0); }
+.pied-tete { position: absolute; right: max(96px, calc(50% - 544px)); top: -74px; width: 118px; height: 74px; overflow: hidden; pointer-events: none; }
+.pied-tete img { width: 118px; display: block; transform: translateY(28px); transition: transform .5s cubic-bezier(.22,1,.36,1); }
+.pied:hover .pied-tete img { transform: translateY(22px); } /* au-delà, le ticket jaune de l'oreille apparaîtrait */
 .pied-in { max-width: 1280px; margin: 0 auto; padding: 56px 64px 40px; display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; }
 .pied-marque { display: flex; flex-direction: column; gap: 14px; }
 .pied-marque p { margin: 0; max-width: 260px; }
@@ -1236,8 +1236,8 @@ body:not(.admin) .si-admin { display: none !important; }
 
 /* Pied de Mon espace (mobile) */
 .pied-m { position: relative; margin-top: 56px; padding: 20px 4px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; font-size: 14px; color: var(--muted); }
-.pied-m-tete { position: absolute; right: 12px; top: -88px; width: 74px; height: 88px; overflow: hidden; pointer-events: none; }
-.pied-m-tete img { width: 74px; display: block; transform: translateY(8px); }
+.pied-m-tete { position: absolute; right: 12px; top: -54px; width: 86px; height: 54px; overflow: hidden; pointer-events: none; }
+.pied-m-tete img { width: 86px; display: block; transform: translateY(20px); }
 .pied-m-liens { display: flex; flex-wrap: wrap; gap: 4px 20px; }
 .pied-m-liens a, .pied-m-liens button { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .pied-m .credit-tmdb { font-size: 12px; line-height: 1.45; align-items: flex-start; }

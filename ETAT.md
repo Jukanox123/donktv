@@ -61,7 +61,7 @@ Mis à jour le 20 novembre 2026.
 - Fonctions Supabase déployées le 20 novembre : `comptes` (liste, inviter, retirer, supprimer son compte) et `sources` (relais TMDB / OMDb avec les clés de l'administrateur). Clé service_role fournie par Supabase côté serveur.
 - Envoi des e-mails : le service intégré de Supabase n'envoie qu'aux membres de l'équipe (2 / heure) ; brancher un SMTP (Gmail ou Resend) pour inviter d'autres personnes.
 - Auth › URL Configuration : Site URL et Redirect URLs = https://jukanox123.github.io/donktv/
-- Tête de Baudet seule : img/baudet-tete.png (20 novembre, image Gemini de Valentin, ticket jaune retiré, détourée) pour le pied de page et le saut de « Ton avis ». Logo TMDB : img/tmdb.png (20 novembre). Région : eu-west-1 (Irlande).
+- Tête de Baudet seule : img/baudet-tete.png (20 novembre, image Gemini de Valentin détourée, contour crème des yeux passé au beige rosé #CFAA90 des autres ânes ; le ticket jaune reste sur l'oreille, caché dans le pied de page en ne montrant que le bout des oreilles) pour le pied de page et le saut de « Ton avis ». Logo TMDB : img/tmdb.png (20 novembre). Région : eu-west-1 (Irlande).
 
 ## Écarts assumés par rapport aux maquettes
 - Mobile : barre du bas Accueil · Collection · + · À voir · Mon espace ; tops, stats, rétros et réglages via Mon espace.
