@@ -159,7 +159,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.4.6';
+const VERSION = '1.4.7';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -522,19 +522,6 @@ function majListe(id, patch) {
   if (i >= 0) films[i] = { ...films[i], ...patch };
 }
 
-// Tête de Baudet qui saute et étoiles qui jaillissent, au-dessus du message de confirmation.
-function feter() {
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const etoile = (dx, dy, c) => `<span class="etoile" style="--dx:${dx}px;--dy:${dy}px"><svg width="14" height="14" viewBox="0 0 24 24"><path d="M12 2l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17l-5.9 3.1 1.3-6.6L2.5 8.9l6.6-.8z" fill="${c}"/></svg></span>`;
-  const f = document.createElement('div');
-  f.className = 'fete'; f.setAttribute('aria-hidden', 'true');
-  f.innerHTML = etoile(-70, -60, '#E3A72F') + etoile(72, -54, '#E3A72F') + etoile(-12, -88, '#7FAE5F') + etoile(-84, 6, '#7FAE5F') + etoile(84, 10, '#E3A72F')
-    + '<img class="saut" src="img/baudet-tete.png" alt="" onerror="this.remove()">';
-  // Dans une fenêtre encore ouverte (ajout d'un film), la fête doit passer par-dessus : on l'y place.
-  (document.querySelector('dialog[open]') || document.body).append(f);
-  setTimeout(() => f.remove(), 1800);
-}
-
 async function enregistrerEdition(b) {
   const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
   if (!valider([...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
@@ -555,7 +542,6 @@ async function enregistrerEdition(b) {
     }
     majListe(fiche.id, patch);
     fen.close();
-    if (fiche.statut !== 'vu' && vu) feter(); // « Ton avis » enregistré : Baudet saute de joie
     toast(fiche.statut === 'vu' || !vu ? 'Modifications enregistrées.' : `${fiche.titre} est maintenant dans mes films vus.`);
     route();
   } catch (e) {
@@ -979,7 +965,6 @@ async function enregistrer(bouton) {
     }
     films = [data, ...films.filter((f) => f.id !== data.id)];
     etape(3, 'C’est ajouté !');
-    if (vu) feter(); // « Ton avis » de l'ajout enregistré
     corps.innerHTML = `<div class="fini"><div><h3>${esc(film.titre)} ${vu ? 'est dans ta collection !' : 'rejoint ta watchlist !'}</h3>
       <div class="boutons"><a class="btn primaire" href="#film/${data.id}" data-fermer style="height:48px">Voir la fiche</a><button class="btn" type="button" data-retour style="height:48px">Ajouter un autre film</button></div></div></div>`;
   } catch (err) {
