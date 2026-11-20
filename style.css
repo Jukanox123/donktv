@@ -672,20 +672,21 @@ img.initiales { object-fit: cover; object-position: 50% 20%; flex: none; }
 
 /* Installation */
 dialog.feuille { width: min(520px, 100%); }
+.installer:focus { outline: none; }
 .installer { padding: 10px 24px 28px; display: flex; flex-direction: column; gap: 18px; }
 .poignee { align-self: center; width: 40px; height: 5px; border-radius: 3px; background: var(--line); }
-.installer-tete { display: flex; align-items: center; gap: 14px; }
+.installer-tete { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
 .installer-tete img { width: 68px; height: 68px; border-radius: 18px; box-shadow: 0 10px 22px -12px rgba(20,40,28,.5); }
-.installer-tete h2 { font-size: 24px; display: flex; align-items: baseline; gap: 8px; }
-.logo-inline { display: inline-block; height: 28px; vertical-align: baseline; transform: translateY(4px); }
-.installer ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
-.installer li { display: flex; align-items: center; gap: 12px; }
-.installer ul span { width: 36px; height: 36px; border-radius: 10px; background: var(--chip); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
-.installer .bascule { display: flex; }
-.installer .bascule button { flex: 1; }
-.etapes-ios { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--bg); list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 15px; }
-.etapes-ios li { display: flex; align-items: center; gap: 10px; }
-.etapes-ios span { width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--btn); color: var(--btn-text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.installer-tete h2 { font-size: 24px; }
+.installer-puces { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.installer-puces li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; background: var(--chip); font-size: 13px; }
+.installer-puces svg { color: var(--accent); }
+.installer-etapes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 15px; }
+.installer-etapes li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.installer-etapes li > span:nth-child(2) { flex: 1; line-height: 1.35; }
+.installer-etapes .num { width: 26px; height: 26px; flex: none; border-radius: 50%; background: var(--btn); color: var(--btn-text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.bouton-os { flex: none; min-width: 36px; height: 34px; padding: 0 10px; border-radius: 8px; background: var(--bg); color: #2F7CF6; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; }
+.installer > .lien { align-self: center; min-height: 36px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
 /* Recherche rapide */
 #recherche { width: min(640px, calc(100% - 32px)); margin: 72px auto auto; }
@@ -1231,17 +1232,29 @@ nav .espace-menu a[aria-current] { background: none; color: var(--accent); font-
 .credit-tmdb { display: flex; align-items: center; gap: 12px; }
 .credit-tmdb img { height: 28px; width: auto; flex: 0 0 auto; }
 body:not(.admin) .si-admin { display: none !important; }
-@media (max-width: 760px) { .pied { display: none; } }
-@media (prefers-reduced-motion: reduce) { .pied-tete img { transition: none; } }
-
-/* Pied de Mon espace (mobile) */
-.pied-m { position: relative; margin-top: 56px; padding: 20px 4px 4px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; font-size: 14px; color: var(--muted); }
-.pied-m-tete { position: absolute; right: 12px; top: -54px; width: 86px; height: 54px; overflow: hidden; pointer-events: none; }
-.pied-m-tete img { width: 86px; display: block; transform: translateY(20px); }
-.pied-m-liens { display: flex; flex-wrap: wrap; gap: 4px 20px; }
-.pied-m-liens a, .pied-m-liens button { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.pied-m .credit-tmdb { font-size: 12px; line-height: 1.45; align-items: flex-start; }
-.pied-m > span:last-child { font-size: 12px; }
+.pied h2 button { all: unset; display: contents; }
+.pied h2 svg, .pied .si-mobile { display: none; }
+@media (max-width: 760px) {
+  #page { padding-bottom: 32px; }
+  .pied { margin-top: 64px; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .pied-tete { right: 24px; top: -54px; width: 86px; height: 54px; }
+  .pied-tete img { width: 86px; transform: translateY(20px); }
+  .pied:hover .pied-tete img { transform: translateY(20px); }
+  .pied-in { padding: 24px 20px 8px; grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .pied-marque { margin-bottom: 16px; }
+  .pied nav { gap: 0; border-bottom: 1px solid var(--line); }
+  .pied-marque + nav { border-top: 1px solid var(--line); }
+  .pied h2 { margin: 0; font-size: 15px; letter-spacing: 0; text-transform: none; color: var(--text); font-weight: 500; }
+  .pied h2 button { display: flex; justify-content: space-between; align-items: center; min-height: 48px; width: 100%; cursor: pointer; }
+  .pied h2 svg { display: block; transition: transform .3s cubic-bezier(.22,1,.36,1); }
+  .pied h2 button[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .pied nav:has(button[aria-expanded="false"]) > :not(h2) { display: none !important; }
+  .pied nav > a, .pied .si-mobile { min-height: 40px; }
+  .pied nav > :last-child { margin-bottom: 10px; }
+  .pied .si-mobile { display: inline-flex; align-items: center; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+  .pied-bas { padding: 12px 20px 16px; border: 0; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .pied-tete img, .pied h2 svg { transition: none; } }
 
 /* Inviter, Confidentialité, Mon compte */
 .etroit { width: 100%; max-width: 832px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }

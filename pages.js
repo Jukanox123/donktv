@@ -710,17 +710,28 @@ function proposerInstallation() {
   ouvrirInstallation(/iPhone|iPad/.test(navigator.userAgent) ? 'ios' : 'android');
 }
 
+const ICO_INST = (d) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const ETAPES_INSTALL = {
+  ios: [['Touche Partager en bas de Safari', ICO_INST('M8 10H6v10h12V10h-2M12 3v11M8.5 6.5L12 3l3.5 3.5')],
+    ['Choisis « Sur l’écran d’accueil »', ICO_INST('M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 12h6M12 9v6')],
+    ['Valide en haut à droite', '<b>Ajouter</b>']],
+  android: [['Ouvre le menu de Chrome', ICO_INST('M12 5v.01M12 12v.01M12 19v.01')],
+    ['Choisis « Ajouter à l’écran d’accueil »', ICO_INST('M12.5 21h-4.5a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v7M11 4h2M16 19h6M19 16v6')],
+    ['Valide avec « Installer »', '<b>Installer</b>']],
+};
+
 function ouvrirInstallation(os) {
   const ios = os === 'ios';
   fen.classList.add('feuille');
   fen.classList.remove('petit');
-  fenCorps.innerHTML = `<div class="installer"><span class="poignee" aria-hidden="true"></span>
-    <div class="installer-tete"><img src="img/icone-180.png" alt=""><div><h2>Installe <span class="logo logo-inline" role="img" aria-label="DonkTV"></span></h2><span class="muted">Sur ton écran d'accueil, comme une vraie app</span></div></div>
-    <ul><li><span aria-hidden="true">▢</span>S'ouvre en plein écran, sans barre de navigateur</li><li><span aria-hidden="true">⌂</span>L'icône DonkTV sur ton écran d'accueil</li><li><span aria-hidden="true">≋</span>Ta collection reste consultable hors connexion</li></ul>
-    <div class="bascule" role="group" aria-label="Ton téléphone"><button type="button" data-os="android" aria-pressed="${!ios}">Android</button><button type="button" data-os="ios" aria-pressed="${ios}">iPhone</button></div>
-    ${ios ? `<ol class="etapes-ios"><li><span>1</span>Touche <b>Partager</b> (le carré avec une flèche) dans Safari</li><li><span>2</span>Choisis « Sur l'écran d'accueil »</li><li><span>3</span>Valide avec « Ajouter »</li></ol>`
-      : invitationAndroid ? '<button class="btn primaire grand" type="button" data-installer-android>Installer l\'application</button>'
-      : `<ol class="etapes-ios"><li><span>1</span>Ouvre le menu <b>⋮</b> de Chrome</li><li><span>2</span>Choisis « Installer l'application » ou « Ajouter à l'écran d'accueil »</li></ol>`}
+  fenCorps.innerHTML = `<div class="installer" tabindex="-1" autofocus><span class="poignee" aria-hidden="true"></span>
+    <div class="installer-tete"><img src="img/icone-180.png" alt=""><h2>Installe DonkTV</h2>
+      <ul class="installer-puces"><li>${ICO_INST('M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M16 4h2a2 2 0 0 1 2 2v2M16 20h2a2 2 0 0 0 2-2v-2')}Plein écran</li>
+        <li>${ICO_INST('M5 12H3l9-9 9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7')}Écran d’accueil</li>
+        <li>${ICO_INST('M12 18h.01M9.2 15.2a4 4 0 0 1 5.6 0M6.3 12.3a8 8 0 0 1 11.4 0M3.5 9.5a12 12 0 0 1 17 0')}Hors connexion</li></ul></div>
+    ${!ios && invitationAndroid ? '<button class="btn primaire grand" type="button" data-installer-android>Installer l’application</button>'
+      : `<ol class="installer-etapes">${ETAPES_INSTALL[os].map(([t, b], i) => `<li><span class="num">${i + 1}</span><span>${t}</span><span class="bouton-os">${b}</span></li>`).join('')}</ol>`}
+    <button class="lien" type="button" data-os="${ios ? 'android' : 'ios'}">${ios ? 'Tu es sur Android ?' : 'Tu es sur iPhone ?'}</button>
     <button class="btn plat" type="button" data-plus-tard>Plus tard</button></div>`;
   if (!fen.open) fen.showModal();
 }
