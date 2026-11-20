@@ -98,10 +98,17 @@ function majTirage() {
   $('#tg-resultat').innerHTML = '';
   piste.classList.remove('arrete');
   piste.style.transform = '';
-  // Piste au repos : quelques affiches, centrées.
-  const repos = melange(l).slice(0, 9); // chaque film une seule fois
-  piste.innerHTML = repos.map(affichePiste).join('');
-  if (repos.length) piste.style.transform = `translateX(${decalage(piste, Math.floor((repos.length - 1) / 2))}px)`;
+  // Piste au repos : la boucle d'affiches (ordre tiré une fois), centrée sur un film.
+  tg.ordre = melange(l); tg.pos = 0;
+  poserPiste(0);
+}
+
+// Affiches de la boucle (n° depuis tg.pos - 4), le film tg.pos centré en position 4.
+function poserPiste(n) {
+  const piste = $('#piste'), o = tg.ordre, L = o.length;
+  if (!L) { piste.innerHTML = ''; return; }
+  piste.innerHTML = Array.from({ length: n + 10 }, (_, i) => affichePiste(o[(((tg.pos - 4 + i) % L) + L) % L])).join('');
+  piste.style.transform = `translateX(${decalage(piste, 4)}px)`;
 }
 
 // Décalage qui place l'affiche n° i au centre de la bobine.
@@ -114,15 +121,17 @@ function lancerTirage() {
   const l = candidats();
   if (!l.length || tg.enCours) return;
   tg.enCours = true;
-  const elu = l[Math.floor(Math.random() * l.length)], piste = $('#piste'), bouton = $('[data-tg-lancer]');
-  // Bande d'affiches qui défile, chaque film une seule fois, l'élu vers la fin.
-  const bande = melange(l.filter((f) => f !== elu)).slice(0, 33), n = bande.length + 1, fin = n - 1 - Math.min(3, Math.floor((n - 1) / 2));
-  bande.splice(fin, 0, elu);
+  const piste = $('#piste'), bouton = $('[data-tg-lancer]'), o = tg.ordre, L = o.length;
+  const elu = o[Math.floor(Math.random() * L)];
+  // Toujours de gauche à droite : on repart du film affiché et on fait plusieurs tours de boucle jusqu'à l'élu.
+  let pas0 = (o.indexOf(elu) - tg.pos + L) % L;
+  while (pas0 < 40) pas0 += L;
+  const fin = 4 + pas0;
   piste.classList.remove('arrete');
   $('#tg-resultat').innerHTML = '';
-  piste.innerHTML = bande.map(affichePiste).join('');
+  poserPiste(pas0);
   zoneTirage().querySelectorAll('button').forEach((x) => (x.disabled = true));
-  const depart = decalage(piste, Math.min(2, fin)), arrivee = decalage(piste, fin) + (Math.random() - 0.5) * piste.children[0].offsetWidth * 0.5;
+  const depart = decalage(piste, 4), arrivee = decalage(piste, fin);
   const duree = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 3800, t0 = performance.now(), items = [...piste.children];
   let centre = -1;
   const pas = (t) => {
@@ -132,17 +141,15 @@ function lancerTirage() {
     const c = Math.round((decalage(piste, 0) - x) / (items[0].offsetWidth + parseFloat(getComputedStyle(piste).columnGap || 0)));
     if (c !== centre) { items[centre]?.classList.remove('centre'); items[c]?.classList.add('centre'); centre = c; }
     if (k < 1) return requestAnimationFrame(pas);
-    // Recalage en douceur sur l'élu, puis le résultat.
-    piste.style.transition = 'transform .45s cubic-bezier(.2,.8,.2,1)';
-    piste.style.transform = `translateX(${decalage(piste, fin)}px)`;
     items[centre]?.classList.remove('centre'); items[fin].classList.add('centre', 'elu');
+    tg.pos = o.indexOf(elu);
     setTimeout(() => {
-      piste.style.transition = ''; piste.classList.add('arrete');
+      piste.classList.add('arrete');
       afficherElu(elu);
       zoneTirage().querySelectorAll('button').forEach((x) => (x.disabled = false));
       bouton.disabled = false; bouton.innerHTML = ICO_DE + 'Relancer';
       tg.enCours = false;
-    }, duree ? 480 : 0);
+    }, duree ? 300 : 0);
   };
   requestAnimationFrame(pas);
 }
