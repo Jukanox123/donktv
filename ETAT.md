@@ -1,6 +1,6 @@
 # État du projet DonkTV
 
-Mis à jour le 25 novembre 2026 (1.4.13).
+Mis à jour le 25 novembre 2026 (1.5).
 
 ## Liens
 - App en ligne : https://jukanox123.github.io/donktv/ (dépôt GitHub `Jukanox123/donktv`)
