@@ -144,14 +144,14 @@ async function pageGenre(s) {
   const nbCoeurs = vus.filter((f) => f.coup_de_coeur).length;
   const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? fr1(moyenne(notes)) : '–', 'note moyenne'],
     [Math.round(minutes / 60) + ' h', 'devant l’écran'], [nbCoeurs, nbCoeurs > 1 ? 'coups de cœur' : 'coup de cœur']];
-  return `${entete('collection')}<div class="filtres">
-    ${vus.length ? `<div class="filtres-ligne">${champRecherche('genre-q', gp.q, 'Rechercher dans ce genre')}${champTri('genre-tri', [['date', 'Date de visionnage'], ['note', 'Note'], ['annee', 'Année de sortie'], ['titre', 'Titre']], gp.tri)}${champPf('genre-pf', vus, gp.pf)}</div>` : ''}
-    <nav class="puces" aria-label="Genres"><a class="tous" href="#collection">Tous les genres</a>${GENRES.map((x) => `<a href="#genre/${slugGenre(x)}" ${x === g ? 'aria-current="page"' : ''}><img src="${buste(x)}" alt="">${x}</a>`).join('')}</nav></div>
-  <section class="genre-hero" style="--g-bg:${bg};--g-texte:${texte};--g-attenue:${attenue};--g-kpi:${kpiBg};--g-voile:${voile}">
+  return `${entete('collection')}<section class="genre-hero" style="--g-bg:${bg};--g-texte:${texte};--g-attenue:${attenue};--g-kpi:${kpiBg};--g-voile:${voile}">
     <picture><source media="(max-width: 760px)" srcset="img/decor-${slugGenre(g)}.jpg"><img src="img/genre-${slugGenre(g)}.jpg" alt="${alt}"></picture>
     <div class="genre-hero-texte"><p class="sur-titre">Genre</p><h1>${g}</h1><p>${accroche}</p>
       ${vus.length ? `<div class="genre-kpis">${kpis.map(([v, l]) => `<div><span class="chiffre">${v}</span><span>${l}</span></div>`).join('')}</div>` : ''}</div>
   </section>
+  <div class="filtres">
+    ${vus.length ? `<div class="filtres-ligne">${champRecherche('genre-q', gp.q, 'Rechercher dans ce genre')}${champTri('genre-tri', [['date', 'Date de visionnage'], ['note', 'Note'], ['annee', 'Année de sortie'], ['titre', 'Titre']], gp.tri)}${champPf('genre-pf', vus, gp.pf)}</div>` : ''}
+    <nav class="puces" aria-label="Genres"><a class="tous" href="#collection">Tous les genres</a>${GENRES.map((x) => `<a href="#genre/${slugGenre(x)}" ${x === g ? 'aria-current="page"' : ''}><img src="${buste(x)}" alt="">${x}</a>`).join('')}</nav></div>
   <section class="genre-films"><h2 class="section">${filmsTitre}</h2>
     ${vus.length ? `<div id="genre-resultats">${htmlGenre()}</div>`
     : `<div class="genre-vide"><img src="${buste(g)}" alt=""><h3>Aucun film vu dans ce genre pour l’instant</h3><p class="muted">Ajoute ton premier film : il apparaîtra ici avec ta note.</p>
