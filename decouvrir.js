@@ -200,7 +200,7 @@ async function pagePersonne(p) {
   const reste = credits.filter((c) => !mien.has(c.id) && !(c.genre_ids || []).includes(99)).sort((a, b) => b.vote_count - a.vote_count);
   const notes = vus.filter((f) => f.note).map((f) => f.note), coeurs = vus.filter((f) => f.coup_de_coeur).length;
   const metier = real ? (femme ? 'Réalisatrice' : 'Réalisateur') : femme ? 'Actrice' : 'Acteur';
-  const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? fr1(moyenne(notes)) : '–', 'ma note moyenne'], [coeurs, coeurs > 1 ? 'coups de cœur' : 'coup de cœur'],
+  const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? `${fr1(moyenne(notes))}<small>/5</small>` : '–', 'ma note moyenne'], [coeurs, coeurs > 1 ? 'coups de cœur' : 'coup de cœur'],
     [`${vus.length}<small>/${credits.length}</small>`, real ? 'de ses films réalisés' : 'de sa filmographie']];
   const { p: pg, nbPages, items: montres } = decouper(reste, pers.page, mobile() ? 9 : 10);
   pers.page = pg;
@@ -258,9 +258,9 @@ async function pageSaga(id) {
 }
 
 async function pageSagas() {
-  const F = await chargerFilms(), ids = [...new Set(F.filter((f) => f.saga_id).map((f) => f.saga_id))];
+  const F = await chargerFilms(), ids = [...new Set(F.filter((f) => f.saga_id && f.statut === 'vu').map((f) => f.saga_id))];
   const titre = '<div class="titre-page"><h1>Mes sagas</h1></div>';
-  if (!ids.length) return titre + videMascotte('Aucune saga pour l’instant', 'Dès qu’un film de ta collection fait partie d’une saga (Star Wars, Harry Potter…), elle apparaît ici. Les films déjà ajoutés sont vérifiés au fil des démarrages.', '<a class="btn primaire" href="#collection">Voir mes films</a>');
+  if (!ids.length) return titre + videMascotte('Aucune saga pour l’instant', 'Dès qu’un film que tu as vu fait partie d’une saga (Star Wars, Harry Potter…), elle apparaît ici. Les films déjà ajoutés sont vérifiés au fil des démarrages.', '<a class="btn primaire" href="#collection">Voir mes films</a>');
   if (!sources.tmdb) return titre + sansCle();
   const vusIds = new Set(F.filter((f) => f.statut === 'vu').map((f) => f.tmdb_id));
   const sagas = (await Promise.allSettled(ids.map(collection))).filter((r) => r.status === 'fulfilled').map(({ value: c }) => {

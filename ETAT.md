@@ -1,6 +1,6 @@
 # État du projet DonkTV
 
-Mis à jour le 20 novembre 2026 (1.4.11).
+Mis à jour le 25 novembre 2026 (1.4.12).
 
 ## Liens
 - App en ligne : https://jukanox123.github.io/donktv/ (dépôt GitHub `Jukanox123/donktv`)
@@ -49,6 +49,7 @@ Mis à jour le 20 novembre 2026 (1.4.11).
 - 20 novembre (version 1.4.4, vitesse) : appels TMDB / OMDb en GET via la fonction `sources`, TMDB gardé par le navigateur 6 h, requête OPTIONS gardée 24 h, jeton vérifié sur place (getClaims) ; saga de la fiche lue en même temps que le film ; lectures identiques simultanées regroupées, films lus dès le démarrage ; mise à jour de fond lancée 4 s après l'affichage ; plateformes réécrites au plus tous les 7 jours (plus de vidage du cache à chaque fiche) ; images de l'app servies depuis le cache du service worker ; PNG recompressés (944 Ko → 368 Ko) ; preconnect Supabase, polices, TMDB.
 - 20 novembre (version 1.4.10) : footer mobile en accordéons retiré (doublon avec la barre du bas), retour au bloc en bas de Mon espace, sans les crédits.
 - 20 novembre (version 1.4.8, choix de Valentin) : footer sur mobile, sur toutes les pages au-dessus de la barre du bas, rubriques Cinéma / Mon espace / À propos en accordéons (« Se déconnecter » dans À propos sur mobile), remplace le bloc du bas de Mon espace ; crédits TMDB / JustWatch retirés du footer (PC et mobile), gardés sur la page Confidentialité ; fenêtre « Installer l'app » refaite : icône et titre centrés, 3 puces (Plein écran, Écran d'accueil, Hors connexion), étapes en cartes avec le bouton à toucher, téléphone détecté avec lien « Tu es sur Android ? » / « Tu es sur iPhone ? » (plus de bascule). « Changer mon mot de passe » : erreur 535 de Gmail, mot de passe d'application à saisir dans le SMTP de Supabase.
+- 25 novembre (version 1.4.12) : pages de genre = films vus seulement (plus de films de la watchlist) ; fiche mobile, boutons en 2 colonnes : Bande-annonce, puis Je l'ai revu | Modifier, puis Ajouter à mes tops et la corbeille chacun sur toute la ligne ; Mes sagas = sagas avec au moins 1 film vu ; page personne, KPI « ma note moyenne » avec « /5 » ; case « Je ne me rappelle plus quand » (ajout d'un film, Ton avis, Modifier) : visionnage sans date (`supabase/migration-2026-11-25.sql`, appliquée), compté dans les totaux, notes, tops, sagas, heures, absent du calendrier, des rétrospectives, des courbes et de « ce mois-ci », « Vu · date inconnue » sur la fiche, en fin de liste au tri par date.
 - 20 novembre (version 1.4.11) : tirage de la Watchlist, la roue démarre plus vite (au moins 40 affiches parcourues), défile toujours de gauche à droite en repartant du film affiché, et tourne en boucle (après le dernier film, la liste recommence à droite, dans le même ordre).
 - 20 novembre (version 1.4.9) : Watchlist, « Qu'est-ce que je regarde ? » : chaque film n'apparaît qu'une fois dans la bande du tirage (au repos et pendant le défilement, 34 affiches au plus).
 - 19 novembre (version 1.3.1) : bustes de genre de Baudet sur les affiches du tirage « Qu'est-ce que je regarde ? » (Watchlist) et des « Films à découvrir » (pages réalisateur / acteur, et films hors base des sagas), genres lus sur TMDB.

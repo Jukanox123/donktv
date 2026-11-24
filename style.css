@@ -818,10 +818,10 @@ dialog.feuille { width: min(520px, 100%); }
   .cal-detail h2 { font-size: 22px; }
   .loupe-mobile { display: inline-flex !important; }
   .entete-in .pousse { flex: 1; }
-  .fiche-actions { grid-template-columns: 1fr 1fr 48px; }
-  .fiche-actions .btn.large { grid-column: span 2; }
-  .fiche-actions { grid-template-columns: auto minmax(0, 1fr) 48px; }
-  .fiche-actions .btn { white-space: nowrap; padding: 0 14px; }
+  .fiche-actions { grid-template-columns: 1fr 1fr; }
+  .fiche-actions .btn { white-space: nowrap; padding: 0 14px; min-width: 0; }
+  .fiche-actions [data-action="tops"], .fiche-actions .btn.carre, .fiche-actions .btn.clair:not([data-action="ba"]) + .btn { grid-column: 1 / -1; }
+  .fiche-actions .btn.carre { width: auto; }
   .court { display: inline; }
   .hero .court { display: inline; }
   .section-tete { margin-bottom: 12px; }
@@ -1296,3 +1296,10 @@ body:not(.admin) .si-admin { display: none !important; }
 .vide-mascotte { overflow: hidden; }
 .vide-mascotte > img { animation: coucou 1.2s cubic-bezier(.22,1,.36,1) .2s both; }
 @media (prefers-reduced-motion: reduce) { .btn.coeur[aria-pressed="true"] svg, .vide-mascotte > img { animation: none; } }
+
+/* Visionnage sans date (1.4.12) */
+.case-inconnue { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.case-inconnue input { width: 18px; height: 18px; margin: 0; accent-color: var(--btn); flex: none; }
+.vision .case-inconnue { grid-column: 1 / -1; height: auto; padding: 0; border: 0; background: none; }
+.vision .case-inconnue input { flex: none; }
+input[type="date"]:disabled { opacity: .45; }

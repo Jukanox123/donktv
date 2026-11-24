@@ -159,7 +159,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.4.11';
+const VERSION = '1.4.12';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -291,6 +291,8 @@ $('#page').addEventListener('click', async (e) => {
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const dateLongue = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d === 1 ? '1er' : d} ${MOIS[m - 1]} ${y}`; };
 const aujourdhui = () => new Date().toLocaleDateString('sv');
+// Dates de visionnage triées, les visionnages sans date (null) en premier.
+const trierDates = (l) => [...l].sort((a, b) => (a || '').localeCompare(b || ''));
 const etoilesTxt = (n) => '★'.repeat(Math.floor(n)) + (n % 1 ? '½' : '');
 const ICO_ETOILE = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#F2B84B"/><path d="M26 13l3.9 8.2 8.9 1.1-6.6 6.1 1.8 8.8L26 32.8l-8 4.4 1.8-8.8-6.6-6.1 8.9-1.1z" fill="#5A3A08"/></svg>';
 const ICO_RT = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#E8664A"/><path d="M17 36l3.5-10.5L33 13l6 6-12.5 12.5z" fill="#FFF"/><path d="M20.5 25.5l6 6" stroke="#E8664A" stroke-width="2.4" stroke-linecap="round"/><circle cx="27.5" cy="24.5" r="2" fill="#E8664A"/><path d="M14 39h12" stroke="#FFF" stroke-width="2.6" stroke-linecap="round"/></svg>';
@@ -331,9 +333,9 @@ const titreReal = (rs) => (rs.every((r) => r.genre === 1) ? 'Réalisatrice' : 'R
 function htmlFilm(f) {
   const vu = f.statut === 'vu', decouverte = f.statut === 'decouverte';
   const pasSorti = String(f.date_sortie_fr || f.annee || '') > aujourdhui();
-  const visions = f.visionnages.map((v) => v.date).sort();
-  const n = visions.length;
-  const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(visions[n - 1])}` : n ? `Vu le ${dateLongue(visions[0])}` : 'Vu';
+  const visions = trierDates(f.visionnages.map((v) => v.date));
+  const n = visions.length, der = visions[n - 1];
+  const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : !der ? (n > 1 ? `Vu ${n} fois · date inconnue` : n ? 'Vu · date inconnue' : 'Vu') : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(der)}` : `Vu le ${dateLongue(der)}`;
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
   return `<div class="fiche-tete">
   <section class="fiche-hero">
@@ -366,7 +368,7 @@ function htmlFilm(f) {
       ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
     ${decouverte ? '' : `<div class="fiche-cote"><aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
-      <b>${dateLongue(d)}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
+      <b>${d ? dateLongue(d) : 'Date inconnue'}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
       : `<p class="muted">Pas encore vu. Dans ta watchlist depuis le ${dateLongue(f.ajoute_le.slice(0, 10))}.</p>`}</aside>
     ${f.saga ? sagaFicheHtml(f.saga) : ''}</div>`}
   </div>`;
@@ -487,7 +489,7 @@ const fen = $('#fenetre'), fenCorps = $('#fenetre-corps');
 let edition = null; // brouillon de la fenêtre « Modifier »
 
 function ouvrirEdition(versVu) {
-  const visions = fiche.visionnages.map((v) => v.date).sort();
+  const visions = trierDates(fiche.visionnages.map((v) => v.date));
   edition = { statut: versVu ? 'vu' : fiche.statut, note: Number(fiche.note) || 0, coeur: fiche.coup_de_coeur, genres: [...fiche.genres],
     visions: versVu ? [aujourdhui()] : visions };
   fen.classList.remove('petit');
@@ -512,8 +514,8 @@ function afficherEdition() {
 function visionsHtml() {
   const d = edition;
   return `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
-        <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v}" max="${aujourdhui()}"></label>
-        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12l14 0"/></svg></button></div>`).join('')}
+        <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v ?? ''}" max="${aujourdhui()}" ${v === null ? 'disabled' : ''}></label>
+        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12l14 0"/></svg></button>${i === 0 ? `<label class="case-inconnue"><input type="checkbox" data-inconnue="1" ${v === null ? 'checked' : ''}>Je ne me rappelle plus quand</label>` : ''}</div>`).join('')}
       <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button><p class="erreur" id="err-edit-visions" role="alert" hidden></p></fieldset>`;
 }
 
@@ -524,14 +526,14 @@ function majListe(id, patch) {
 
 async function enregistrerEdition(b) {
   const d = edition, vu = d.statut === 'vu', err = $('#erreur-edition');
-  if (!valider([...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => !v) ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
+  if (!valider([...(vu ? [['err-edit-note', d.note ? '' : MANQUE_NOTE], ['err-edit-visions', d.visions.some((v) => v === '') ? 'Choisis une date pour chaque visionnage.' : '']] : [])])) return;
   b.disabled = true;
   try {
     const patch = { statut: d.statut, note: vu && d.note ? d.note : null, coup_de_coeur: vu && d.coeur, genres: d.genres };
     const { error } = await sb.from('films').update(patch).eq('id', fiche.id);
     if (error) throw error;
-    const anciens = fiche.visionnages.map((v) => v.date).sort();
-    if (vu && d.visions.slice().sort().join() !== anciens.join()) {
+    const anciens = trierDates(fiche.visionnages.map((v) => v.date));
+    if (vu && trierDates(d.visions).join() !== anciens.join()) {
       // Ajout avant suppression : si l'ajout échoue, les anciens visionnages restent.
       const { error: e1 } = await sb.from('visionnages').insert(d.visions.map((date) => ({ film_id: fiche.id, date })));
       if (e1) throw e1;
@@ -649,6 +651,7 @@ fen.addEventListener('click', (e) => {
   }
 });
 fen.addEventListener('input', (e) => { if (e.target.dataset.vision) edition.visions[Number(e.target.dataset.vision)] = e.target.value; });
+fen.addEventListener('change', (e) => { if (e.target.dataset.inconnue) { edition.visions[0] = e.target.checked ? null : aujourdhui(); $('.visions', fenCorps).outerHTML = visionsHtml(); } });
 
 /* ---------- Menus déroulants ---------- */
 // Un <select data-menu> reste dans la page (valeur, évènement « change ») mais s'affiche comme un bouton + une liste.
@@ -729,7 +732,7 @@ function entete(vue, compteur = '') {
 async function pageCollection() {
   const data = await lire('collection', () => sb.from('films').select('*,visionnages(date)').eq('statut', 'vu'));
   coll.films = data.map((f) => ({ ...f, note: f.note == null ? null : Number(f.note),
-    dernier: f.visionnages.map((v) => v.date).sort().at(-1) || f.ajoute_le.slice(0, 10),
+    dernier: trierDates(f.visionnages.map((v) => v.date)).at(-1) || '',
     cherche: norm([f.titre, ...f.realisateurs, ...f.acteurs.map((a) => a.nom)].join(' ')) }));
   return entete('collection', `<p class="muted"><strong>${coll.films.length}</strong> ${coll.films.length > 1 ? 'films vus' : 'film vu'}</p>`) + `
   <div class="filtres">
@@ -795,8 +798,8 @@ const cal = { mois: null, jour: null, page: 1, visions: [] };
 async function pageCalendrier() {
   const data = await lire('calendrier', () => sb.from('visionnages').select('date,film_id,films(id,titre,affiche,note,coup_de_coeur,duree)'));
   const premier = {};
-  data.forEach((v) => { if (!premier[v.film_id] || v.date < premier[v.film_id]) premier[v.film_id] = v.date; });
-  cal.visions = data.filter((v) => v.films).map((v) => ({ ...v, revu: v.date > premier[v.film_id] }));
+  data.forEach((v) => { const d = v.date || ''; if (premier[v.film_id] == null || d < premier[v.film_id]) premier[v.film_id] = d; });
+  cal.visions = data.filter((v) => v.films && v.date).map((v) => ({ ...v, revu: v.date > premier[v.film_id] }));
   cal.mois ??= aujourdhui().slice(0, 7);
   return entete('calendrier') + `<div id="cal" class="cal">${htmlCal()}</div>`;
 }
@@ -936,7 +939,8 @@ function afficherDetails() {
       ${vu ? `<div class="avis">
         <div><span class="etiquette" id="note-label">Ta note</span>${etoilesHtml(note, 'note-label')}<p class="erreur" id="err-ajout-note" role="alert" hidden></p></div>
         ${coeurHtml(coeur)}
-        <label><span class="etiquette">Vu le</span><input type="date" id="date-vu" value="${date}" max="${new Date().toLocaleDateString('sv')}"></label>
+        <label><span class="etiquette">Vu le</span><input type="date" id="date-vu" value="${date ?? ''}" max="${new Date().toLocaleDateString('sv')}" ${date === null ? 'disabled' : ''}></label>
+        <label class="case-inconnue"><input type="checkbox" id="date-inconnue" ${date === null ? 'checked' : ''}>Je ne me rappelle plus quand</label>
       </div>` : '<p class="info">Il rejoindra ta watchlist. Tu pourras le noter le jour où tu le verras.</p>'}
       <fieldset><legend>Genres</legend>${genresHtml(f.genres)}</fieldset>
     </div></div>
@@ -960,7 +964,7 @@ async function enregistrer(bouton) {
       .select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').single();
     if (error) throw error;
     if (vu) {
-      const { error: e2 } = await sb.from('visionnages').insert({ film_id: data.id, date: date || undefined });
+      const { error: e2 } = await sb.from('visionnages').insert({ film_id: data.id, date: date === null ? null : date || undefined });
       if (e2) throw e2;
     }
     films = [data, ...films.filter((f) => f.id !== data.id)];
@@ -995,6 +999,7 @@ dlg.addEventListener('input', (e) => {
   if (e.target.id === 'q') { clearTimeout(chercher.t); chercher.t = setTimeout(() => chercher(e.target.value), 300); }
   if (e.target.id === 'date-vu') saisie.date = e.target.value;
 });
+dlg.addEventListener('change', (e) => { if (e.target.id === 'date-inconnue') { saisie.date = e.target.checked ? null : aujourdhui(); afficherDetails(); } });
 dlg.addEventListener('close', () => uid && route());
 
 /* ---------- Connexion ---------- */

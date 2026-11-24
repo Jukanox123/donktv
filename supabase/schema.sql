@@ -45,7 +45,7 @@ create table visionnages (
   id bigint generated always as identity primary key,
   user_id uuid not null default auth.uid() references auth.users on delete cascade,
   film_id bigint not null references films on delete cascade,
-  date date not null default current_date
+  date date default current_date -- null = date inconnue
 );
 
 create table tops (

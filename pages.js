@@ -31,7 +31,7 @@ function ilYa(isoDate) {
 // Tous les films avec leurs dates de visionnage triées.
 async function chargerFilms() {
   const data = await lire('films', () => sb.from('films').select('*,visionnages(date)'));
-  return data.map((f) => ({ ...f, note: f.note == null ? null : Number(f.note), visions: f.visionnages.map((v) => v.date).sort(), ajout: f.ajoute_le.slice(0, 10),
+  return data.map((f) => ({ ...f, note: f.note == null ? null : Number(f.note), visions: f.visionnages.map((v) => v.date).filter(Boolean).sort(), vues: f.visionnages.length, ajout: f.ajoute_le.slice(0, 10),
     cherche: norm([f.titre, f.titre_original, ...f.realisateurs, ...f.acteurs.map((a) => a.nom)].join(' ')) }));
 }
 
@@ -61,7 +61,7 @@ const champTri = (id, options, valeur) => `<label class="champ"><span>Trier par<
 const videMascotte = (titre, texte, bouton) => `<div class="vide-mascotte"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV"><div><h2>${titre}</h2><p class="muted">${texte}</p>${bouton}</div></div>`;
 
 const TRIS_TEXTE = { titre: (a, b) => a.titre.localeCompare(b.titre, 'fr') };
-const parDernier = (a, b) => (b.visions.at(-1) || b.ajout).localeCompare(a.visions.at(-1) || a.ajout);
+const parDernier = (a, b) => (b.visions.at(-1) || '').localeCompare(a.visions.at(-1) || '');
 
 /* ---------- À voir ---------- */
 
@@ -136,11 +136,11 @@ const gp = { genre: null, q: '', tri: 'date', pf: '', page: 1, films: [] };
 async function pageGenre(s) {
   const g = genreDeSlug(s) || GENRES[0];
   if (gp.genre !== g) Object.assign(gp, { genre: g, q: '', tri: 'date', pf: '', page: 1 });
-  gp.films = (await chargerFilms()).filter((f) => f.genres.includes(g));
-  const vus = gp.films.filter((f) => f.statut === 'vu');
+  gp.films = (await chargerFilms()).filter((f) => f.statut === 'vu' && f.genres.includes(g));
+  const vus = gp.films;
   const [bg, texte, attenue, kpiBg, voile, accroche, filmsTitre, alt] = GENRE_INFO[g];
   const notes = vus.filter((f) => f.note).map((f) => f.note);
-  const minutes = vus.reduce((s2, f) => s2 + (f.duree || 0) * Math.max(1, f.visions.length), 0);
+  const minutes = vus.reduce((s2, f) => s2 + (f.duree || 0) * Math.max(1, f.vues), 0);
   const nbCoeurs = vus.filter((f) => f.coup_de_coeur).length;
   const kpis = [[vus.length, vus.length > 1 ? 'films vus' : 'film vu'], [notes.length ? fr1(moyenne(notes)) : '–', 'note moyenne'],
     [Math.round(minutes / 60) + ' h', 'devant l’écran'], [nbCoeurs, nbCoeurs > 1 ? 'coups de cœur' : 'coup de cœur']];
@@ -162,8 +162,7 @@ async function pageGenre(s) {
 function htmlGenre() {
   const q = norm(gp.q.trim());
   const tri = { date: parDernier, note: (a, b) => (b.note ?? -1) - (a.note ?? -1), annee: (a, b) => (b.annee ?? 0) - (a.annee ?? 0), ...TRIS_TEXTE }[gp.tri];
-  // Les films vus d'abord, puis la watchlist du genre.
-  const l = gp.films.filter((f) => surPf(f, gp.pf) && (!q || f.cherche.includes(q))).sort((a, b) => (a.statut === 'vu' ? 0 : 1) - (b.statut === 'vu' ? 0 : 1) || tri(a, b));
+  const l = gp.films.filter((f) => surPf(f, gp.pf) && (!q || f.cherche.includes(q))).sort(tri);
   if (!l.length) return `<div class="genre-vide" role="status">${ICO_LOUPE}<h3>Aucun film trouvé</h3><p class="muted">${gp.q ? `Rien ne correspond à « ${esc(gp.q)} » dans ce genre.` : 'Rien ne correspond à ces filtres dans ce genre.'}</p>
     <div class="boutons"><button class="btn" type="button" data-genre-reset>${gp.pf ? 'Réinitialiser les filtres' : 'Effacer la recherche'}</button><button class="btn primaire" type="button" data-ajout>Ajouter un film</button></div></div>`;
   const { p, nbPages, items, compteur } = decouper(l, gp.page, mobile() ? 9 : 10);
@@ -356,7 +355,7 @@ const portrait = (nom) => (st.photos[nom] ? `<img class="initiales" src="https:/
   : `<span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>`);
 
 async function pageStats() {
-  st.films = (await chargerFilms()).filter((f) => f.statut === 'vu' && f.visions.length);
+  st.films = (await chargerFilms()).filter((f) => f.statut === 'vu');
   st.annee ??= Number(aujourdhui().slice(0, 4));
   return htmlStats();
 }
@@ -365,20 +364,22 @@ function htmlStats() {
   const F = st.films, auj = aujourdhui(), moisCourant = auj.slice(0, 7);
   if (!F.length) return `<div class="titre-page"><h1>Statistiques</h1></div>${videMascotte('Pas encore de statistiques', 'Ajoute tes premiers films vus : Baudet calculera tes chiffres, tes genres et tes pays.', '<button class="btn primaire" type="button" data-ajout>Ajouter un film</button>')}`;
   const visions = F.flatMap((f) => f.visions.map((d) => ({ d, f })));
+  // Films dont le premier visionnage est daté (courbes et nouveautés du mois).
+  const D = F.filter((f) => f.visions.length && f.vues === f.visions.length);
   const notes = F.filter((f) => f.note).map((f) => f.note);
-  const minutes = visions.reduce((s, v) => s + (v.f.duree || 0), 0);
+  const minutes = F.reduce((s, f) => s + (f.duree || 0) * Math.max(1, f.vues), 0);
   const parGenre = GENRES.map((g) => ({ g, n: F.filter((f) => f.genres.includes(g)).length })).filter((x) => x.n).sort((a, b) => b.n - a.n);
   const top = parGenre[0];
-  const nouveauxMois = F.filter((f) => f.visions[0].startsWith(moisCourant)).length;
-  const debut = F.map((f) => f.visions[0]).sort()[0];
+  const nouveauxMois = D.filter((f) => f.visions[0].startsWith(moisCourant)).length;
+  const debut = D.map((f) => f.visions[0]).sort()[0];
   const kpis = [['Films vus', F.length, '', evol(nouveauxMois, 'ce mois-ci')], ['Heures passées', Math.round(minutes / 60), 'h', `environ ${pluriel(Math.round(minutes / 1440), 'jour')}`],
     ['Note moyenne', notes.length ? fr1(moyenne(notes)) : '–', '/ 5', `${pluriel(notes.filter((n) => n === 5).length, 'film noté', 'films notés')} 5 ★`], ['Genre préféré', top ? top.g : '–', '', top ? pluriel(top.n, 'film') : '']];
 
   // 12 derniers mois
   const mois = Array.from({ length: 12 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 11 + i); return iso(d).slice(0, 7); });
-  const cumul = mois.map((m) => F.filter((f) => f.visions[0].slice(0, 7) <= m).length);
+  const cumul = mois.map((m) => D.filter((f) => f.visions[0].slice(0, 7) <= m).length);
   const maxC = maxRond(Math.max(...cumul)), pts = cumul.map((v, i) => [i * (1000 / 11), 260 - (v / maxC) * 260]);
-  const vusMois = mois.map((m) => F.filter((f) => f.visions[0].startsWith(m)).length);
+  const vusMois = mois.map((m) => D.filter((f) => f.visions[0].startsWith(m)).length);
   const lab = (m) => MOIS_COURT[Number(m.slice(5)) - 1];
   const parMois = mois.map((m) => {
     const vs = visions.filter((v) => v.d.startsWith(m)), h = Math.round(vs.reduce((s, v) => s + (v.f.duree || 0), 0) / 60);
@@ -441,7 +442,7 @@ function htmlStats() {
   const nomPays = (c) => { try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(c); } catch { return c; } };
   st.pays = pays;
 
-  return `<div class="titre-page"><h1>Statistiques</h1><p class="muted">Depuis ${MOIS[Number(debut.slice(5, 7)) - 1]} ${debut.slice(0, 4)} · seuls les films vus comptent.</p></div>
+  return `<div class="titre-page"><h1>Statistiques</h1><p class="muted">${debut ? `Depuis ${MOIS[Number(debut.slice(5, 7)) - 1]} ${debut.slice(0, 4)} · ` : ''}seuls les films vus comptent.</p></div>
   <section class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</section>
   <div class="stats-grille">
   <section class="carte stat large"><div class="stat-tete"><h2>Ta collection au fil des mois</h2><span class="muted">${pluriel(F.length, 'film')} · ${evol(cumul[11] - cumul[0], 'en 12 mois')}</span></div>
@@ -546,7 +547,7 @@ function bornes(periode, decalage) {
 }
 
 function resumePeriode(debut, fin) {
-  const vs = rt.films.flatMap((f) => f.visions.filter((d) => d >= debut && d <= fin).map((d) => ({ d, f, revu: d > f.visions[0] })));
+  const vs = rt.films.flatMap((f) => f.visions.filter((d) => d >= debut && d <= fin).map((d) => ({ d, f, revu: d > f.visions[0] || f.vues > f.visions.length })));
   const distincts = [...new Set(vs.map((v) => v.f))];
   const notes = distincts.filter((f) => f.note).map((f) => f.note);
   return { vs, distincts, n: vs.length, heures: Math.round(vs.reduce((s, v) => s + (v.f.duree || 0), 0) / 60), note: notes.length ? moyenne(notes) : null,
@@ -625,10 +626,10 @@ const SIGNE = { Western: 'du western', Thriller: 'du thriller', Drame: 'du drame
   Action: 'de l’action', Aventure: 'de l’aventure', Animation: 'de l’animation', Guerre: 'du film de guerre' };
 
 async function pageAccueilPleine() {
-  const F = await chargerFilms(), vus = F.filter((f) => f.statut === 'vu' && f.visions.length), aVoir = F.filter((f) => f.statut === 'a_voir');
+  const F = await chargerFilms(), vus = F.filter((f) => f.statut === 'vu'), aVoir = F.filter((f) => f.statut === 'a_voir');
   const auj = aujourdhui(), notes = vus.filter((f) => f.note).map((f) => f.note);
-  const minutes = vus.reduce((s, f) => s + (f.duree || 0) * f.visions.length, 0);
-  const ceMois = vus.filter((f) => f.visions[0].startsWith(auj.slice(0, 7))).length;
+  const minutes = vus.reduce((s, f) => s + (f.duree || 0) * Math.max(1, f.vues), 0);
+  const ceMois = vus.filter((f) => f.vues === f.visions.length && f.visions[0]?.startsWith(auj.slice(0, 7))).length;
   rt.films = vus;
   const [md, mf] = bornes('mois', 1), rp = resumePeriode(md, mf);
   const gMois = GENRES.map((g) => ({ g, n: rp.distincts.filter((f) => f.genres.includes(g)).length })).sort((a, b) => b.n - a.n)[0];
