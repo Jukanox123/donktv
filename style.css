@@ -1303,3 +1303,28 @@ body:not(.admin) .si-admin { display: none !important; }
 .vision .case-inconnue { grid-column: 1 / -1; height: auto; padding: 0; border: 0; background: none; }
 .vision .case-inconnue input { flex: none; }
 input[type="date"]:disabled { opacity: .45; }
+
+/* Amis (1.5) */
+.pastille { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--btn); color: var(--btn-text); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.pastille[hidden] { display: none; }
+nav .espace-menu a:has(.pastille:not([hidden])) { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ini { width: 40px; height: 40px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; }
+.amis-poster { position: absolute; z-index: 1; left: 10px; top: 10px; display: flex; padding-left: 6px; }
+.amis-poster .ini { width: 28px; height: 28px; margin-left: -6px; font-size: 12px; border: 2px solid #FFFDF7; box-shadow: 0 4px 10px -4px rgba(0,0,0,.5); }
+.sorties .amis-poster { left: auto; right: 8px; top: 8px; }
+.amis-filtre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.amis-filtre > span { font-size: 15px; color: var(--muted); margin-right: 4px; }
+.amis-filtre .ini, .tirage .puce-ami .ini { width: 28px; height: 28px; font-size: 13px; }
+.amis-filtre a { min-height: 40px; display: inline-flex; align-items: center; padding: 0 6px; font-size: 14px; font-weight: 500; color: var(--accent); text-underline-offset: 3px; }
+.amis-liste li > span.ini { flex: none; }
+.amis-liste li > span.ami-txt { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; }
+.amis-liste small { overflow-wrap: anywhere; }
+.amis-liste li.ligne-ami { flex-wrap: nowrap; }
+.amis-liste li.ligne-ami > span.ami-txt { flex-basis: 0; }
+#cx-prenom-bloc small { font-size: 13px; font-weight: 400; }
+@media (max-width: 760px) {
+  .sorties .amis-poster { top: auto; right: auto; left: 6px; bottom: 6px; }
+  .amis-poster .ini { width: 22px; height: 22px; font-size: 10px; margin-left: -5px; }
+}
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (max-width: 760px) { .liens-pc-seul { display: none !important; } }

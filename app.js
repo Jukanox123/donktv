@@ -159,7 +159,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.4.13';
+const VERSION = '1.5';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -218,7 +218,7 @@ async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
   const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace', decouverte: 'collection' }[nom] || nom;
   document.querySelectorAll('#app a[href^="#"]').forEach((a) => (a.getAttribute('href') === '#' + actif ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
-  const espace = ['tops', 'stats', 'retros', 'sagas', 'reglages', 'mon-espace', 'inviter', 'confidentialite'].includes(actif);
+  const espace = ['tops', 'stats', 'retros', 'sagas', 'amis', 'reglages', 'mon-espace', 'inviter', 'confidentialite'].includes(actif);
   $('.capsule-espace').classList.toggle('actif', espace && actif !== 'mon-espace');
   if (espace) $('.nav-bas a[href="#mon-espace"]').setAttribute('aria-current', 'page');
   const rendu = (PAGES[nom] || pageIntrouvable)(id);
@@ -289,7 +289,8 @@ $('#page').addEventListener('click', async (e) => {
 /* ---------- Fiche film ---------- */
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
-const dateLongue = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d === 1 ? '1er' : d} ${MOIS[m - 1]} ${y}`; };
+const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+const dateCourte = (iso) => { const [y, m, d] = iso.split('-').map(Number); return `${d === 1 ? '1er' : d} ${MOIS_COURT[m - 1]} ${y}`; };
 const aujourdhui = () => new Date().toLocaleDateString('sv');
 // Dates de visionnage triées, les visionnages sans date (null) en premier.
 const trierDates = (l) => [...l].sort((a, b) => (a || '').localeCompare(b || ''));
@@ -335,7 +336,7 @@ function htmlFilm(f) {
   const pasSorti = String(f.date_sortie_fr || f.annee || '') > aujourdhui();
   const visions = trierDates(f.visionnages.map((v) => v.date));
   const n = visions.length, der = visions[n - 1];
-  const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : !der ? (n > 1 ? `Vu ${n} fois · date inconnue` : n ? 'Vu · date inconnue' : 'Vu') : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateLongue(der)}` : `Vu le ${dateLongue(der)}`;
+  const vuTxt = decouverte ? 'Pas encore vu' : !vu ? 'Dans ta watchlist' : !der ? (n > 1 ? `Vu ${n} fois · date inconnue` : n ? 'Vu · date inconnue' : 'Vu') : n > 1 ? `Vu ${n} fois · dernier visionnage le ${dateCourte(der)}` : `Vu le ${dateCourte(der)}`;
   const meta = [f.annee, duree(f.duree)].filter(Boolean).join(' · ') + (f.realisateurs.length ? ` · de <strong>${esc(f.realisateurs.join(', '))}</strong>` : '');
   return `<div class="fiche-tete">
   <section class="fiche-hero">
@@ -368,8 +369,8 @@ function htmlFilm(f) {
       ${f.acteurs.length ? `<section><h2 class="section">Casting</h2><ul class="casting">${f.acteurs.map((a) => personne(a.nom, a.photo, a.role, f.idActeurs.get(a.nom))).join('')}</ul></section>` : ''}
     </div>
     ${decouverte ? '' : `<div class="fiche-cote"><aside class="carte histo"><h2>Mes visionnages</h2>${vu && n ? `<ol>${visions.slice().reverse().map((d, i) => `<li class="${i === 0 ? 'dernier' : ''}">
-      <b>${d ? dateLongue(d) : 'Date inconnue'}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
-      : `<p class="muted">Pas encore vu. Dans ta watchlist depuis le ${dateLongue(f.ajoute_le.slice(0, 10))}.</p>`}</aside>
+      <b>${d ? dateCourte(d) : 'Date inconnue'}</b><small>${i === n - 1 ? 'Premier visionnage' : 'Revisionnage'}</small></li>`).join('')}</ol>`
+      : `<p class="muted">Pas encore vu. Dans ta watchlist depuis le ${dateCourte(f.ajoute_le.slice(0, 10))}.</p>`}</aside>
     ${f.saga ? sagaFicheHtml(f.saga) : ''}</div>`}
   </div>`;
 }
@@ -515,7 +516,7 @@ function visionsHtml() {
   const d = edition;
   return `<fieldset class="visions"><legend>Mes visionnages</legend>${d.visions.map((v, i) => `<div class="vision">
         <label><span>${i === 0 ? 'Premier' : 'Revu le'}</span><input type="date" data-vision="${i}" value="${v ?? ''}" max="${aujourdhui()}" ${v === null ? 'disabled' : ''}></label>
-        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateLongue(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12l14 0"/></svg></button>${i === 0 ? `<label class="case-inconnue"><input type="checkbox" data-inconnue="1" ${v === null ? 'checked' : ''}>Je ne me rappelle plus quand</label>` : ''}</div>`).join('')}
+        <button class="btn carre" type="button" data-retirer="${i}" ${d.visions.length <= 1 ? 'disabled' : ''} aria-label="Retirer le visionnage du ${v ? dateCourte(v) : 'jour non renseigné'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M5 12l14 0"/></svg></button>${i === 0 ? `<label class="case-inconnue"><input type="checkbox" data-inconnue="1" ${v === null ? 'checked' : ''}>Je ne me rappelle plus quand</label>` : ''}</div>`).join('')}
       <button class="btn pointille" type="button" data-ajouter-vision>+ Ajouter un visionnage</button><p class="erreur" id="err-edit-visions" role="alert" hidden></p></fieldset>`;
 }
 
@@ -607,7 +608,7 @@ async function enregistrerRevisionnage(b) {
   const { error } = await sb.from('visionnages').insert({ film_id: fiche.id, date });
   if (error) { b.disabled = false; err.textContent = 'Revisionnage non enregistré : ' + error.message; err.hidden = false; return; }
   fen.close();
-  toast(`Revisionnage ajouté pour le ${dateLongue(date)}.`);
+  toast(`Revisionnage ajouté pour le ${dateCourte(date)}.`);
   route();
 }
 
@@ -1008,7 +1009,7 @@ dlg.addEventListener('close', () => uid && route());
 const ECRANS_CX = {
   connexion: { titre: 'Connecte-toi pour retrouver tes films', bouton: 'Se connecter' },
   oublie: { titre: 'Mot de passe oublié', texte: 'Saisis ton e-mail : Baudet t’envoie un lien pour en choisir un nouveau.', bouton: 'Envoyer le lien' },
-  creer: { titre: 'Bienvenue sur DonkTV', texte: 'Tu as été invité. Choisis ton mot de passe pour créer ton compte : ta liste de films sera rien qu’à toi.', label: 'Choisis un mot de passe', bouton: 'Créer mon compte' },
+  creer: { titre: 'Bienvenue sur DonkTV', texte: 'Tu as été invité. Indique ton prénom et choisis ton mot de passe pour créer ton compte : ta liste de films sera rien qu’à toi.', label: 'Choisis un mot de passe', bouton: 'Créer mon compte' },
   nouveau: { titre: 'Nouveau mot de passe', texte: 'Choisis ton nouveau mot de passe.', label: 'Choisis un mot de passe', bouton: 'Enregistrer' },
 };
 let ecranCx = 'connexion';
@@ -1017,6 +1018,7 @@ function afficherConnexion(ecran, { erreur = '', ok = '' } = {}) {
   ecranCx = ecran;
   $('#cx-titre').textContent = c.titre;
   $('#cx-texte').textContent = c.texte || ''; $('#cx-texte').hidden = !c.texte;
+  $('#cx-prenom-bloc').hidden = ecran !== 'creer'; $('#prenom').required = ecran === 'creer';
   $('#email').readOnly = neuf; if (neuf) $('#email').value = moi;
   $('#cx-mdp-bloc').hidden = ecran === 'oublie'; mdp.required = ecran !== 'oublie';
   $('#cx-mdp-label').textContent = c.label || 'Mot de passe';
@@ -1059,6 +1061,8 @@ $('#form-connexion').addEventListener('submit', async (e) => {
     } else {
       const { error } = await sb.auth.updateUser({ password: mdp });
       if (error) return echec('Enregistrement impossible : ' + error.message);
+      // Sans prénom enregistré, la fenêtre du prénom le redemande au démarrage.
+      if (ecranCx === 'creer') await sb.from('reglages').upsert({ user_id: uid, prenom: $('#prenom').value.trim() });
       modeMdp = null;
       history.replaceState(null, '', URL_APP + '#accueil');
       demarrer();
@@ -1085,6 +1089,8 @@ async function demarrer() {
   if (reglages.theme) appliquerTheme(reglages.theme);
   $('#connexion').hidden = true; $('#app').hidden = false;
   route();
+  majAmis();
+  if (!reglages.prenom) demanderPrenom();
   setTimeout(completerFilms, 4000); // après l'affichage de la page, pour ne pas lui prendre la bande passante
   if (r.error || f.error) toast('Lecture de la base impossible : ' + (r.error || f.error).message);
 }

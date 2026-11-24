@@ -7,7 +7,6 @@ const mobile = () => matchMedia('(max-width: 760px)').matches;
 const ICO_TROPHEE = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21l8 0 M12 17l0 4 M7 4l10 0 M17 4v8a5 5 0 0 1 -10 0v-8 M3 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0 M17 9a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/></svg>';
 const ICO_LOUPE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0 M21 21l-6 -6"/></svg>';
 const ICO_FLECHE_D = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>';
-const MOIS_COURT = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 const iso = (d) => d.toLocaleDateString('sv');
 const ajoutJours = (isoDate, n) => { const d = new Date(isoDate + 'T12:00'); d.setDate(d.getDate() + n); return iso(d); };
 const joursEntre = (a, b) => Math.round((new Date(b + 'T12:00') - new Date(a + 'T12:00')) / 864e5);
@@ -60,16 +59,20 @@ const champRecherche = (id, valeur, label) => `<label class="champ champ-recherc
 const champTri = (id, options, valeur) => `<label class="champ"><span>Trier par</span><select id="${id}" data-menu>${options.map(([v, l]) => `<option value="${v}" ${v === valeur ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
 const videMascotte = (titre, texte, bouton) => `<div class="vide-mascotte"><img src="img/mascotte.png" alt="Baudet, la mascotte de DonkTV"><div><h2>${titre}</h2><p class="muted">${texte}</p>${bouton}</div></div>`;
 
+// Films présents dans la watchlist de tous les amis choisis (et dans la mienne).
+const enCommunAvec = (f, ids) => ids.every((id) => av.amis.find((a) => a.ami === id)?.films.has(f.tmdb_id));
+
 const TRIS_TEXTE = { titre: (a, b) => a.titre.localeCompare(b.titre, 'fr') };
 const parDernier = (a, b) => (b.visions.at(-1) || '').localeCompare(a.visions.at(-1) || '');
 
 /* ---------- À voir ---------- */
 
-const av = { q: '', tri: 'ajout', genre: '', pf: '', page: 1, films: [], vus: [] };
+const av = { q: '', tri: 'ajout', genre: '', pf: '', page: 1, films: [], vus: [], amis: [], sel: [] };
 
 async function pageAVoir() {
-  av.films = (await chargerFilms()).filter((f) => f.statut === 'a_voir');
+  [av.films, av.amis] = await Promise.all([chargerFilms().then((l) => l.filter((f) => f.statut === 'a_voir')), chargerAmis().catch(() => [])]);
   av.vus = [];
+  av.sel = av.sel.filter((id) => av.amis.some((a) => a.ami === id));
   const n = av.films.length;
   return `<div class="coll-tete avoir-tete"><div class="titre-page"><h1>Watchlist</h1></div>
     <div class="coll-tete-droite"><p class="muted"><strong>${n}</strong> ${n > 1 ? 'films à voir' : 'film à voir'}</p>
@@ -80,7 +83,8 @@ async function pageAVoir() {
       const c = g ? av.films.filter((f) => f.genres.includes(g)).length : n;
       if (!c && av.genre !== g) return ''; // un genre absent de la watchlist ne filtrerait rien
       return `<button type="button" data-av-genre="${g}" aria-pressed="${av.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}<small>${c}</small></button>`;
-    }).join('')}</div></div>` : ''}
+    }).join('')}</div>
+    ${av.amis.length ? `<div class="amis-filtre puces" role="group" aria-label="En commun avec"><span>En commun avec</span>${av.amis.map((a) => puceAmi(a, 'data-av-ami', av.sel.includes(a.ami), av.films.filter((f) => a.films.has(f.tmdb_id)).length)).join('')}<a href="#amis" class="liens-pc-seul">Gérer mes amis</a></div>` : ''}</div>` : ''}
   <div id="av-resultats">${htmlAVoir()}</div>
   ${n ? '<section class="tirage-section" aria-labelledby="tg-titre"><h2 class="section" id="tg-titre">Qu’est-ce que je regarde ?</h2><p class="muted">Baudet tire au sort un film de ma watchlist.</p><div id="tirage-zone"></div></section>' : ''}`;
 }
@@ -91,14 +95,14 @@ function htmlAVoir() {
   const q = norm(av.q.trim());
   const tri = { ajout: (a, b) => b.ajoute_le.localeCompare(a.ajoute_le), genre: (a, b) => (a.genres[0] || '￿').localeCompare(b.genres[0] || '￿', 'fr'),
     annee: (a, b) => (b.annee ?? 0) - (a.annee ?? 0), duree: (a, b) => (a.duree ?? 1e9) - (b.duree ?? 1e9), ...TRIS_TEXTE }[av.tri];
-  const l = restants.filter((f) => (!av.genre || f.genres.includes(av.genre)) && surPf(f, av.pf) && (!q || f.cherche.includes(q))).sort(tri);
+  const l = restants.filter((f) => (!av.genre || f.genres.includes(av.genre)) && surPf(f, av.pf) && (!q || f.cherche.includes(q)) && enCommunAvec(f, av.sel)).sort(tri);
   if (!l.length) return videMascotte('Aucun film trouvé', 'Baudet a fouillé partout, rien ne correspond à ces filtres.', '<button class="btn primaire" type="button" data-av-reset>Réinitialiser les filtres</button>');
   const { p, nbPages, items, compteur } = decouper(l, av.page, mobile() ? 12 : 10);
   av.page = p;
   return `<p class="muted compteur" aria-live="polite">${compteur}</p>
   <div class="grille-films grille-avoir">${items.map((f) => `<div class="carte-avoir">
-    <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f)}</a>
-    <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small></div>
+    <a href="#film/${f.id}" tabindex="-1" aria-hidden="true">${posterHtml(f, amisSurAffiche(av.amis, f))}</a>
+    <div class="carte-avoir-texte"><a href="#film/${f.id}"><b>${esc(f.titre)}</b></a><small>${f.annee ?? ''}${f.annee ? ' · ' : ''}ajouté ${ilYa(f.ajout)}</small>${amisTexte(av.amis, f)}</div>
     <button class="btn" type="button" data-marquer-vu="${f.id}" aria-label="${esc(f.titre)} : je l’ai vu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10"/></svg><span>Je l’ai vu</span></button>
   </div>`).join('')}</div>${paginationHtml(p, nbPages, 'data-av-page')}`;
 }
@@ -564,7 +568,7 @@ function htmlRetro() {
   const { periode: P, decalage: D } = rt, [debut, fin] = bornes(P, D), [pDebut, pFin] = bornes(P, D + 1);
   const r = resumePeriode(debut, fin), prec = resumePeriode(pDebut, pFin);
   const nomMois = (d) => MOIS[Number(d.slice(5, 7)) - 1];
-  const titre = P === 'semaine' ? (D === 0 ? 'Cette semaine' : D === 1 ? 'La semaine dernière' : `Semaine du ${dateLongue(debut).replace(/ \d{4}$/, '')}`)
+  const titre = P === 'semaine' ? (D === 0 ? 'Cette semaine' : D === 1 ? 'La semaine dernière' : `Semaine du ${dateCourte(debut).replace(/ \d{4}$/, '')}`)
     : P === 'mois' ? `${majuscule(nomMois(debut))} ${debut.slice(0, 4)}` : debut.slice(0, 4);
   const ici = P === 'semaine' ? 'cette semaine' : P === 'mois' ? `en ${nomMois(debut)}` : `en ${debut.slice(0, 4)}`;
   const ref = P === 'semaine' ? 'la semaine d’avant' : `en ${P === 'mois' ? nomMois(pDebut) : pDebut.slice(0, 4)}`;
@@ -574,7 +578,7 @@ function htmlRetro() {
   const kpis = [[r.n, '', `${r.n > 1 ? 'films vus' : 'film vu'} ${ici}`, cmp(r.n, prec.n, '', 'film')], [r.heures, 'h', 'passées devant l’écran', cmp(r.heures, prec.heures, 'h')],
     [r.note ? fr1(r.note) : '–', '/ 5', 'de note moyenne'], [r.coeurs, '', r.coeurs > 1 ? 'coups de cœur' : 'coup de cœur', cmp(r.coeurs, prec.coeurs, '', 'coup de cœur', 'coups de cœur')]];
   const fleches = { up: '↑', down: '↓', eq: '=' };
-  const resume = P === 'semaine' ? `Du ${dateLongue(debut).replace(/ \d{4}$/, '')} au ${dateLongue(fin)}.` : P === 'mois' ? `Du 1er au ${Number(fin.slice(8))} ${nomMois(fin)}.` : `De janvier à ${D === 0 ? 'aujourd’hui' : 'décembre'}.`;
+  const resume = P === 'semaine' ? `Du ${dateCourte(debut).replace(/ \d{4}$/, '')} au ${dateCourte(fin)}.` : P === 'mois' ? `Du 1er au ${Number(fin.slice(8))} ${nomMois(fin)}.` : `De janvier à ${D === 0 ? 'aujourd’hui' : 'décembre'}.`;
   const genres = GENRES.map((g) => ({ g, n: r.distincts.filter((f) => f.genres.includes(g)).length })).filter((x) => x.n).sort((a, b) => b.n - a.n).slice(0, 5);
   const top = [...r.distincts].sort((a, b) => (b.note ?? 0) - (a.note ?? 0) || b.coup_de_coeur - a.coup_de_coeur).slice(0, 3);
   const phare = (cle) => {
@@ -586,7 +590,7 @@ function htmlRetro() {
   if (phares[0]?.[0] === 'Réalisateurs') photosReals(phares[0][1].map(([nom]) => nom));
   // Rythme : jours de la semaine, semaines du mois ou mois de l'année.
   let rythme;
-  if (P === 'semaine') rythme = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'].map((l, i) => { const d = ajoutJours(debut, i), n = r.vs.filter((v) => v.d === d).length; return { v: n, label: l, tip: `${majuscule(dateLongue(d))} : ${pluriel(n, 'film')}` }; });
+  if (P === 'semaine') rythme = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'].map((l, i) => { const d = ajoutJours(debut, i), n = r.vs.filter((v) => v.d === d).length; return { v: n, label: l, tip: `${majuscule(dateCourte(d))} : ${pluriel(n, 'film')}` }; });
   else if (P === 'mois') {
     rythme = [];
     for (let d = debut, k = 1; d <= fin; d = ajoutJours(d, 7), k++) { const f2 = ajoutJours(d, 6) > fin ? fin : ajoutJours(d, 6), n = r.vs.filter((v) => v.d >= d && v.d <= f2).length; rythme.push({ v: n, label: `S${k}`, tip: `Du ${Number(d.slice(8))} au ${Number(f2.slice(8))} ${nomMois(d)} : ${pluriel(n, 'film')}` }); }
@@ -626,7 +630,7 @@ const SIGNE = { Western: 'du western', Thriller: 'du thriller', Drame: 'du drame
   Action: 'de l’action', Aventure: 'de l’aventure', Animation: 'de l’animation', Guerre: 'du film de guerre' };
 
 async function pageAccueilPleine() {
-  const F = await chargerFilms(), vus = F.filter((f) => f.statut === 'vu'), aVoir = F.filter((f) => f.statut === 'a_voir');
+  const [F, amis] = await Promise.all([chargerFilms(), chargerAmis().catch(() => [])]), vus = F.filter((f) => f.statut === 'vu'), aVoir = F.filter((f) => f.statut === 'a_voir');
   const auj = aujourdhui(), notes = vus.filter((f) => f.note).map((f) => f.note);
   const minutes = vus.reduce((s, f) => s + (f.duree || 0) * Math.max(1, f.vues), 0);
   const ceMois = vus.filter((f) => f.vues === f.visions.length && f.visions[0]?.startsWith(auj.slice(0, 7))).length;
@@ -646,7 +650,7 @@ async function pageAccueilPleine() {
   <section>${titreSection('', 'Ton cinéma en chiffres', '#stats', 'Toutes les statistiques')}
     <div class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</div></section>
   ${souvenir ? `<section class="souvenir"><a href="#film/${souvenir.f.id}" tabindex="-1" aria-hidden="true">${affiche(souvenir.f.affiche)}</a>
-    <div><p class="sur-titre">Ce jour-là · ${dateLongue(souvenir.d)}</p><h2>Il y a ${pluriel(Number(auj.slice(0, 4)) - Number(souvenir.d.slice(0, 4)), 'an')}, tu regardais <span>${esc(souvenir.f.titre)}</span></h2>
+    <div><p class="sur-titre">Ce jour-là · ${dateCourte(souvenir.d)}</p><h2>Il y a ${pluriel(Number(auj.slice(0, 4)) - Number(souvenir.d.slice(0, 4)), 'an')}, tu regardais <span>${esc(souvenir.f.titre)}</span></h2>
     <p class="muted">${souvenir.f.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(souvenir.f.note)} / 5` : 'Pas noté'}${souvenir.f.coup_de_coeur ? ' · coup de cœur' : ''}</p>
     <a class="btn" href="#film/${souvenir.f.id}">Revoir la fiche</a></div></section>` : ''}
   ${vus.length ? `<section>${titreSection('', 'Derniers films vus', '#collection', 'Voir la collection')}
@@ -659,8 +663,8 @@ async function pageAccueilPleine() {
   ${aVoir.length ? `<section>${titreSection('', 'À voir ensuite', '#a-voir', 'Toute la watchlist')}
     <div class="rangee">${[...aVoir].sort((a, b) => b.ajoute_le.localeCompare(a.ajoute_le)).slice(0, 6).map((f) => carteFilm(f, `<span>${f.annee ?? ''}</span><span>ajouté ${ilYa(f.ajout)}</span>`).replace('carte-bas', 'carte-bas sans-points')).join('')}</div></section>` : ''}
   ${sorties.length ? `<section><div class="section-tete"><div><h2 class="section">Bientôt au cinéma en France</h2></div></div>
-    <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml(f, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>`)}
-      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${Number(f.date_sortie_fr.slice(8))} ${MOIS_COURT[Number(f.date_sortie_fr.slice(5, 7)) - 1]} ${f.date_sortie_fr.slice(0, 4)}</span></span></a>`; }).join('')}</div></section>` : ''}
+    <div class="rangee sorties">${sorties.map((f) => { const j = joursEntre(auj, f.date_sortie_fr); return `<a class="carte-film" href="#film/${f.id}">${posterHtml(f, `<span class="badge vu">dans ${pluriel(j, 'jour')}</span>${amisSurAffiche(amis, f)}`)}
+      <b>${esc(f.titre)}</b><span class="carte-bas"><span>${dateCourte(f.date_sortie_fr)}</span></span>${amisTexte(amis, f)}</a>`; }).join('')}</div></section>` : ''}
   ${fonctionnalitesHtml()}`;
 }
 
@@ -691,6 +695,7 @@ function pageMonEspace() {
     ${lien('#stats', '#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Mes chiffres, mes genres et mes pays')}
     ${lien('#retros', '#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Semaine, mois et année')}
     ${lien('#sagas', '#7A5AA6', svgEspace(CHEMINS.sagas), 'Mes sagas', 'Star Wars, Harry Potter… où j’en suis')}
+    <a href="#amis"><span class="espace-ico" style="background:#C2603A" aria-hidden="true">${svgEspace('M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0 -3 -3.85')}</span><span><b>Mes amis</b><small>Nos films en commun dans la watchlist</small></span>${(n => n ? `<span class="pastille">${n}<span class="vh"> demande${n > 1 ? 's' : ''} reçue${n > 1 ? 's' : ''}</span></span>` : '')(mesAmis.filter((a) => a.etat === 'recue').length)}${ICO_FLECHE_D}</a>
     ${installee() ? '' : `<button type="button" data-installer><span class="espace-ico" style="background:#8A5A2B" aria-hidden="true">${svgEspace('M12.5 21h-4.5a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v7 M11 4h2 M12 17v.01 M19 16v6 M22 19l-3 3l-3 -3')}</span><span><b>Installer l’app sur ton téléphone</b><small>DonkTV sur ton écran d’accueil, en plein écran</small></span>${ICO_FLECHE_D}</button>`}
     ${lien('#reglages', '#56685A', svgEspace('M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065 M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0'), 'Réglages', 'Thème, plateformes, mon compte')}
   </nav>`;
@@ -855,8 +860,12 @@ $('#page').addEventListener('click', (e) => {
     av.genre = d.avGenre; av.page = 1;
     document.querySelectorAll('[data-av-genre]').forEach((x) => x.setAttribute('aria-pressed', x === b));
     $('#av-resultats').innerHTML = htmlAVoir();
+  } else if (d.avAmi) {
+    av.sel = av.sel.includes(d.avAmi) ? av.sel.filter((x) => x !== d.avAmi) : [...av.sel, d.avAmi]; av.page = 1;
+    b.setAttribute('aria-pressed', av.sel.includes(d.avAmi));
+    $('#av-resultats').innerHTML = htmlAVoir();
   } else if ('avReset' in d) {
-    Object.assign(av, { q: '', genre: '', pf: '', page: 1 }); route();
+    Object.assign(av, { q: '', genre: '', pf: '', page: 1, sel: [] }); route();
   } else if (d.avPage) { av.page = Number(d.avPage); $('#av-resultats').innerHTML = htmlAVoir(); $('#av-resultats').scrollIntoView({ block: 'start' }); }
   else if (d.marquerVu) marquerVu(Number(d.marquerVu), b);
   else if ('genreReset' in d) { gp.q = ''; gp.pf = ''; route(); }

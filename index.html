@@ -28,6 +28,7 @@
       <p id="erreur-connexion" class="alerte ko" role="alert" hidden></p>
       <p id="cx-ok" class="alerte ok" role="status" hidden></p>
       <form id="form-connexion">
+        <label id="cx-prenom-bloc" hidden>Ton prénom<input id="prenom" type="text" autocomplete="given-name" maxlength="40" placeholder="Camille"><small class="muted">Tes amis le verront dans DonkTV.</small></label>
         <label>E-mail<input id="email" type="email" autocomplete="username" placeholder="prenom@exemple.fr" required></label>
         <div id="cx-mdp-bloc" class="champ-mdp">
           <div class="cx-ligne"><label for="mdp" id="cx-mdp-label">Mot de passe</label><button type="button" class="lien" data-cx="oublie" id="cx-oubli">Mot de passe oublié ?</button></div>
@@ -53,9 +54,9 @@
       <nav class="nav-haut liens-pc" aria-label="Navigation principale">
         <a href="#accueil">Accueil</a><a href="#collection">Mes films</a><a href="#a-voir">Watchlist</a>
         <div class="espace-pc">
-          <button type="button" class="capsule-espace lien-espace" data-espace-menu aria-haspopup="true" aria-expanded="false" aria-controls="espace-menu">Mon espace<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6 -6"/></svg></button>
+          <button type="button" class="capsule-espace lien-espace" data-espace-menu aria-haspopup="true" aria-expanded="false" aria-controls="espace-menu">Mon espace<span class="pastille" data-pastille hidden></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6 -6"/></svg></button>
           <div class="espace-menu" id="espace-menu" hidden>
-            <a href="#tops">Mes tops</a><a href="#stats">Statistiques</a><a href="#retros">Rétrospectives</a><a href="#sagas">Mes sagas</a>
+            <a href="#tops">Mes tops</a><a href="#stats">Statistiques</a><a href="#retros">Rétrospectives</a><a href="#sagas">Mes sagas</a><a href="#amis">Mes amis<span class="pastille" data-pastille hidden></span></a>
             <a href="#reglages" class="espace-sep">Réglages</a>
           </div>
         </div>
@@ -76,7 +77,7 @@
     <div class="pied-in">
       <div class="pied-marque"><a href="#accueil" class="logo-lien"><span class="logo" role="img" aria-label="DonkTV"></span></a><p class="muted">Les films que j’ai vus, et ceux qui m’attendent.</p></div>
       <nav aria-labelledby="pied-cinema"><h2 id="pied-cinema">Cinéma</h2><a href="#collection">Mes films</a><a href="#a-voir">Watchlist</a><a href="#sagas">Mes sagas</a></nav>
-      <nav aria-labelledby="pied-espace"><h2 id="pied-espace">Mon espace</h2><a href="#tops">Mes tops</a><a href="#stats">Statistiques</a><a href="#retros">Rétrospectives</a><a href="#reglages">Réglages</a></nav>
+      <nav aria-labelledby="pied-espace"><h2 id="pied-espace">Mon espace</h2><a href="#tops">Mes tops</a><a href="#stats">Statistiques</a><a href="#retros">Rétrospectives</a><a href="#amis">Mes amis</a><a href="#reglages">Réglages</a></nav>
       <nav aria-labelledby="pied-apropos"><h2 id="pied-apropos">À propos</h2><a href="#inviter" class="si-admin">Inviter un utilisateur</a><a href="#confidentialite">Confidentialité</a></nav>
     </div>
     <div class="pied-bas"><span data-version></span></div>

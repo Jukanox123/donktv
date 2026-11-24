@@ -53,13 +53,13 @@ async function basculerPlateforme(b) {
 /* ---------- Qu'est-ce que je regarde ? ---------- */
 
 const ICO_DE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14 M8 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M15 8.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M15 15.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M8 15.5a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0 M11.5 12a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0"/></svg>';
-const tg = { duree: '', genre: '', mes: null, films: [], enCours: false };
+const tg = { duree: '', genre: '', mes: null, films: [], enCours: false, amis: [] };
 const DUREES = [['', 'Peu importe'], ['moins', 'Moins de 2 h'], ['plus', 'Plus de 2 h']];
 
 // Par défaut : seulement les films disponibles aujourd'hui sur mes plateformes. Les films pas encore sortis ne peuvent pas être tirés.
 const candidats = () => tg.films.filter((f) => !(f.date_sortie_fr > aujourdhui())
   && (!tg.duree || (f.duree && (tg.duree === 'moins' ? f.duree <= 120 : f.duree > 120)))
-  && (!tg.genre || f.genres.includes(tg.genre)) && (!tg.mes || (f.plateformes || []).some((p) => aMoi(p.nom))));
+  && (!tg.genre || f.genres.includes(tg.genre)) && (!tg.mes || (f.plateformes || []).some((p) => aMoi(p.nom))) && enCommunAvec(f, tg.amis));
 const melange = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(([, x]) => x);
 const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}${bustesHtml(f.genres)}</span>`;
 const zoneTirage = () => $('#tirage-zone');
@@ -67,10 +67,12 @@ const zoneTirage = () => $('#tirage-zone');
 // Section toujours ouverte en bas de la Watchlist : filtres à gauche, tirage à droite (empilés sur mobile).
 function tirageHtml() {
   tg.mes ??= !!(reglages.plateformes || []).length;
+  tg.amis = tg.amis.filter((id) => av.amis.some((a) => a.ami === id));
   const genres = GENRES.filter((g) => tg.films.some((f) => f.genres.includes(g)));
   if (!genres.includes(tg.genre)) tg.genre = '';
   return `<div class="tirage carte">
     <div class="tirage-filtres">
+      ${av.amis.length ? `<div><p class="tirage-lab">En commun avec</p><div class="puces" role="group" aria-label="En commun avec">${av.amis.map((a) => puceAmi(a, 'data-tg-ami', tg.amis.includes(a.ami))).join('')}</div></div>` : ''}
       <div><p class="tirage-lab">Durée</p><div class="bascule" role="group" aria-label="Durée">${DUREES.map(([v, l]) => `<button type="button" data-tg-duree="${v}" aria-pressed="${tg.duree === v}">${l}</button>`).join('')}</div></div>
       ${(reglages.plateformes || []).length ? `<div><p class="tirage-lab">Plateformes</p><button class="btn" type="button" data-tg-mes aria-pressed="${tg.mes}">${ICO_VU}Sur mes plateformes</button></div>` : ''}
       <div><p class="tirage-lab">Genre</p><div class="puces" role="group" aria-label="Genre">${['', ...genres].map((g) => `<button type="button" data-tg-genre="${g}" aria-pressed="${tg.genre === g}">${g ? `<img src="${buste(g)}" alt="">${g}` : 'Tous les genres'}</button>`).join('')}</div></div>
@@ -178,7 +180,7 @@ const genresTmdb = (c) => [...new Set((c.genre_ids || []).map((g) => GENRE_TMDB[
 const carteTmdb = (c) => {
   const futur = c.release_date > aujourdhui();
   return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}${bustesHtml(genresTmdb(c))}</a>
-  <a href="#decouverte/${c.id}" tabindex="-1"><b>${esc(c.title)}</b></a><span class="carte-bas"><span>${futur ? 'Sort le ' + dateLongue(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
+  <a href="#decouverte/${c.id}" tabindex="-1"><b>${esc(c.title)}</b></a><span class="carte-bas"><span>${futur ? 'Sort le ' + dateCourte(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
   <div class="carte-actions"><button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button>${futur ? '' : `<button class="btn" type="button" data-tmdb-vu="${c.id}" aria-label="${esc(c.title)} : je l’ai vu">${ICO_VU}Je l’ai vu</button>`}</div></div>`;
 };
 const grille = (l) => `<div class="grille-films">${l.join('')}</div>`;
@@ -287,6 +289,7 @@ $('#page').addEventListener('click', (e) => {
   if (d.pf) basculerPlateforme(b);
   else if (d.tgDuree != null) { tg.duree = d.tgDuree; b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
   else if (d.tgGenre != null) { tg.genre = d.tgGenre; b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', x === b)); majTirage(); }
+  else if (d.tgAmi) { tg.amis = tg.amis.includes(d.tgAmi) ? tg.amis.filter((x) => x !== d.tgAmi) : [...tg.amis, d.tgAmi]; b.setAttribute('aria-pressed', tg.amis.includes(d.tgAmi)); majTirage(); }
   else if ('tgMes' in d) { tg.mes = !tg.mes; b.setAttribute('aria-pressed', tg.mes); majTirage(); }
   else if ('tgLancer' in d) lancerTirage();
   else if (d.frise) { const f = $('.frise'); f.scrollBy({ left: Number(d.frise) * f.clientWidth * 0.8, behavior: 'smooth' }); }
