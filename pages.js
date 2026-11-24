@@ -35,7 +35,7 @@ async function chargerFilms() {
 }
 
 const bustesHtml = (g) => `<span class="bustes">${g.slice(0, 2).map((x) => `<span title="${x}" role="img" aria-label="Genre : ${x}"><img src="${buste(x)}" alt=""></span>`).join('')}${g.length > 2 ? `<span class="plus" title="${g.slice(2).join(', ')}">+${g.length - 2}</span>` : ''}</span>`;
-const posterHtml = (f, badge = '') => `<span class="poster">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}${badge}${f.statut === 'vu' && f.coup_de_coeur ? ICO_COEUR_CARTE : ''}${bustesHtml(f.genres)}</span>`;
+const posterHtml = (f, badge = '') => `<span class="poster">${f.affiche ? `<img src="${IMG(f.affiche)}" alt="" loading="lazy">` : maison(f.titre)}${badge}${f.statut === 'vu' && f.coup_de_coeur ? ICO_COEUR_CARTE : ''}${bustesHtml(f.genres)}</span>`;
 const carteFilm = (f, bas, badge = '') => `<a class="carte-film" href="#film/${f.id}" aria-label="${esc(f.titre)}${f.annee ? ', ' + f.annee : ''}">${posterHtml(f, badge)}<b>${esc(f.titre)}</b><span class="carte-bas">${bas}</span></a>`;
 const noteBas = (f) => `<span>${f.annee ?? ''}</span><strong>${f.statut !== 'vu' ? 'À voir' : f.note ? '★ ' + fr(f.note) : 'À noter'}</strong>`;
 
@@ -355,7 +355,7 @@ function photosReals(noms) {
   });
 }
 
-const portrait = (nom) => (st.photos[nom] ? `<img class="initiales" src="https://image.tmdb.org/t/p/w185${esc(st.photos[nom])}" alt="" loading="lazy">`
+const portrait = (nom) => (st.photos[nom] ? `<img class="initiales" src="${IMG(st.photos[nom], 185)}" alt="" loading="lazy">`
   : `<span class="initiales" aria-hidden="true">${esc(nom.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>`);
 
 async function pageStats() {
@@ -600,7 +600,7 @@ function htmlRetro() {
   }
   // Mur : les films de la période d'abord, puis les autres films vus, chaque affiche une seule fois tant qu'il en reste.
   const mur = [...new Map([...r.distincts, ...[...rt.films].sort(parDernier)].filter((f) => f.affiche).map((f) => [f.affiche, f])).values()];
-  const colonnes = Array.from({ length: 12 }, (_, i) => `<div class="mur-col" style="animation-delay:${-i * 1.7}s">${Array.from({ length: 8 }, (_, j) => { const f = mur[(i * 8 + j) % (mur.length || 1)]; return `<span>${f ? `<img src="https://image.tmdb.org/t/p/w185${esc(f.affiche)}" alt="" loading="lazy">` : ''}</span>`; }).join('')}</div>`).join('');
+  const colonnes = Array.from({ length: 12 }, (_, i) => `<div class="mur-col" style="animation-delay:${-i * 1.7}s">${Array.from({ length: 8 }, (_, j) => { const f = mur[(i * 8 + j) % (mur.length || 1)]; return `<span>${f ? `<img src="${IMG(f.affiche, 185)}" alt="" loading="lazy">` : ''}</span>`; }).join('')}</div>`).join('');
 
   return `<section class="retro-hero"><div class="mur" aria-hidden="true">${colonnes}</div><div class="retro-voile" aria-hidden="true"></div>
     <div class="retro-hero-in">
@@ -649,7 +649,7 @@ async function pageAccueilPleine() {
       <div class="boutons"><button class="btn primaire grand" type="button" data-ajout>Ajouter un film</button><a class="btn grand" href="#a-voir">Ma watchlist · ${aVoir.length}</a></div></div></section>
   <section>${titreSection('', 'Ton cinéma en chiffres', '#stats', 'Toutes les statistiques')}
     <div class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</div></section>
-  ${souvenir ? `<section class="souvenir"><a href="#film/${souvenir.f.id}" tabindex="-1" aria-hidden="true">${affiche(souvenir.f.affiche)}</a>
+  ${souvenir ? `<section class="souvenir"><a href="#film/${souvenir.f.id}" tabindex="-1" aria-hidden="true">${affiche(souvenir.f.affiche, '', souvenir.f.titre)}</a>
     <div><p class="sur-titre">Ce jour-là · ${dateCourte(souvenir.d)}</p><h2>Il y a ${pluriel(Number(auj.slice(0, 4)) - Number(souvenir.d.slice(0, 4)), 'an')}, tu regardais <span>${esc(souvenir.f.titre)}</span></h2>
     <p class="muted">${souvenir.f.note ? `<span class="etoile-txt" aria-hidden="true">★</span> ${fr(souvenir.f.note)} / 5` : 'Pas noté'}${souvenir.f.coup_de_coeur ? ' · coup de cœur' : ''}</p>
     <a class="btn" href="#film/${souvenir.f.id}">Revoir la fiche</a></div></section>` : ''}

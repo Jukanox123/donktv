@@ -61,7 +61,7 @@ const candidats = () => tg.films.filter((f) => !(f.date_sortie_fr > aujourdhui()
   && (!tg.duree || (f.duree && (tg.duree === 'moins' ? f.duree <= 120 : f.duree > 120)))
   && (!tg.genre || f.genres.includes(tg.genre)) && (!tg.mes || (f.plateformes || []).some((p) => aMoi(p.nom))) && enCommunAvec(f, tg.amis));
 const melange = (l) => l.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map(([, x]) => x);
-const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}${bustesHtml(f.genres)}</span>`;
+const affichePiste = (f) => `<span class="bobine-item">${f.affiche ? `<img src="${IMG(f.affiche)}" alt="">` : `<b>${esc(f.titre)}</b>`}${bustesHtml(f.genres)}</span>`;
 const zoneTirage = () => $('#tirage-zone');
 
 // Section toujours ouverte en bas de la Watchlist : filtres à gauche, tirage à droite (empilés sur mobile).
@@ -179,7 +179,7 @@ const genresTmdb = (c) => [...new Set((c.genre_ids || []).map((g) => GENRE_TMDB[
 // L'affiche mène à la fiche du film (sans note ni visionnage) ; « Vu » ouvre l'ajout avec la note.
 const carteTmdb = (c) => {
   const futur = c.release_date > aujourdhui();
-  return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${AFFICHE}${esc(c.poster_path)}" alt="" loading="lazy">` : ''}${bustesHtml(genresTmdb(c))}</a>
+  return `<div class="carte-film carte-tmdb"><a class="poster" href="#decouverte/${c.id}" aria-label="${esc(c.title)}">${c.poster_path ? `<img src="${IMG(c.poster_path)}" alt="" loading="lazy">` : maison(c.title)}${bustesHtml(genresTmdb(c))}</a>
   <a href="#decouverte/${c.id}" tabindex="-1"><b>${esc(c.title)}</b></a><span class="carte-bas"><span>${futur ? 'Sort le ' + dateCourte(c.release_date) : (c.release_date || '').slice(0, 4)}</span></span>
   <div class="carte-actions"><button class="btn" type="button" data-rr-avoir="${c.id}">+ Watchlist</button>${futur ? '' : `<button class="btn" type="button" data-tmdb-vu="${c.id}" aria-label="${esc(c.title)} : je l’ai vu">${ICO_VU}Je l’ai vu</button>`}</div></div>`;
 };
@@ -207,7 +207,7 @@ async function pagePersonne(p) {
   const { p: pg, nbPages, items: montres } = decouper(reste, pers.page, mobile() ? 9 : 10);
   pers.page = pg;
   return `${retour('Retour')}
-  <section class="personne-tete"><span class="personne-photo">${d.profile_path ? `<img src="https://image.tmdb.org/t/p/w342${esc(d.profile_path)}" alt="Portrait de ${esc(d.name)} (TMDB)">` : esc(d.name.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>
+  <section class="personne-tete"><span class="personne-photo">${d.profile_path ? `<img src="${IMG(d.profile_path)}" alt="Portrait de ${esc(d.name)} (TMDB)">` : esc(d.name.split(' ').map((x) => x[0]).join('').slice(0, 2))}</span>
     <div><p class="sur-titre">${metier}</p><h1>${esc(d.name)}</h1></div>
       <div class="kpis personne-kpis">${kpis.map(([v, l]) => `<div class="kpi"><span class="chiffre">${v}</span><span class="muted">${l}</span></div>`).join('')}</div></section>
   <section class="bloc"><h2 class="section">Mes films vus</h2>
@@ -270,7 +270,7 @@ async function pageSagas() {
     return { c, n: l.length, vus };
   }).filter((x) => x.n).sort((a, b) => (a.vus === a.n) - (b.vus === b.n) || b.vus / b.n - a.vus / a.n);
   return `${titre}<ul class="sagas">${sagas.map(({ c, n, vus }) => `<li><a class="carte" href="#saga/${c.id}">
-    <span class="saga-img">${c.backdrop_path ? `<img src="https://image.tmdb.org/t/p/w500${esc(c.backdrop_path)}" alt="" loading="lazy">` : ''}</span>
+    <span class="saga-img">${c.backdrop_path ? `<img src="${IMG(c.backdrop_path, 500)}" alt="" loading="lazy">` : ''}</span>
     <span class="saga-txt"><b>${esc(nomSaga(c.name))}</b><small>${vus === n ? 'Terminée · ' : ''}${vus} sur ${n} vus</small><span class="jauge" aria-hidden="true"><span style="width:${(vus / n) * 100}%"></span></span></span></a></li>`).join('')}</ul>`;
 }
 

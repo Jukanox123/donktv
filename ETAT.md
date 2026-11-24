@@ -1,6 +1,6 @@
 # État du projet DonkTV
 
-Mis à jour le 25 novembre 2026 (1.5).
+Mis à jour le 25 novembre 2026 (1.5.1).
 
 ## Liens
 - App en ligne : https://jukanox123.github.io/donktv/ (dépôt GitHub `Jukanox123/donktv`)
@@ -57,9 +57,11 @@ Mis à jour le 25 novembre 2026 (1.5).
 - Numéros de version : 1.1 (fonctions du 18 novembre + retours), 1.2 (menu et page saga). Règle : majeur.mineur.correctif, augmenté à chaque mise en ligne.
 - 18 novembre (version 1.2.1) : accueil, blocs « Ce que DonkTV sait faire » non cliquables, descriptions plus longues, « Sur quelle plateforme le regarder ? » ; capsule du menu PC au rayon des boutons (10 px) ; page saga : jauge ronde X/Y à droite, résumé coupé à 220 caractères, frise Vu / Pas encore vu (affiches non vues en noir et blanc), bouton « Marquer comme vu » pour les films de la watchlist ; tous les tops en top 10 ; boutons « Marquer comme vu » alignés en bas des cartes ; plus de logos de plateforme sous les cartes de la Watchlist ; rétrospective : mur d'affiches sans doublon tant que possible, meilleurs films en blocs comme les tops, têtes d'affiche cliquables, rythme en courbe.
 
+- 25 novembre (version 1.5.1, préparation App Store / Google Play) : toutes les URL d'images (affiches, portraits, logos des plateformes, sagas) passent par la fonction `IMG(chemin, largeur)` d'`app.js` (changer de source d'images = une ligne) ; affiche maison quand un film n'a pas d'affiche (Baudet, buste du genre sur la fiche, titre en Fraunces, titre masqué sur les vignettes de moins de 80 px) ; offre du compte lue au démarrage (`premium`, fonction SQL `est_premium()`), rien n'est encore réservé au premium.
 - 25 novembre (version 1.5, amis et films en commun) : demandes d'ami par e-mail exact (page #amis : ajouter, demandes reçues Accepter / Refuser, amis avec Retirer, demandes envoyées Annuler) ; entre amis, seuls les films en commun des watchlists sont visibles ; Watchlist : filtre « En commun avec » (un ou plusieurs amis), pastilles d'initiales sur les affiches, même filtre dans « Qu'est-ce que je regarde ? » ; accueil : pastilles sur « Bientôt au cinéma en France » ; pastille du nombre de demandes reçues sur « Mon espace » (PC) et sur la ligne « Mes amis » (mobile) ; prénom demandé à la création du compte, et une fois dans une fenêtre pour les comptes existants ; Confidentialité et Inviter mises à jour ; toutes les dates au format court avec l'année (« 19 nov. 2026 », fonction dateCourte).
 
 ## Amis (25 novembre)
+- Base : `supabase/migration-2026-11-25-offre.sql` appliquée le 25 novembre (table abonnements sans règle RLS : seul le serveur y écrit ; pas de ligne = gratuit ; fonction est_premium()). Testée : un compte ne peut ni lire ni écrire la table, est_premium() passe à vrai avec une ligne premium (transaction annulée).
 - Base : `supabase/migration-2026-11-25-amis.sql` appliquée le 25 novembre (colonne reglages.prenom, table amities sans règle RLS, fonctions amis(), demander_ami(email), accepter_ami(id), supprimer_ami(id), films_en_commun()). Testée en SQL avec deux comptes (transaction annulée).
 - À tester en vrai : une demande entre deux comptes, puis les pastilles et le filtre « En commun avec ».
 

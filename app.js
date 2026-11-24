@@ -45,8 +45,11 @@ async function revalider(cle, requete, ancien) {
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fr = (n) => String(n).replace('.', ',');
-const AFFICHE = 'https://image.tmdb.org/t/p/w342';
-const affiche = (chemin, alt = '') => `<span class="affiche">${chemin ? `<img src="${AFFICHE}${esc(chemin)}" alt="${esc(alt)}" loading="lazy">` : ''}</span>`;
+// Toutes les images de films et de personnes passent par ici : changer de source d'images = changer cette ligne.
+const IMG = (chemin, w = 342) => `https://image.tmdb.org/t/p/w${w}${esc(chemin)}`;
+// Affiche maison quand la source n'en a pas : Baudet (buste du genre s'il est donné) et le titre.
+const maison = (titre = '', genres = []) => `<span class="maison"><img src="${genres[0] ? buste(genres[0]) : 'img/baudet-tete.png'}" alt=""><b>${esc(titre)}</b></span>`;
+const affiche = (chemin, alt = '', titre = '') => `<span class="affiche">${chemin ? `<img src="${IMG(chemin)}" alt="${esc(alt)}" loading="lazy">` : maison(titre)}</span>`;
 
 const GENRES = ['Western', 'Thriller', 'Drame', 'SF', 'Horreur', 'Comédie', 'Romantique', 'Action', 'Aventure', 'Animation', 'Guerre'];
 const buste = (g) => `img/buste-${g.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')}.png`;
@@ -55,6 +58,7 @@ const GENRE_TMDB = { 28: 'Action', 12: 'Aventure', 16: 'Animation', 35: 'Comédi
   27: 'Horreur', 9648: 'Thriller', 10749: 'Romantique', 878: 'SF', 53: 'Thriller', 10752: 'Guerre', 37: 'Western' };
 
 let uid = null, moi = '', admin = true, reglages = {}, films = [];
+let premium = false; // offre du compte (table abonnements) : rien n'est encore réservé au premium
 let sources = { tmdb: false, omdb: false }; // clés renseignées par l'administrateur (elles restent sur le serveur)
 
 function toast(msg, action) {
@@ -139,7 +143,7 @@ function pageAccueil() {
     // shortcut: liste simple en attendant le vrai accueil (KPI, souvenirs, bientôt au cinéma) des maquettes.
     return `<div class="titre-page"><p class="sur-titre">Accueil</p><h1>Mes derniers films</h1></div>
       <div class="grille">${films.slice(0, 18).map((f) => `<a class="film" href="#film/${f.id}">
-        <span class="affiche">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}<span class="badge ${f.statut === 'vu' ? 'vu' : ''}">${f.statut === 'vu' ? 'Vu' : 'À voir'}</span></span>
+        <span class="affiche">${f.affiche ? `<img src="${IMG(f.affiche)}" alt="" loading="lazy">` : maison(f.titre)}<span class="badge ${f.statut === 'vu' ? 'vu' : ''}">${f.statut === 'vu' ? 'Vu' : 'À voir'}</span></span>
         <b>${esc(f.titre)}</b><small>${esc(f.annee ?? '')}${f.note ? ` · ${fr(f.note)} / 5` : ''}${f.coup_de_coeur ? ' · coup de cœur' : ''}</small></a>`).join('')}</div>`;
   }
   return `<section class="hero"><div class="hero-texte">
@@ -159,7 +163,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.5';
+const VERSION = '1.5.1';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -326,7 +330,7 @@ function tuile(ico, label, valeur, unite, bas, lien, niv) {
   return lien ? `<a class="${cls}" href="${lien}" target="_blank" rel="noopener">${contenu}</a>` : `<div class="${cls}">${contenu}</div>`;
 }
 
-const personne = (nom, photo, role, id) => `<li><a href="#personne/${id || encodeURIComponent(nom)}"><span class="photo">${photo ? `<img src="https://image.tmdb.org/t/p/w185${esc(photo)}" alt="" loading="lazy">` : esc(nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
+const personne = (nom, photo, role, id) => `<li><a href="#personne/${id || encodeURIComponent(nom)}"><span class="photo">${photo ? `<img src="${IMG(photo, 185)}" alt="" loading="lazy">` : esc(nom.split(' ').map((p) => p[0]).join('').slice(0, 3))}</span>
   <b>${esc(nom)}</b>${role ? `<small>${esc(role)}</small>` : ''}</a></li>`;
 // TMDB : 1 = femme. Au masculin dès qu'un réalisateur n'est pas une femme (ou genre inconnu).
 const titreReal = (rs) => (rs.every((r) => r.genre === 1) ? 'Réalisatrice' : 'Réalisateur') + (rs.length > 1 ? 's' : '');
@@ -341,7 +345,7 @@ function htmlFilm(f) {
   return `<div class="fiche-tete">
   <section class="fiche-hero">
     <div class="fiche-retour">${decouverte ? retour('Retour') : `<a class="retour" href="#collection"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"/></svg>Mes films</a>`}</div>
-    <div class="fiche-affiche">${f.affiche ? `<img src="https://image.tmdb.org/t/p/w500${esc(f.affiche)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : ''}</div>
+    <div class="fiche-affiche">${f.affiche ? `<img src="${IMG(f.affiche, 500)}" alt="Affiche officielle de ${esc(f.titre)} (TMDB)">` : maison(f.titre, f.genres)}</div>
     <div class="fiche-infos">
       <h1>${esc(f.titre)}</h1>
       <div class="fiche-genres">${f.genres.map((g) => `<a href="#genre/${norm(g)}"><img src="${buste(g)}" alt="">${g}</a>`).join('')}</div>
@@ -375,7 +379,7 @@ function htmlFilm(f) {
   </div>`;
 }
 
-const logoPf = (p) => (p.logo ? `<img src="https://image.tmdb.org/t/p/w92${esc(p.logo)}" alt="">` : '');
+const logoPf = (p) => (p.logo ? `<img src="${IMG(p.logo, 92)}" alt="">` : '');
 const pastillePf = (p, mien) => `<li class="pf${mien ? ' pf-mien' : ''}">${logoPf(p)}<span><b>${esc(p.nom)}</b><small>${mien ? 'Dans mes abonnements' : 'Pas abonné'}</small></span></li>`;
 
 function ouRegarderHtml(o) {
@@ -780,7 +784,7 @@ function htmlResultats() {
   <div class="grille-films">${l.slice(debut, debut + parPage).map((f) => {
     const g = f.genres;
     return `<a class="carte-film" href="#film/${f.id}" aria-label="${esc(f.titre)}${f.annee ? ', ' + f.annee : ''}${f.note ? ', noté ' + fr(f.note) + ' sur 5' : ''}">
-      <span class="poster">${f.affiche ? `<img src="${AFFICHE}${esc(f.affiche)}" alt="" loading="lazy">` : ''}${f.coup_de_coeur ? ICO_COEUR_CARTE : ''}
+      <span class="poster">${f.affiche ? `<img src="${IMG(f.affiche)}" alt="" loading="lazy">` : maison(f.titre)}${f.coup_de_coeur ? ICO_COEUR_CARTE : ''}
         <span class="bustes">${g.slice(0, 2).map((x) => `<span title="${x}" role="img" aria-label="Genre : ${x}"><img src="${buste(x)}" alt=""></span>`).join('')}${g.length > 2 ? `<span class="plus" title="${g.slice(2).join(', ')}">+${g.length - 2}</span>` : ''}</span></span>
       <b>${esc(f.titre)}</b><span class="carte-bas"><span>${f.annee ?? ''}</span><strong>${f.note ? '★ ' + fr(f.note) : 'À noter'}</strong></span></a>`;
   }).join('')}</div>
@@ -815,7 +819,7 @@ function htmlCal() {
   const heures = Math.round(duMois.reduce((s, v) => s + (v.films.duree || 0), 0) / 60);
   const nomMois = MOIS[m - 1].replace(/^./, (c) => c.toUpperCase()) + ' ' + y;
   const nomJour = (d) => new Date(y, m - 1, d).toLocaleDateString('fr-FR', { weekday: 'long' });
-  const img = (v) => `<span class="cal-affiche">${v.films.affiche ? `<img src="https://image.tmdb.org/t/p/w185${esc(v.films.affiche)}" alt="">` : ''}</span>`;
+  const img = (v) => `<span class="cal-affiche">${v.films.affiche ? `<img src="${IMG(v.films.affiche, 185)}" alt="">` : ''}</span>`;
   const cases = [];
   for (let i = 0; i < Math.ceil((decalage + nbJours) / 7) * 7; i++) {
     const d = i - decalage + 1, vs = parJour[d];
@@ -1074,15 +1078,17 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
 
 async function demarrer() {
   chargerFilms().catch(() => {}); // lue par la plupart des pages : partie en même temps que le reste
-  const [r, f, c] = await Promise.all([
+  const [r, f, c, p] = await Promise.all([
     sb.from('reglages').select('*').maybeSingle(),
     sb.from('films').select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').order('ajoute_le', { ascending: false }),
     sb.rpc('cles'),
+    sb.rpc('est_premium'),
   ]);
   reglages = r.data || {}; films = f.data || [];
   // Les clés de l'administrateur servent à tous ; le navigateur sait seulement si elles existent.
   if (c.error) toast('Lecture du compte impossible : ' + c.error.message);
   admin = !!c.data?.admin;
+  premium = p.data === true;
   sources = { tmdb: !!c.data?.tmdb, omdb: !!c.data?.omdb };
   document.body.classList.toggle('admin', admin);
   document.querySelectorAll('[data-version]').forEach((e) => (e.textContent = 'DonkTV · version ' + VERSION));
