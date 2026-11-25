@@ -664,9 +664,19 @@ function htmlRetro() {
     const dernier = D === 0 ? Number(aujourdhui().slice(5, 7)) : 12;
     rythme = Array.from({ length: dernier }, (_, i) => { const m = `${debut.slice(0, 4)}-${String(i + 1).padStart(2, '0')}`, n = r.vs.filter((v) => v.d.startsWith(m)).length; return { v: n, label: MOIS_COURT[i], tip: `${majuscule(MOIS[i])} : ${pluriel(n, 'film')}` }; });
   }
-  // Mur : les films de la période d'abord, puis les autres films vus, chaque affiche une seule fois tant qu'il en reste.
-  const mur = [...new Map([...r.distincts, ...[...rt.films].sort(parDernier)].filter((f) => f.affiche).map((f) => [f.affiche, f])).values()];
-  const colonnes = Array.from({ length: 12 }, (_, i) => `<div class="mur-col" style="animation-delay:${-i * 1.7}s">${Array.from({ length: 8 }, (_, j) => { const f = mur[(i * 8 + j) % (mur.length || 1)]; return `<span>${f ? `<img src="${IMG(f.affiche, 185)}" alt="" loading="lazy">` : ''}</span>`; }).join('')}</div>`).join('');
+  // Mur : toutes les affiches de mes films vus, tirées au hasard (peu importe la période) ;
+  // une affiche ne revient qu'une fois toutes les autres posées, et jamais à côté d'elle-même.
+  const affiches = [...new Map(rt.films.filter((f) => f.affiche).map((f) => [f.affiche, f])).values()];
+  let sac = [];
+  const grille = Array.from({ length: 12 }, () => []);
+  for (let i = 0; i < 12; i++) for (let j = 0; j < 8; j++) {
+    if (!affiches.length) break;
+    if (!sac.length) sac = [...affiches].sort(() => Math.random() - 0.5);
+    const voisins = [grille[i][j - 1], grille[i - 1]?.[j], grille[i - 1]?.[j + 1], grille[i - 1]?.[j - 1]];
+    const k = sac.findIndex((f) => !voisins.includes(f));
+    grille[i][j] = sac.splice(k < 0 ? 0 : k, 1)[0];
+  }
+  const colonnes = Array.from({ length: 12 }, (_, i) => `<div class="mur-col" style="animation-delay:${-i * 1.7}s">${Array.from({ length: 8 }, (_, j) => { const f = grille[i][j]; return `<span>${f ? `<img src="${IMG(f.affiche, 185)}" alt="" loading="lazy">` : ''}</span>`; }).join('')}</div>`).join('');
 
   return `<section class="retro-hero"><div class="mur" aria-hidden="true">${colonnes}</div><div class="retro-voile" aria-hidden="true"></div>
     <div class="retro-hero-in">
