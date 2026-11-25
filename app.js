@@ -95,11 +95,6 @@ async function viaServeur(corps) {
     { headers: { Authorization: 'Bearer ' + session?.access_token, apikey: SB_CLE } });
 }
 
-async function essaiServeur(corps) {
-  const r = await viaServeur(corps);
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).erreur || (r.status === 401 || r.status === 403 ? 'Clé refusée.' : 'Erreur ' + r.status + '.'));
-}
-
 async function tmdb(chemin, params = {}, cle) {
   const jeton = cle?.startsWith('eyJ');
   const q = { language: 'fr-FR', ...params };
@@ -158,13 +153,10 @@ function pageAccueil() {
 const APERCUS = { clair: '#F6F1E4', sombre: '#141F19', auto: 'linear-gradient(90deg, #F6F1E4 50%, #141F19 50%)' };
 const CLES = [
   { champ: 'tmdb_token', nom: 'Clé TMDB', aide: 'Gratuite, à créer sur themoviedb.org (Paramètres › API). Le jeton d’accès ou la clé d’API conviennent.', test: (v) => tmdb('/configuration', {}, v) },
-  // Essai de sources compatibles avec un usage commercial (préparation des stores).
-  { champ: 'tvdb_key', nom: 'Clé TheTVDB', aide: 'En essai. Gratuite, à créer sur thetvdb.com (Developers › API).', test: (v) => essaiServeur({ tvdb: '/search', params: { query: 'Interstellar', type: 'movie' }, cle: v }) },
-  { champ: 'sa_key', nom: 'Clé Streaming Availability', aide: 'En essai. Gratuite, sur RapidAPI (offre Basic) : la clé « X-RapidAPI-Key ».', test: (v) => essaiServeur({ sa: '/shows/tt0816692', params: { country: 'fr' }, cle: v }) },
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.5.7';
+const VERSION = '1.5.8';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -176,7 +168,7 @@ function pageReglages() {
     </section>
     <section class="carte"><div><h2>Mes plateformes</h2><p class="muted">Cherche celles auxquelles tu es abonné et ajoute-les : elles ressortent en vert dans « Où le regarder ? » et servent au filtre « Sur mes plateformes ».</p></div>
       <div id="pf-choix"><p class="muted">Chargement des plateformes…</p></div></section>
-    ${admin ? `<section class="carte"><div><h2>Sources des films</h2><p class="muted">TMDB pour les fiches ; TheTVDB et Streaming Availability en essai. Visible par toi seul : les autres utilisateurs ne les voient pas.</p></div>
+    ${admin ? `<section class="carte"><div><h2>Sources des films</h2><p class="muted">Une clé gratuite : TMDB pour les fiches. Visible par toi seul : les autres utilisateurs ne les voient pas.</p></div>
       ${CLES.map((k) => `<div class="cle" data-cle="${k.champ}">
         <div class="cle-tete"><label for="${k.champ}">${k.nom}</label><span class="etat ${reglages[k.champ] ? 'ok' : ''}">${reglages[k.champ] ? 'Connectée' : 'À renseigner'}</span></div>
         <div class="cle-ligne"><input id="${k.champ}" type="password" value="${esc(reglages[k.champ])}" autocomplete="off" spellcheck="false">

@@ -1337,8 +1337,3 @@ nav .espace-menu a:has(.pastille:not([hidden])) { display: flex; align-items: ce
 .maison > img { width: 55%; height: auto; aspect-ratio: 1; object-fit: contain; }
 .maison > b { font: 700 clamp(10px, 11cqw, 26px)/1.15 'Fraunces', Georgia, serif; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 @container (max-width: 80px) { .maison > b { display: none; } .maison > img { width: 80%; } }
-/* Essai TheTVDB (page temporaire) */
-.essai { width: 100%; border-collapse: collapse; }
-.essai td { padding: 8px; vertical-align: middle; border-bottom: 1px solid var(--line); }
-.essai .affiche { display: block; width: 110px; height: 165px; aspect-ratio: auto; } /* hauteur fixe : Safari résout mal 100 % dans une cellule de tableau */
-.essai .affiche img { object-fit: contain; } /* image entière, même si elle n'est pas au format affiche */

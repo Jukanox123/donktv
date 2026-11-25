@@ -300,32 +300,3 @@ $('#page').addEventListener('click', (e) => {
 });
 $('#page').addEventListener('input', (e) => { if (e.target.id === 'pf-q') suggererPlateformes(e.target.value); });
 
-// Essai temporaire (25 novembre 2026, préparation des stores) : mes films vus côté TMDB et côté TheTVDB, pour comparer.
-// shortcut: page cachée (#essai-sources), administrateur seul, à retirer une fois la source choisie.
-async function pageEssaiSources() {
-  if (!admin) return pageIntrouvable();
-  const { data, error } = await sb.from('films').select('titre,annee,affiche,synopsis,imdb_id').order('ajoute_le', { ascending: false });
-  if (error) throw error;
-  const tvdb = async (chemin, params) => { const r = await viaServeur({ tvdb: chemin, params }); if (!r.ok) throw new Error((await r.json().catch(() => ({}))).erreur || 'Erreur ' + r.status); return (await r.json()).data; };
-  const lignes = await Promise.all(data.map(async (f) => {
-    let m = null, err = '';
-    try {
-      const id = f.imdb_id && (await tvdb('/search/remoteid/' + f.imdb_id))?.find((x) => x.movie)?.movie?.id;
-      if (id) m = await tvdb(`/movies/${id}/extended`, { meta: 'translations', short: 'true' });
-    } catch (e) { err = e.message; }
-    const tr = (cle) => m?.translations?.[cle]?.find((t) => t.language === 'fra')?.[cle === 'nameTranslations' ? 'name' : 'overview'];
-    // Affiche (type 14 chez TheTVDB) : en français d'abord, puis en anglais, sinon l'image principale.
-    const posters = (m?.artworks || []).filter((a) => a.type === 14);
-    const fr = posters.find((a) => a.language === 'fra'), poster = fr || posters.find((a) => a.language === 'eng') || posters[0];
-    return { f, m, err, titreFr: tr('nameTranslations'), resumeFr: tr('overviewTranslations'), image: poster?.image || m?.image, afficheFr: !!fr };
-  }));
-  const oui = (v) => (v ? '✓' : '✗');
-  const n = (k) => lignes.filter(k).length;
-  return `<div class="etroit texte"><h1>Essai TheTVDB</h1>
-    <p>${data.length} films : trouvés ${n((l) => l.m)}, affiche ${n((l) => l.image)} (dont en français ${n((l) => l.afficheFr)}), titre français ${n((l) => l.titreFr)}, résumé français ${n((l) => l.resumeFr)}.</p>
-    <table class="essai"><thead><tr><th>TMDB</th><th>TheTVDB</th><th>Film</th></tr></thead><tbody>${lignes.map((l) => `<tr>
-      <td>${affiche(l.f.affiche, '', l.f.titre)}</td>
-      <td><span class="affiche">${l.image ? `<img src="${esc(l.image)}" alt="" loading="lazy">` : maison(l.f.titre)}</span></td>
-      <td><b>${esc(l.f.titre)}</b> (${esc(l.f.annee ?? '')})<br><small>${l.err ? 'Erreur : ' + esc(l.err) : l.m ? `Trouvé · titre FR ${oui(l.titreFr)}${l.titreFr ? ' « ' + esc(l.titreFr) + ' »' : ''} · affiche FR ${oui(l.afficheFr)} · résumé FR ${oui(l.resumeFr)} · ${(l.m.artworks || []).length} visuels` : 'Pas trouvé sur TheTVDB'}</small></td></tr>`).join('')}</tbody></table></div>`;
-}
-PAGES['essai-sources'] = () => pageEssaiSources();
