@@ -218,9 +218,10 @@ function htmlTops() {
   const medailles = ['var(--or)', 'var(--argent)', 'var(--bronze)'];
   const fleches = (f, i) => `<div class="fleches"><button class="btn carre" type="button" data-top-monter="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Faire monter ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 15l6 -6l6 6"/></svg></button>
     <button class="btn carre" type="button" data-top-descendre="${i}" ${i === liste.length - 1 ? 'disabled' : ''} aria-label="Faire descendre ${esc(f.titre)}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6l6 -6"/></svg></button>
-    <button class="btn carre" type="button" data-top-retirer="${i}" aria-label="Retirer ${esc(f.titre)} du classement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg></button></div>`;
+    <button class="btn carre" type="button" data-top-retirer="${i}" aria-label="Retirer ${esc(f.titre)} du classement"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-12 12 M6 6l12 12"/></svg></button>
+    <span class="prise-top" aria-hidden="true">⋮⋮</span></div>`;
   const note = (f) => (f.note ? `<span aria-hidden="true" class="etoile-txt">★</span> ${fr(f.note)}` : 'Pas noté');
-  return `<div class="titre-page"><h1>Mes tops</h1><p class="muted">Ton classement à toi, dans l'ordre que tu veux. Utilise les flèches pour faire monter ou descendre un film.</p></div>
+  return `<div class="titre-page"><h1>Mes tops</h1><p class="muted">Ton classement à toi, dans l'ordre que tu veux. Glisse un film ou utilise les flèches pour le faire monter ou descendre.</p></div>
   <nav class="puces" aria-label="Choisir un classement">${['tous', ...GENRES].map((x) => `<a href="#tops/${x === 'tous' ? 'tous' : slugGenre(x)}" ${x === l ? 'aria-current="page"' : ''}>${x === 'tous' ? `<span class="trophee">${ICO_TROPHEE}</span>Tous les temps` : `<img src="${buste(x)}" alt="">${x}`}</a>`).join('')}</nav>
   <div class="tops-tete"><h2 class="section">${nomTop(l)}</h2><div><span class="muted">${liste.length} / ${taille} places</span>
     ${liste.length < taille && liste.length ? `<button class="btn primaire" type="button" data-top-ajouter>${ICO_TROPHEE}Ajouter au top</button>` : ''}</div></div>
@@ -262,6 +263,71 @@ async function modifierTop(action, b) {
     if (action === 'topChoisir') fen.close();
     $('#page').innerHTML = htmlTops();
   } catch (err) { toast('Classement non enregistré : ' + err.message); b.disabled = false; }
+}
+
+// Glisser-déposer façon iOS : toute la ligne à la souris, la poignée ⋮⋮ au doigt (la page défile sinon).
+const rubberband = (o, dim, c = 0.55) => (o * dim * c) / (dim + c * Math.abs(o));
+const SEL_TOP = '.podium > li:not(.podium-libre), .top-suite > li:not(.libre)';
+
+document.addEventListener('dragstart', (e) => { if (e.target.closest?.(SEL_TOP)) e.preventDefault(); });
+document.addEventListener('pointerdown', (e) => {
+  const li = e.target.closest(SEL_TOP);
+  if (!li || e.button !== 0 || e.target.closest('button, a')) return;
+  if (e.pointerType !== 'mouse' && !e.target.closest('.prise-top')) return;
+  if (e.pointerType === 'mouse') e.preventDefault(); // pas de sélection de texte
+  glisserTop(e, li);
+});
+
+function glisserTop(e, li) {
+  const items = [...document.querySelectorAll(SEL_TOP)], depart = items.indexOf(li), page = $('#page');
+  const centres = items.map((x) => { const r = x.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  const [cx0, cy0] = centres[depart], xs = centres.map((c) => c[0]), ys = centres.map((c) => c[1]);
+  const bornes = [Math.min(...xs) - cx0, Math.max(...xs) - cx0, Math.min(...ys) - cy0, Math.max(...ys) - cy0];
+  const zone = page.getBoundingClientRect();
+  const elastique = (o, min, max, dim) => (o < min ? min + rubberband(o - min, dim) : o > max ? max + rubberband(o - max, dim) : o);
+  let actif = false, cible = depart, dx = 0, dy = 0, vx = 0, vy = 0, tp0 = e.timeStamp, px = e.clientX, py = e.clientY;
+  const place = (x, y) => (li.style.transform = `translate(${x}px, ${y}px)`);
+  li.setPointerCapture(e.pointerId);
+
+  const bouge = (ev) => {
+    const ox = ev.clientX - e.clientX, oy = ev.clientY - e.clientY;
+    if (!actif) {
+      if (Math.hypot(ox, oy) < 8) return;
+      actif = true; li.classList.add('tenu'); page.classList.add('tops-glisse');
+    }
+    const dt = Math.max(ev.timeStamp - tp0, 1);
+    vx = 0.8 * ((ev.clientX - px) / dt) * 1000 + 0.2 * vx; vy = 0.8 * ((ev.clientY - py) / dt) * 1000 + 0.2 * vy;
+    tp0 = ev.timeStamp; px = ev.clientX; py = ev.clientY;
+    dx = elastique(ox, bornes[0], bornes[1], zone.width); dy = elastique(oy, bornes[2], bornes[3], zone.height);
+    place(dx, dy);
+    const x = cx0 + dx, y = cy0 + dy;
+    cible = centres.reduce((m, c, k) => (Math.hypot(c[0] - x, c[1] - y) < Math.hypot(centres[m][0] - x, centres[m][1] - y) ? k : m), 0);
+    items.forEach((it, j) => {
+      if (j === depart) return;
+      const n = depart < j && j <= cible ? j - 1 : cible <= j && j < depart ? j + 1 : j;
+      it.style.transform = n === j ? '' : `translate(${centres[n][0] - centres[j][0]}px, ${centres[n][1] - centres[j][1]}px)`;
+    });
+  };
+
+  const fin = () => {
+    li.removeEventListener('pointermove', bouge); li.removeEventListener('pointerup', fin); li.removeEventListener('pointercancel', fin);
+    if (!actif) return;
+    const tx = centres[cible][0] - cx0, ty = centres[cible][1] - cy0;
+    let restants = 2;
+    const pose = async () => {
+      if (--restants) return;
+      const l = tp.liste, ids = topDe(l).map((r) => r.film_id);
+      if (cible !== depart) {
+        ids.splice(cible, 0, ids.splice(depart, 1)[0]);
+        try { await enregistrerTop(l, ids); } catch (err) { toast('Classement non enregistré : ' + err.message); }
+      }
+      page.classList.remove('tops-glisse');
+      page.innerHTML = htmlTops();
+    };
+    ressort({ from: dx, to: tx, v: vx, damping: 1, response: 0.3, onUpdate: (x) => place((dx = x), dy), onDone: pose });
+    ressort({ from: dy, to: ty, v: vy, damping: 1, response: 0.3, onUpdate: (y) => place(dx, (dy = y)), onDone: pose });
+  };
+  li.addEventListener('pointermove', bouge); li.addEventListener('pointerup', fin); li.addEventListener('pointercancel', fin);
 }
 
 // Fenêtre « Ajouter à mes tops » depuis la fiche : le classement général et les genres du film.
@@ -741,7 +807,7 @@ function ouvrirInstallation(os) {
     <button class="btn plat" type="button" data-plus-tard>Plus tard</button></div>`;
   if (!fen.open) fen.showModal();
 }
-fen.addEventListener('close', () => fen.classList.remove('feuille'));
+fen.addEventListener('close', () => setTimeout(() => { if (!fen.open) fen.classList.remove('feuille'); }, 450)); // après l'animation de sortie
 
 /* ---------- Recherche rapide (Ctrl K) ---------- */
 

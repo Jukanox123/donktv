@@ -74,8 +74,10 @@ function toast(msg, action) {
   clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), action ? 6000 : 3200);
 }
 
-function appliquerTheme(theme) {
-  if (theme === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+function appliquerTheme(theme, fondu) {
+  const changer = () => { if (theme === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme; };
+  // Fondu entre clair et sombre, sauf au démarrage ou avec « réduire les animations »
+  if (fondu && document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(changer); else changer();
   try { localStorage.setItem('donktv-theme', theme); } catch {}
 }
 
@@ -156,7 +158,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.5.8';
+const VERSION = '1.6.0';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -198,7 +200,11 @@ const pageIntrouvable = () => `<div class="introuvable"><svg viewBox="0 0 480 33
   <div><h1>Page introuvable</h1><p class="muted">Baudet a cherché dans toutes les salles : cette page n’existe pas.</p><a class="btn primaire" href="#accueil">Retour à l’accueil</a></div></div>`;
 
 // Menu PC : fond flouté dès qu'on fait défiler ; raccourci affiché selon le système.
-addEventListener('scroll', () => $('.entete').classList.toggle('colle', scrollY > 4), { passive: true });
+addEventListener('scroll', () => {
+  $('.entete').classList.toggle('colle', scrollY > 4);
+  const f = $('.filtres'); // PC : la barre de filtres prend le matériau de l'en-tête quand elle se colle dessous
+  if (f) f.classList.toggle('colle', f.getBoundingClientRect().top <= 68.5 && innerWidth > 760);
+}, { passive: true });
 if (/Mac|iP/.test(navigator.platform)) $('[data-raccourci]').textContent = '⌘K';
 
 function menuEspace(ouvrir) {
@@ -212,6 +218,14 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#espace-menu').hidden) { menuEspace(false); $('[data-espace-menu]').focus(); } });
 
+function progressionPage(debut) {
+  let b = $('.progression-page');
+  if (!b) { b = document.createElement('div'); b.className = 'progression-page'; document.body.append(b); }
+  clearTimeout(progressionPage.t);
+  if (debut) { b.className = 'progression-page'; void b.offsetWidth; progressionPage.t = setTimeout(() => (b.className = 'progression-page go'), 80); }
+  else b.className = 'progression-page fin';
+}
+
 async function route() {
   const hash = location.hash, [nom, id] = (hash.slice(1) || 'accueil').split('/'), page = $('#page');
   const actif = { film: 'collection', calendrier: 'collection', genre: 'collection', personne: 'collection', saga: 'collection', sagas: 'mon-espace', decouverte: 'collection' }[nom] || nom;
@@ -221,11 +235,15 @@ async function route() {
   if (espace) $('.nav-bas a[href="#mon-espace"]').setAttribute('aria-current', 'page');
   const rendu = (PAGES[nom] || pageIntrouvable)(id);
   if (rendu instanceof Promise) {
-    if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement…</p>';
+    // L'ancienne page reste affichée, estompée, avec un trait de progression ; la nouvelle arrive en fondu
+    const attente = page.dataset.vue !== hash && page.dataset.vue !== undefined;
+    if (attente) { page.classList.add('attente'); progressionPage(true); }
+    else if (page.dataset.vue !== hash) page.innerHTML = '<p class="vide">Chargement…</p>';
     let html;
     try { html = await rendu; } catch (err) { html = `<p class="vide erreur">Chargement impossible : ${esc(err.message)}</p>`; }
     if (location.hash !== hash) return; // on a changé de page pendant le chargement
     page.innerHTML = html;
+    if (attente) { page.classList.remove('attente'); progressionPage(false); page.classList.remove('arrivee'); void page.offsetWidth; page.classList.add('arrivee'); }
   } else page.innerHTML = rendu;
   if (page.dataset.vue !== hash) scrollTo(0, 0);
   page.querySelector('.puces [aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'center' }); // genre en cours visible sur mobile
@@ -243,7 +261,7 @@ $('#page').addEventListener('click', async (e) => {
   if (!b) return;
   try {
     if (b.dataset.themeChoix) {
-      appliquerTheme(b.dataset.themeChoix);
+      appliquerTheme(b.dataset.themeChoix, true);
       await enregistrerReglages({ theme: b.dataset.themeChoix });
       route();
     } else if ('voir' in b.dataset) {
@@ -1097,3 +1115,53 @@ sb.auth.onAuthStateChange((evt, session) => {
   // Pas d'appel Supabase dans ce rappel (il bloquerait la session), et pas avant que pages.js et decouvrir.js soient chargés.
   pagesChargees.then(() => setTimeout(demarrer, 0));
 });
+
+/* ---------- Fenêtres mobiles : on les tire vers le bas pour les fermer (1.6) ---------- */
+// Ressort façon Apple : damping 1 = sans rebond, response = rapidité (s). Reprend la vitesse du doigt.
+function ressort({ from, to, v = 0, damping = 1, response = 0.35, onUpdate, onDone }) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) { onUpdate(to); onDone?.(); return { stop() {} }; }
+  const k = (2 * Math.PI / response) ** 2, c = 4 * Math.PI * damping / response;
+  let x = from, vel = v, last = performance.now(), id, fini = false;
+  const pas = (t) => {
+    if (fini) return;
+    const dt = Math.min((t - last) / 1000, 1 / 30); last = t;
+    for (let i = 0; i < 4; i++) { const h = dt / 4, a = -k * (x - to) - c * vel; vel += a * h; x += vel * h; }
+    onUpdate(x);
+    if (Math.abs(vel) < 2 && Math.abs(x - to) < 0.5) { onUpdate(to); fini = true; onDone?.(); return; }
+    id = requestAnimationFrame(pas);
+  };
+  id = requestAnimationFrame(pas);
+  return { stop() { fini = true; cancelAnimationFrame(id); } };
+}
+{
+  const elastique = (o, dim, c = 0.55) => (o * dim * c) / (dim + c * Math.abs(o));
+  const projeter = (v, d = 0.998) => (v / 1000) * d / (1 - d);
+  let prise = null, anim = null;
+  document.addEventListener('pointerdown', (e) => {
+    const d = e.target.closest('dialog[open]:not(.petit)');
+    if (!d || innerWidth > 760 || e.button > 0 || e.target.closest('button, a, input, textarea, select, label, [contenteditable]')) return;
+    if (e.clientY - d.getBoundingClientRect().top > 64) return; // on attrape la feuille par le haut
+    anim?.stop();
+    prise = { d, id: e.pointerId, y0: e.clientY, depart: 0, y: 0, actif: false, hist: [{ t: performance.now(), y: e.clientY }] };
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!prise || e.pointerId !== prise.id) return;
+    const brut = e.clientY - prise.y0;
+    if (!prise.actif) { if (Math.abs(brut) < 8) return; prise.actif = true; prise.y0 = e.clientY; prise.d.setPointerCapture?.(e.pointerId); prise.d.classList.add('sans-transition'); }
+    const dy = e.clientY - prise.y0, H = prise.d.offsetHeight;
+    prise.y = dy < 0 ? -elastique(-dy, H) : dy;
+    prise.d.style.transform = `translateY(${prise.y}px)`;
+    prise.hist.push({ t: performance.now(), y: e.clientY }); if (prise.hist.length > 6) prise.hist.shift();
+  });
+  const lacher = (e) => {
+    if (!prise || e.pointerId !== prise.id) return;
+    const { d, y, actif, hist } = prise; prise = null;
+    if (!actif) return;
+    const a = hist[0], b = hist[hist.length - 1], v = (b.y - a.y) / Math.max(16, b.t - a.t) * 1000, H = d.offsetHeight;
+    const poser = (x) => (d.style.transform = `translateY(${x}px)`);
+    if (y + projeter(v) > H * 0.5) anim = ressort({ from: y, to: H, v, response: 0.3, onUpdate: poser, onDone: () => { d.close(); d.style.transform = ''; setTimeout(() => d.classList.remove('sans-transition'), 50); } });
+    else anim = ressort({ from: y, to: 0, v, damping: 0.8, response: 0.3, onUpdate: poser, onDone: () => { d.style.transform = ''; d.classList.remove('sans-transition'); } });
+  };
+  document.addEventListener('pointerup', lacher);
+  document.addEventListener('pointercancel', lacher);
+}
