@@ -1440,3 +1440,5 @@ h2.section, .souvenir h2, .retro-carte h2, .saga-tete h1, .personne-tete h1 { le
 @media (max-width: 760px) { .hero { background-image: url(img/bienvenue-large.jpg); background-size: cover; background-position: right bottom; } }
 /* PC : la page laisse déborder le fond de la barre de filtres jusqu'aux bords de l'écran (#app coupe déjà au bord) */
 @media (min-width: 761px) { #page:has(.filtres) { overflow-x: visible; } }
+/* Téléphone étroit : on garde l'image mobile, où Baudet est plus grand et bien à droite du texte */
+@media (max-width: 480px) { .hero { background-image: url(img/bienvenue-mobile.jpg); background-size: auto 100%; background-position: right -30px top; } }
