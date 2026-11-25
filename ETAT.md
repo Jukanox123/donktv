@@ -1,6 +1,6 @@
 # État du projet DonkTV
 
-Mis à jour le 25 novembre 2026 (1.5.4).
+Mis à jour le 25 novembre 2026 (1.5.5).
 
 ## Liens
 - App en ligne : https://jukanox123.github.io/donktv/ (dépôt GitHub `Jukanox123/donktv`)
@@ -57,6 +57,7 @@ Mis à jour le 25 novembre 2026 (1.5.4).
 - Numéros de version : 1.1 (fonctions du 18 novembre + retours), 1.2 (menu et page saga). Règle : majeur.mineur.correctif, augmenté à chaque mise en ligne.
 - 18 novembre (version 1.2.1) : accueil, blocs « Ce que DonkTV sait faire » non cliquables, descriptions plus longues, « Sur quelle plateforme le regarder ? » ; capsule du menu PC au rayon des boutons (10 px) ; page saga : jauge ronde X/Y à droite, résumé coupé à 220 caractères, frise Vu / Pas encore vu (affiches non vues en noir et blanc), bouton « Marquer comme vu » pour les films de la watchlist ; tous les tops en top 10 ; boutons « Marquer comme vu » alignés en bas des cartes ; plus de logos de plateforme sous les cartes de la Watchlist ; rétrospective : mur d'affiches sans doublon tant que possible, meilleurs films en blocs comme les tops, têtes d'affiche cliquables, rythme en courbe.
 
+- 25 novembre (version 1.5.5) : page cachée #essai-sources (administrateur seul, à retirer après le choix) : mes films avec l'affiche TMDB à côté de celle de TheTVDB, titre et résumé français trouvés ou non, totaux en haut. Streaming Availability abandonné (inscription RapidAPI impossible pour Valentin).
 - 25 novembre (version 1.5.4, essai de sources pour les stores) : Réglages › Sources des films (administrateur) : champs « Clé TheTVDB » et « Clé Streaming Availability » (Tester et enregistrer) ; fonction `sources` (version 3 déployée) : relais `tvdb` (connexion par clé, jeton gardé) et `sa` (RapidAPI), paramètre `cle` pour tester une clé avant de l'enregistrer ; branche OMDb retirée. Base : `supabase/migration-2026-11-25-essai-sources.sql` appliquée (colonnes reglages.tvdb_key, sa_key).
 - 25 novembre (version 1.5.3, choix de Valentin, préparation des stores) : note Rotten Tomatoes retirée partout (tuile Critiques de la fiche, lectures OMDb à l'ajout et en arrière-plan, clé OMDb des Réglages, mentions de Confidentialité et À propos) ; fiche : tuiles Ma note + Spectateurs (2 colonnes sur mobile) ; « Où le regarder ? » : chaque plateforme est un lien (recherche du film sur Netflix et Prime Video, liens universels qui ouvrent l'app ; page « Où regarder » de TMDB pour les autres) avec une flèche. Colonne films.note_rt laissée en place, inutilisée.
 - 25 novembre (version 1.5.1, préparation App Store / Google Play) : toutes les URL d'images (affiches, portraits, logos des plateformes, sagas) passent par la fonction `IMG(chemin, largeur)` d'`app.js` (changer de source d'images = une ligne) ; affiche maison quand un film n'a pas d'affiche (Baudet, buste du genre sur la fiche, titre en Fraunces, titre masqué sur les vignettes de moins de 80 px) ; offre du compte lue au démarrage (`premium`, fonction SQL `est_premium()`), rien n'est encore réservé au premium.
