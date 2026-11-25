@@ -1340,4 +1340,5 @@ nav .espace-menu a:has(.pastille:not([hidden])) { display: flex; align-items: ce
 /* Essai TheTVDB (page temporaire) */
 .essai { width: 100%; border-collapse: collapse; }
 .essai td { padding: 8px; vertical-align: middle; border-bottom: 1px solid var(--line); }
-.essai .affiche { display: block; width: 72px; }
+.essai .affiche { display: block; width: 110px; }
+.essai .affiche img { object-fit: contain; } /* image entière, même si elle n'est pas au format affiche */
