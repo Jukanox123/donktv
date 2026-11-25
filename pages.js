@@ -499,7 +499,7 @@ function htmlStats() {
     const rows = Object.entries(compte).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'fr')).slice(0, 5);
     const m = rows[0]?.[1] || 1;
     if (cle === 'real') photosReals(rows.map(([nom]) => nom));
-    return rows.length ? lignesH(rows.map(([nom, n]) => ({ ico: portrait(nom), nom: esc(nom), pct: (n / m) * 100, val: pluriel(n, 'film') })))
+    return rows.length ? lignesH(rows.map(([nom, n]) => ({ ico: `<a href="#personne/${encodeURIComponent(nom)}" tabindex="-1" aria-hidden="true">${portrait(nom)}</a>`, nom: `<a href="#personne/${encodeURIComponent(nom)}">${esc(nom)}</a>`, pct: (n / m) * 100, val: pluriel(n, 'film') })))
       : `<p class="muted">Aucun film ${periode === 'mois' ? 'ce mois-ci' : 'cette année'}.</p>`;
   };
   const seg = (attr, val, opts) => `<div class="bascule" role="group">${opts.map(([v, l]) => `<button type="button" ${attr}="${v}" aria-pressed="${v === val}">${l}</button>`).join('')}</div>`;

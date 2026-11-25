@@ -1434,3 +1434,9 @@ h2.section, .souvenir h2, .retro-carte h2, .saga-tete h1, .personne-tete h1 { le
 :is(.podium, .top-suite) > li.tenu { position: relative; z-index: 5; transition: none; box-shadow: 0 18px 40px -12px rgba(20,40,28,.45); }
 @media (max-width: 760px) { .prise-top { width: 24px; height: 32px; } }
 @media (prefers-reduced-motion: reduce) { .tops-glisse :is(.podium, .top-suite) > li:not(.tenu) { transition: none; } }
+/* 1.6.2 : bannière de l'accueil sur l'image large (Baudet tout à droite), texte dans la moitié gauche aux largeurs moyennes */
+.hero { background-image: url(img/bienvenue-large.jpg); background-size: cover; background-position: right bottom; }
+@media (min-width: 761px) and (max-width: 1180px) { .hero-texte { max-width: 50%; } .hero h1 { font-size: clamp(40px, 5vw, 56px); } }
+@media (max-width: 760px) { .hero { background-image: url(img/bienvenue-large.jpg); background-size: cover; background-position: right bottom; } }
+/* PC : la page laisse déborder le fond de la barre de filtres jusqu'aux bords de l'écran (#app coupe déjà au bord) */
+@media (min-width: 761px) { #page:has(.filtres) { overflow-x: visible; } }
