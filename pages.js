@@ -35,7 +35,7 @@ async function chargerFilms() {
 }
 
 const bustesHtml = (g) => `<span class="bustes">${g.slice(0, 2).map((x) => `<span title="${x}" role="img" aria-label="Genre : ${x}"><img src="${buste(x)}" alt=""></span>`).join('')}${g.length > 2 ? `<span class="plus" title="${g.slice(2).join(', ')}">+${g.length - 2}</span>` : ''}</span>`;
-const posterHtml = (f, badge = '') => `<span class="poster">${f.affiche ? `<img src="${IMG(f.affiche)}" alt="" loading="lazy">` : maison(f.titre)}${badge}${f.statut === 'vu' && f.coup_de_coeur ? ICO_COEUR_CARTE : ''}${bustesHtml(f.genres)}</span>`;
+const posterHtml = (f, badge = '') => `<span class="poster">${f.affiche ? `<img src="${IMG(f.affiche)}" alt="" loading="lazy" decoding="async">` : maison(f.titre)}${badge}${f.statut === 'vu' && f.coup_de_coeur ? ICO_COEUR_CARTE : ''}${bustesHtml(f.genres)}</span>`;
 const carteFilm = (f, bas, badge = '') => `<a class="carte-film" href="#film/${f.id}" aria-label="${esc(f.titre)}${f.annee ? ', ' + f.annee : ''}">${posterHtml(f, badge)}<b>${esc(f.titre)}</b><span class="carte-bas">${bas}</span></a>`;
 const noteBas = (f) => `<span>${f.annee ?? ''}</span><strong>${f.statut !== 'vu' ? 'À voir' : f.note ? '★ ' + fr(f.note) : 'À noter'}</strong>`;
 
@@ -443,7 +443,7 @@ function htmlStats() {
   const nouveauxMois = D.filter((f) => f.visions[0].startsWith(moisCourant)).length;
   const debut = D.map((f) => f.visions[0]).sort()[0];
   const kpis = [['Films vus', F.length, '', evol(nouveauxMois, 'ce mois-ci')], ['Heures passées', Math.round(minutes / 60), 'h', `environ ${pluriel(Math.round(minutes / 1440), 'jour')}`],
-    ['Note moyenne', notes.length ? fr1(moyenne(notes)) : '–', '/ 5', `${pluriel(notes.filter((n) => n === 5).length, 'film noté', 'films notés')} 5 ★`], ['Genre préféré', top ? top.g : '–', '', top ? pluriel(top.n, 'film') : '']];
+    ['Note moyenne', notes.length ? fr1(moyenne(notes)) : '–', '/ 5', `${pluriel(notes.filter((n) => n === 5).length, 'film noté', 'films notés')} 5 ★`], ['Jours de cinéma', new Set(visions.map((v) => v.d)).size, '', 'depuis le début']];
 
   // 12 derniers mois
   const mois = Array.from({ length: 12 }, (_, i) => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 11 + i); return iso(d).slice(0, 7); });
@@ -515,7 +515,7 @@ function htmlStats() {
   return `<div class="titre-page"><h1>Statistiques</h1><p class="muted">${debut ? `Depuis ${MOIS[Number(debut.slice(5, 7)) - 1]} ${debut.slice(0, 4)} · ` : ''}seuls les films vus comptent.</p></div>
   <section class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</section>
   <div class="stats-grille">
-  <section class="carte stat large"><div class="stat-tete"><h2>Ta collection au fil des mois</h2><span class="muted">${pluriel(F.length, 'film')} · ${evol(cumul[11] - cumul[0], 'en 12 mois')}</span></div>
+  <section class="carte stat large"><div class="stat-tete"><h2>Ma collection au fil des mois</h2><span class="muted">${pluriel(F.length, 'film')} · ${evol(cumul[11] - cumul[0], 'en 12 mois')}</span></div>
     <div class="graph"><div class="axe" aria-hidden="true">${[4, 3, 2, 1, 0].map((k) => `<span>${(maxC * k) / 4}</span>`).join('')}</div>
     <div class="zone"><div class="lignes" aria-hidden="true">${[0, 1, 2, 3, 4].map(() => '<span></span>').join('')}</div>
     <svg viewBox="0 0 1000 260" preserveAspectRatio="none" role="img" aria-label="Nombre total de films vus, cumulé : de ${cumul[0]} en ${MOIS[Number(mois[0].slice(5)) - 1]} ${mois[0].slice(0, 4)} à ${cumul[11]} aujourd’hui">
@@ -524,14 +524,14 @@ function htmlStats() {
     ${pts.map((p, i) => `<span class="point" style="left:${p[0] / 10}%;top:${(p[1] / 260) * 100}%"><span class="tip">${majuscule(MOIS[Number(mois[i].slice(5)) - 1])} ${mois[i].slice(0, 4)} : ${pluriel(vusMois[i], 'film vu', 'films vus')}</span></span>`).join('')}</div>
     <span></span><div class="etiquettes" aria-hidden="true">${mois.map((m) => `<span>${lab(m)}</span>`).join('')}</div></div></section>
 
-  <section class="carte stat large"><div class="stat-tete"><h2>Ton année ciné, jour par jour</h2>
+  <section class="carte stat large"><div class="stat-tete"><h2>Mon année ciné, jour par jour</h2>
     ${annees.length > 1 ? `<label class="champ petit-champ"><span>Année</span><select id="stats-annee" data-menu>${annees.map((a) => `<option ${a === an ? 'selected' : ''}>${a}</option>`).join('')}</select></label>` : ''}</div>
     <div class="hm-defile"><div class="hm" style="--semaines:${nbSemaines}"><span></span><div class="hm-mois" aria-hidden="true">${etiquettesSem.join('')}</div>
       <div class="hm-jours" aria-hidden="true"><span></span><span>mar.</span><span></span><span>jeu.</span><span></span><span>sam.</span><span></span></div>
       <div class="hm-cases" role="img" aria-label="${joursVus.length} jours de cinéma en ${an}">${cases.join('')}</div></div></div>
     <div class="hm-mini" role="img" aria-label="${joursVus.length} jours de cinéma en ${an}">${miniMois.join('')}</div>
-    <div class="hm-bas"><div class="hm-chiffres"><div><span class="chiffre">${joursVus.length}</span><span class="muted">jours de cinéma</span></div>
-      <div><span class="chiffre">${pluriel(record, 'jour')}</span><span class="muted">plus longue série</span></div><div><span class="chiffre">${majuscule(jourFav.slice(3))}</span><span class="muted">ton jour préféré pour un film</span></div></div>
+    <div class="hm-bas"><div class="hm-chiffres"><div><span class="chiffre">${joursVus.reduce((s, d) => s + parJour[d].length, 0)}</span><span class="muted">films vus en ${an}</span></div>
+      <div><span class="chiffre">${pluriel(record, 'jour')}</span><span class="muted">plus longue série</span></div><div><span class="chiffre">${majuscule(jourFav.slice(3))}</span><span class="muted">mon jour préféré pour un film</span></div></div>
       <div class="hm-legende" aria-hidden="true"><span>Aucun</span>${[0, 1, 2, 3, 4].map((n) => `<span class="hm-${n}"></span>`).join('')}<span>4 films et +</span></div></div></section>
 
   <section class="carte stat"><div class="stat-tete"><h2>${st.mesure === 'films' ? 'Films vus par mois' : 'Heures par mois'}</h2>${seg('data-mesure', st.mesure, [['films', 'Films'], ['heures', 'Heures']])}</div>${barres(parMois)}</section>
@@ -540,9 +540,9 @@ function htmlStats() {
   <section class="carte stat large stat-genres"><div class="stat-genres-liste"><div class="stat-tete"><h2>Mes genres</h2><p class="muted">Un film peut compter dans plusieurs genres.</p></div>
     ${lignesH(parGenre.map((x) => ({ ico: `<a href="#genre/${slugGenre(x.g)}" tabindex="-1" aria-hidden="true"><img class="hb-buste" src="${buste(x.g)}" alt=""></a>`, nom: `<a href="#genre/${slugGenre(x.g)}">${x.g}</a>`, pct: (x.n / parGenre[0].n) * 100, val: x.n, tip: pluriel(x.n, 'film') })))}</div>
     ${top ? `<a class="genre-prefere" href="#genre/${slugGenre(top.g)}"><img src="img/decor-${slugGenre(top.g)}.jpg" alt="${esc(GENRE_INFO[top.g][7])}">
-      <span><span class="sur-titre">Genre préféré</span><b>${top.g}</b><small>${pluriel(top.n, 'film')} · ${Math.round((top.n / F.length) * 100)} % de ta collection</small></span></a>` : ''}</section>
+      <span><span class="sur-titre">Genre préféré</span><b>${top.g}</b><small>${pluriel(top.n, 'film')} · ${Math.round((top.n / F.length) * 100)} % de ma collection</small></span></a>` : ''}</section>
 
-  <section class="carte stat large"><div class="stat-tete"><h2>Ton tour du monde</h2><span class="muted">un film coproduit compte dans chacun de ses pays</span></div>
+  <section class="carte stat large"><div class="stat-tete"><h2>Mon tour du monde</h2><span class="muted">un film coproduit compte dans chacun de ses pays</span></div>
     <div class="carte-monde"><div id="carte-monde" class="carte-svg">${st.carte || '<p class="muted">Chargement de la carte…</p>'}</div>
       <div class="carte-cote"><div><span class="chiffre">${Object.keys(pays).length}</span><span class="muted">${Object.keys(pays).length > 1 ? 'pays visités en films' : 'pays visité en films'}</span></div>
         <ol class="top-pays">${topPays.map(([c, l]) => `<li><span class="pastille-geo geo-${niveauPays(l.length)}" aria-hidden="true"></span><span>${esc(nomPays(c))}</span><b>${l.length}</b></li>`).join('')}</ol>
@@ -723,7 +723,7 @@ async function pageAccueilPleine() {
   return `<section class="hero accueil-hero"><div class="hero-texte"><p class="sur-titre">${jourTxt}</p><h1>Quel film viens-tu de voir ?</h1>
       <p><span class="long">Tape son titre : affiche, synopsis et casting se remplissent tout seuls. Il ne te reste qu'à le noter.</span><span class="court">Tape son titre, le reste se remplit tout seul.</span></p>
       <div class="boutons"><button class="btn primaire grand" type="button" data-ajout>Ajouter un film</button><a class="btn grand" href="#a-voir">Ma watchlist · ${aVoir.length}</a></div></div></section>
-  <section>${titreSection('', 'Ton cinéma en chiffres', '#stats', 'Toutes les statistiques')}
+  <section>${titreSection('', 'Mon cinéma en chiffres', '#stats', 'Toutes les statistiques')}
     <div class="kpis">${kpis.map(([l, v, u, s]) => `<div class="kpi"><span class="kpi-label">${l}</span><span class="chiffre">${v}<small>${u}</small></span>${s.startsWith('<span') ? s : `<span class="muted">${s}</span>`}</div>`).join('')}</div></section>
   ${souvenir ? `<section class="souvenir"><a href="#film/${souvenir.f.id}" tabindex="-1" aria-hidden="true">${affiche(souvenir.f.affiche, '', souvenir.f.titre)}</a>
     <div><p class="sur-titre">Ce jour-là · ${dateCourte(souvenir.d)}</p><h2>Il y a ${pluriel(Number(auj.slice(0, 4)) - Number(souvenir.d.slice(0, 4)), 'an')}, tu regardais <span>${esc(souvenir.f.titre)}</span></h2>
@@ -746,15 +746,15 @@ async function pageAccueilPleine() {
 
 // Présentation seule : les blocs ne sont pas cliquables.
 function fonctionnalitesHtml() {
-  const bloc = (couleur, ico, titre, texte) => `<li class="fonction"><span class="espace-ico" style="background:${couleur}" aria-hidden="true">${ico}</span><span><b>${titre}</b><small>${texte}</small></span></li>`;
+  const bloc = (couleur, ico, titre, texte) => `<li class="fonction"><span class="espace-ico espace-ico-doux" aria-hidden="true">${ico}</span><span><b>${titre}</b><small>${texte}</small></span></li>`;
   const grand = (ico) => ico.replace(/width="18" height="18"/, 'width="22" height="22"');
   return `<section class="fonctions"><div class="section-tete"><div><h2 class="section">Ce que DonkTV sait faire</h2></div></div><ul>
-    ${bloc('#C2603A', grand(ICO_DE), 'Qu’est-ce que je regarde ?', 'Trop de choix, aucune idée ? Baudet tire au sort un film de ma watchlist. Une durée, un genre, une plateforme : je filtre, je lance, je relance. Le hasard fait bien les choses.')}
-    ${bloc('#56685A', grand(ICO_LOUPE), 'Sur quelle plateforme regarder mon film ?', 'Netflix, Prime Video ou Canal+ ? Chaque fiche montre où le film est disponible en France, et mes abonnements ressortent en vert. Je sais en un coup d’œil si je peux le lancer.')}
-    ${bloc('#E3A72F', svgEspace(CHEMINS.tops), 'Mes tops', 'Un top 10 de tous les temps. Et un top 10 pour chacun des 11 genres. Je classe, je déclasse, je réordonne. Mes chefs-d’œuvre, dans l’ordre que je choisis.')}
-    ${bloc('#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Combien de films. Combien d’heures. Mes genres, mes pays, mes réalisateurs et mes acteurs les plus vus. Tout mon cinéma, en chiffres et en graphiques.')}
-    ${bloc('#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Chaque semaine, chaque mois, chaque année : mon récap. Films vus, genre dominant, meilleures notes. Et la comparaison avec la période d’avant.')}
-    ${bloc('#7A5AA6', svgEspace(CHEMINS.sagas), 'Sagas', 'De Star Wars à Harry Potter, DonkTV repère les sagas de ma collection. Je vois où j’en suis dans chacune, et ce qu’il me reste à découvrir.')}
+    ${bloc('#C2603A', grand(ICO_DE), 'Qu’est-ce que je regarde ?', 'Baudet tire au sort un film de ma watchlist, par durée, genre ou plateforme si je veux.')}
+    ${bloc('#56685A', grand(ICO_LOUPE), 'Sur quelle plateforme regarder mon film ?', 'Chaque fiche indique où voir le film en France. Mes abonnements ressortent en vert.')}
+    ${bloc('#E3A72F', svgEspace(CHEMINS.tops), 'Mes tops', 'Un top 10 de tous les temps et un top 10 par genre, à réordonner quand je veux.')}
+    ${bloc('#3F7A4F', svgEspace(CHEMINS.stats), 'Statistiques', 'Mes heures devant l’écran, mes genres, mes pays et les réalisateurs que je vois le plus.')}
+    ${bloc('#3E8ED0', svgEspace(CHEMINS.retros), 'Rétrospectives', 'Un récap par semaine, par mois et par année, comparé à la période précédente.')}
+    ${bloc('#7A5AA6', svgEspace(CHEMINS.sagas), 'Sagas', 'DonkTV repère les sagas de ma collection et me montre les films qu’il me reste à voir.')}
   </ul></section>`;
 }
 

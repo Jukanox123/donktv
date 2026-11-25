@@ -16,10 +16,25 @@ sb.from = (table) => {
   const q = fromBase(table);
   for (const m of ['insert', 'update', 'upsert', 'delete']) {
     const ecrire = q[m];
-    q[m] = (...a) => { lectures.clear(); generation++; return ecrire.apply(q, a); };
+    q[m] = (...a) => { lectures.clear(); generation++; sauverLectures(); return ecrire.apply(q, a); };
   }
   return q;
 };
+
+// 1.6.4 : les lectures sont aussi gardées sur l'appareil (une copie par compte), pour que l'app s'ouvre
+// tout de suite sur les données de la dernière visite ; elles sont relues aussitôt (t = 0) et la page se met à jour.
+const disque = {
+  lire(nom) { try { return JSON.parse(localStorage.getItem(`donktv-${nom}-${uid}`)); } catch { return null; } },
+  ecrire(nom, v) { try { localStorage.setItem(`donktv-${nom}-${uid}`, JSON.stringify(v)); } catch { disque.effacer(uid, nom); } },
+  effacer(id, nom) { try { for (const n of nom ? [nom] : ['lectures', 'demarrage']) localStorage.removeItem(`donktv-${n}-${id}`); } catch {} },
+};
+function sauverLectures() {
+  clearTimeout(sauverLectures.t);
+  sauverLectures.t = setTimeout(() => uid && disque.ecrire('lectures', [...lectures].map(([k, v]) => [k, v.data])), 1000);
+}
+function relireLectures() {
+  for (const [k, data] of disque.lire('lectures') || []) if (!lectures.has(k)) lectures.set(k, { data, t: 0 });
+}
 async function lire(cle, requete) {
   const c = lectures.get(cle);
   if (c) {
@@ -30,14 +45,14 @@ async function lire(cle, requete) {
   if (!enCours.has(cle)) enCours.set(cle, Promise.resolve(requete()).finally(() => enCours.delete(cle)));
   const { data, error } = await enCours.get(cle);
   if (error) throw error;
-  if (g === generation) lectures.set(cle, { data, t: Date.now() });
+  if (g === generation) { lectures.set(cle, { data, t: Date.now() }); sauverLectures(); }
   return structuredClone(data);
 }
 async function revalider(cle, requete, ancien) {
   ancien.t = Date.now(); // une seule relecture à la fois
   const g = generation, { data, error } = await requete().catch((e) => ({ error: e }));
   if (error || g !== generation) return;
-  lectures.set(cle, { data, t: Date.now() });
+  lectures.set(cle, { data, t: Date.now() }); sauverLectures();
   // Ne pas redessiner sous les doigts : pas pendant une saisie ni avec une fenêtre ouverte.
   if (JSON.stringify(data) !== JSON.stringify(ancien.data) && !document.activeElement?.matches('input, textarea') && !document.querySelector('dialog[open]')) route();
 }
@@ -158,7 +173,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.6.3';
+const VERSION = '1.6.4';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -420,6 +435,16 @@ async function pageDecouverte(tmdbId) {
   f.saga = saga && { id: saga.id, nom: saga.name, parts: (await collection(saga.id).catch(() => null))?.parts };
   return htmlFilm(f);
 }
+
+// 1.6.4 : la fiche est préparée dès que la souris ou le doigt se pose sur une affiche.
+document.addEventListener('pointerover', (e) => {
+  const a = e.target.closest?.('a[href^="#film/"]');
+  if (!a || !uid) return;
+  const id = a.getAttribute('href').split('/')[1];
+  if (!lectures.has('film/' + id)) lire('film/' + id, () => sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle()).catch(() => {});
+  const f = films.find((x) => String(x.id) === id);
+  if (sources.tmdb && f?.tmdb_id) details(f.tmdb_id).catch(() => {});
+}, { passive: true });
 
 async function pageFilm(id) {
   const f = await lire('film/' + id, () => sb.from('films').select('*, visionnages(id,date)').eq('id', id).maybeSingle());
@@ -1074,6 +1099,10 @@ $('#form-connexion').addEventListener('submit', async (e) => {
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
 async function demarrer() {
+  // Ouverture instantanée : la dernière copie sur l'appareil s'affiche, la base est lue en même temps.
+  relireLectures();
+  const avant = disque.lire('demarrage');
+  if (avant) { appliquerDemarrage(avant); afficherApp(); }
   chargerFilms().catch(() => {}); // lue par la plupart des pages : partie en même temps que le reste
   const [r, f, c, p] = await Promise.all([
     sb.from('reglages').select('*').maybeSingle(),
@@ -1081,21 +1110,30 @@ async function demarrer() {
     sb.rpc('cles'),
     sb.rpc('est_premium'),
   ]);
-  reglages = r.data || {}; films = f.data || [];
   // Les clés de l'administrateur servent à tous ; le navigateur sait seulement si elles existent.
   if (c.error) toast('Lecture du compte impossible : ' + c.error.message);
-  admin = !!c.data?.admin;
-  premium = p.data === true;
-  sources = { tmdb: !!c.data?.tmdb };
-  document.body.classList.toggle('admin', admin);
-  document.querySelectorAll('[data-version]').forEach((e) => (e.textContent = 'DonkTV · version ' + VERSION));
-  if (reglages.theme) appliquerTheme(reglages.theme);
-  $('#connexion').hidden = true; $('#app').hidden = false;
-  route();
+  const neuf = { reglages: r.data || {}, films: f.data || [], admin: !!c.data?.admin, premium: p.data === true, tmdb: !!c.data?.tmdb };
+  const { tmdb_token, omdb_key, ...sansCles } = neuf.reglages; // jamais de clé sur l'appareil
+  const garde = { ...neuf, reglages: sansCles };
+  const ok = !r.error && !f.error && !c.error;
+  if (ok) disque.ecrire('demarrage', garde);
+  if (!avant) { appliquerDemarrage(neuf); afficherApp(); }
+  else if (ok) { appliquerDemarrage(neuf); if (JSON.stringify(garde) !== JSON.stringify(avant)) route(); } // en cas d'erreur, la copie reste affichée
   majAmis();
   if (!reglages.prenom) demanderPrenom();
   setTimeout(completerFilms, 4000); // après l'affichage de la page, pour ne pas lui prendre la bande passante
   if (r.error || f.error) toast('Lecture de la base impossible : ' + (r.error || f.error).message);
+}
+
+function appliquerDemarrage(d) {
+  reglages = d.reglages; films = d.films; admin = d.admin; premium = d.premium; sources = { tmdb: d.tmdb };
+  document.body.classList.toggle('admin', admin);
+  if (reglages.theme) appliquerTheme(reglages.theme);
+}
+function afficherApp() {
+  document.querySelectorAll('[data-version]').forEach((e) => (e.textContent = 'DonkTV · version ' + VERSION));
+  $('#connexion').hidden = true; $('#app').hidden = false;
+  route();
 }
 
 const pagesChargees = new Promise((ok) => (document.readyState === 'loading' ? addEventListener('DOMContentLoaded', ok) : ok()));
@@ -1105,6 +1143,7 @@ sb.auth.onAuthStateChange((evt, session) => {
   if (evt === 'PASSWORD_RECOVERY') modeMdp = 'nouveau';
   const id = session?.user?.id || null;
   if (id === uid && id) return; // simple renouvellement du jeton
+  if (uid && uid !== id) { disque.effacer(uid); lectures.clear(); generation++; } // déconnexion : rien ne reste sur l'appareil
   uid = id; moi = session?.user?.email || '';
   if (!uid) {
     if (dlg.open) dlg.close();
