@@ -59,7 +59,7 @@ const GENRE_TMDB = { 28: 'Action', 12: 'Aventure', 16: 'Animation', 35: 'Comédi
 
 let uid = null, moi = '', admin = true, reglages = {}, films = [];
 let premium = false; // offre du compte (table abonnements) : rien n'est encore réservé au premium
-let sources = { tmdb: false, omdb: false }; // clés renseignées par l'administrateur (elles restent sur le serveur)
+let sources = { tmdb: false }; // clés renseignées par l'administrateur (elles restent sur le serveur)
 
 function toast(msg, action) {
   const t = $('#toast');
@@ -85,9 +85,9 @@ async function enregistrerReglages(patch) {
   Object.assign(reglages, patch);
 }
 
-/* ---------- TMDB et OMDb ---------- */
+/* ---------- TMDB ---------- */
 
-// Sans clé explicite (test dans les Réglages), TMDB et OMDb passent par la fonction Supabase « sources » qui garde les clés.
+// Sans clé explicite (test dans les Réglages), TMDB passe par la fonction Supabase « sources » qui garde les clés.
 async function viaServeur(corps) {
   const { data: { session } } = await sb.auth.getSession();
   // GET pour que le navigateur garde les réponses TMDB (6 h) : une fiche déjà vue s'ouvre sans attendre.
@@ -104,12 +104,6 @@ async function tmdb(chemin, params = {}, cle) {
   return r.json();
 }
 
-async function omdb(imdbId, cle) {
-  const r = cle ? await fetch(`https://www.omdbapi.com/?i=${encodeURIComponent(imdbId)}&apikey=${encodeURIComponent(cle)}`) : await viaServeur({ omdb: imdbId });
-  const j = await r.json().catch(() => ({}));
-  if (j.Response !== 'True') throw new Error(j.Error === 'Invalid API key!' ? 'OMDb refuse cette clé : vérifie qu’elle est activée (lien dans le mail d’OMDb).' : 'OMDb : ' + (j.Error || `erreur ${r.status}`));
-  return j;
-}
 
 function versFilm(d) {
   const fr_ = d.release_dates?.results?.find((x) => x.iso_3166_1 === 'FR')?.release_dates?.[0]?.release_date;
@@ -159,11 +153,10 @@ function pageAccueil() {
 const APERCUS = { clair: '#F6F1E4', sombre: '#141F19', auto: 'linear-gradient(90deg, #F6F1E4 50%, #141F19 50%)' };
 const CLES = [
   { champ: 'tmdb_token', nom: 'Clé TMDB', aide: 'Gratuite, à créer sur themoviedb.org (Paramètres › API). Le jeton d’accès ou la clé d’API conviennent.', test: (v) => tmdb('/configuration', {}, v) },
-  { champ: 'omdb_key', nom: 'Clé OMDb', aide: 'Gratuite, à demander sur omdbapi.com. Limitée à 1 000 requêtes par jour.', test: (v) => omdb('tt0133093', v) },
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.5.2';
+const VERSION = '1.5.3';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -175,7 +168,7 @@ function pageReglages() {
     </section>
     <section class="carte"><div><h2>Mes plateformes</h2><p class="muted">Cherche celles auxquelles tu es abonné et ajoute-les : elles ressortent en vert dans « Où le regarder ? » et servent au filtre « Sur mes plateformes ».</p></div>
       <div id="pf-choix"><p class="muted">Chargement des plateformes…</p></div></section>
-    ${admin ? `<section class="carte"><div><h2>Sources des films</h2><p class="muted">Deux clés gratuites : TMDB pour les fiches, OMDb pour la note des critiques. Visible par toi seul : les autres utilisateurs ne les voient pas.</p></div>
+    ${admin ? `<section class="carte"><div><h2>Sources des films</h2><p class="muted">Une clé gratuite : TMDB pour les fiches. Visible par toi seul : les autres utilisateurs ne les voient pas.</p></div>
       ${CLES.map((k) => `<div class="cle" data-cle="${k.champ}">
         <div class="cle-tete"><label for="${k.champ}">${k.nom}</label><span class="etat ${reglages[k.champ] ? 'ok' : ''}">${reglages[k.champ] ? 'Connectée' : 'À renseigner'}</span></div>
         <div class="cle-ligne"><input id="${k.champ}" type="password" value="${esc(reglages[k.champ])}" autocomplete="off" spellcheck="false">
@@ -189,7 +182,7 @@ function pageReglages() {
       <div class="compte-suppr"><p class="muted">Ton compte et tous tes films seront effacés définitivement.</p><button class="btn danger-trait" type="button" data-supprimer-compte>Supprimer mon compte</button></div>
     </section>
     <section class="carte"><h2>À propos</h2><p style="font-size:15px">DonkTV · version ${VERSION}</p>
-      <p class="muted" style="font-size:14px">Fiches, affiches et note des spectateurs : TMDB. Note des critiques : Rotten Tomatoes, via OMDb. Cette application utilise l'API TMDB mais n'est ni approuvée ni certifiée par TMDB.</p>
+      <p class="muted" style="font-size:14px">Fiches, affiches et note des spectateurs : TMDB. Cette application utilise l'API TMDB mais n'est ni approuvée ni certifiée par TMDB.</p>
     </section>
   </div>`;
 }
@@ -259,15 +252,14 @@ $('#page').addEventListener('click', async (e) => {
       b.textContent = i.type === 'password' ? 'Afficher' : 'Masquer';
     } else if ('tester' in b.dataset) {
       const bloc = b.closest('.cle'), k = CLES.find((c) => c.champ === bloc.dataset.cle), etat = $('.etat', bloc);
-      // Le mail d'OMDb donne un lien d'exemple : on en extrait la clé si c'est lui qui a été collé.
-      const v = $('input', bloc).value.trim().replace(/^.*[?&]apikey=([^&\s]+).*$/i, '$1');
+      const v = $('input', bloc).value.trim();
       $('input', bloc).value = v;
       if (!v) return toast('Colle d’abord ta clé.');
       b.disabled = true;
       try {
         await k.test(v);
         await enregistrerReglages({ [k.champ]: v });
-        sources[k.champ === 'tmdb_token' ? 'tmdb' : 'omdb'] = true;
+        sources.tmdb = true;
         etat.className = 'etat ok'; etat.textContent = 'Connectée';
         toast(k.nom + ' : connexion réussie, clé enregistrée.');
       } catch (err) {
@@ -301,7 +293,6 @@ const aujourdhui = () => new Date().toLocaleDateString('sv');
 const trierDates = (l) => [...l].sort((a, b) => (a || '').localeCompare(b || ''));
 const etoilesTxt = (n) => '★'.repeat(Math.floor(n)) + (n % 1 ? '½' : '');
 const ICO_ETOILE = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#F2B84B"/><path d="M26 13l3.9 8.2 8.9 1.1-6.6 6.1 1.8 8.8L26 32.8l-8 4.4 1.8-8.8-6.6-6.1 8.9-1.1z" fill="#5A3A08"/></svg>';
-const ICO_RT = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#E8664A"/><path d="M17 36l3.5-10.5L33 13l6 6-12.5 12.5z" fill="#FFF"/><path d="M20.5 25.5l6 6" stroke="#E8664A" stroke-width="2.4" stroke-linecap="round"/><circle cx="27.5" cy="24.5" r="2" fill="#E8664A"/><path d="M14 39h12" stroke="#FFF" stroke-width="2.6" stroke-linecap="round"/></svg>';
 const ICO_TMDB = '<svg width="52" height="52" viewBox="0 0 52 52" aria-hidden="true"><rect width="52" height="52" rx="14" fill="#3E8ED0"/><path d="M13 19h26v4.5a3.5 3.5 0 0 0 0 7V35H13v-4.5a3.5 3.5 0 0 0 0-7z" fill="#FFF"/><path d="M31 20v14" stroke="#3E8ED0" stroke-width="2.2" stroke-dasharray="2.5 2.5"/></svg>';
 const ICO_COEUR = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" fill="#F07A6E"/></svg>';
 const ICO_POUBELLE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0 M10 11l0 6 M14 11l0 6 M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12 M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
@@ -353,7 +344,6 @@ function htmlFilm(f) {
       <p class="fiche-meta">${meta}</p>
       <div class="tuiles">
         ${vu ? tuile(ICO_ETOILE, 'Ma note', f.note ? fr(f.note) : null, ' /5', (f.note ? `<span aria-hidden="true" class="ma-note">${etoilesTxt(f.note)}</span>` : '') + '<span class="court">Ma note</span>') : ''}
-        ${tuile(ICO_RT, 'Critiques', f.note_rt, ' %', 'Rotten Tomatoes ↗', `https://www.rottentomatoes.com/search?search=${encodeURIComponent(f.titre_original || f.titre)}`, niveau(f.note_rt))}
         ${tuile(ICO_TMDB, 'Spectateurs', f.note_tmdb ? fr(Number(f.note_tmdb).toFixed(1)) : null, ' /10', `TMDB${f.votes_tmdb ? ' · ' + f.votes_tmdb.toLocaleString('fr-FR') + ' votes' : ''} ↗`, `https://www.themoviedb.org/movie/${f.tmdb_id}`, niveau(f.note_tmdb && f.note_tmdb * 10))}
       </div>
       <div class="fiche-etiquettes">${vu && f.coup_de_coeur ? `<span class="coeur-on">${ICO_COEUR}Coup de cœur</span>` : ''}<span>${vuTxt}</span></div>
@@ -381,7 +371,8 @@ function htmlFilm(f) {
 }
 
 const logoPf = (p) => (p.logo ? `<img src="${IMG(p.logo, 92)}" alt="">` : '');
-const pastillePf = (p, mien) => `<li class="pf${mien ? ' pf-mien' : ''}">${logoPf(p)}<span><b>${esc(p.nom)}</b><small>${mien ? 'Dans mes abonnements' : 'Pas abonné'}</small></span></li>`;
+const pastillePf = (p, mien) => `<li><a class="pf${mien ? ' pf-mien' : ''}" href="${esc(p.lien)}" target="_blank" rel="noopener" title="Ouvrir ${esc(p.nom)}">${logoPf(p)}<span><b>${esc(p.nom)}</b><small>${mien ? 'Dans mes abonnements' : 'Pas abonné'}</small></span>${ICO_OUVRIR}</a></li>`;
+const ICO_OUVRIR = '<svg class="pf-ouvrir" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 7l-10 10 M8 7l9 0l0 9"/></svg>';
 
 function ouRegarderHtml(o) {
   if (!o) return '';
@@ -440,44 +431,36 @@ const collection = memo((id) => tmdb(`/collection/${id}`));
 // « Netflix Standard with Ads », « Paramount+ Amazon Channel »… comptent comme la plateforme elle-même.
 const nomPlateforme = (n) => n.replace(/\s+(Standard\s+)?with\s+Ads$/i, '').replace(/\s+(Amazon|Apple TV|Prime Video)\s+Channel$/i, '').replace(/\s+Plus$/i, '+').replace(/^Amazon Prime Video$/i, 'Prime Video').trim();
 const uniques = (l) => [...new Map(l.sort((a, b) => a.display_priority - b.display_priority).map((p) => [nomPlateforme(p.provider_name), { nom: nomPlateforme(p.provider_name), logo: p.logo_path }])).values()];
+// Recherche du film dans la plateforme : lien universel, qui ouvre son app quand elle est installée.
+// shortcut: Netflix et Prime Video seulement ; les autres mènent à la page « Où regarder » de TMDB, qui a leurs liens.
+const RECHERCHE_PF = { 'Netflix': 'https://www.netflix.com/search?q=', 'Prime Video': 'https://www.primevideo.com/search/ref=atv_nb_sr?phrase=' };
 function offres(d) {
   const r = d['watch/providers']?.results?.FR || {};
-  return { abo: uniques([...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]) };
+  const lien = (nom) => (RECHERCHE_PF[nom] ? RECHERCHE_PF[nom] + encodeURIComponent(d.title) : r.link);
+  return { abo: uniques([...(r.flatrate || []), ...(r.free || []), ...(r.ads || [])]).map((p) => ({ ...p, lien: lien(p.nom) })) };
 }
 const aMoi = (nom) => (reglages.plateformes || []).includes(nom);
 
-// Garde la fiche à jour : notes, date de sortie, plateformes et saga depuis TMDB ; note des critiques tous les 30 jours.
-async function mettreAJour(f, d, avecOmdb = true) {
+// Garde la fiche à jour : notes, date de sortie, plateformes et saga depuis TMDB.
+async function mettreAJour(f, d) {
   const v = versFilm(d), auj = aujourdhui(), patch = {}, nouveau = {};
   for (const k of ['note_tmdb', 'votes_tmdb', 'date_sortie_fr']) if (v[k] != null && String(v[k]) !== String(f[k] ?? '')) patch[k] = f[k] = v[k];
   const pf = offres(d).abo.map(({ nom, logo }) => ({ nom, logo }));
   if (JSON.stringify(pf) !== JSON.stringify(f.plateformes) || !f.plateformes_le || joursEntre(f.plateformes_le, auj) >= 7) Object.assign(nouveau, { plateformes: pf, plateformes_le: auj });
   if ((d.belongs_to_collection?.id ?? null) !== (f.saga_id ?? null)) Object.assign(nouveau, { saga_id: d.belongs_to_collection?.id ?? null, saga_nom: d.belongs_to_collection?.name ?? null });
-  const vueDepuis = f.statut === 'vu' && f.visionnages.some((x) => x.date > (f.maj_le || ''));
-  const rtVieille = f.note_rt == null || !f.maj_le || joursEntre(f.maj_le, auj) > 30 || vueDepuis;
-  let rt = null;
-  if (avecOmdb && rtVieille && f.imdb_id && sources.omdb && !mettreAJour.essayes.has(f.id)) {
-    mettreAJour.essayes.add(f.id);
-    try { rt = parseInt((await omdb(f.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value); } catch {}
-    if (rt >= 0 && rt !== f.note_rt) patch.note_rt = rt;
-    if (rt >= 0) nouveau.maj_le = auj;
-  }
   // Deux écritures : si les colonnes du 18 novembre manquent encore, les notes sont quand même mises à jour.
   if (Object.keys(patch).length) await sb.from('films').update(patch).eq('id', f.id);
   if (Object.keys(nouveau).length) await sb.from('films').update(nouveau).eq('id', f.id);
-  if ('note_rt' in patch && location.hash === '#film/' + f.id && !document.querySelector('dialog[open]')) route();
 }
-mettreAJour.essayes = new Set();
 
 // Au démarrage : complète en arrière-plan les films dont les plateformes datent de plus de 7 jours (pour les filtres et les sagas).
 async function completerFilms() {
   if (!sources.tmdb) return;
-  const { data, error } = await sb.from('films').select('id,tmdb_id,statut,note_tmdb,votes_tmdb,date_sortie_fr,plateformes,plateformes_le,saga_id,note_rt,maj_le,imdb_id,visionnages(date)');
+  const { data, error } = await sb.from('films').select('id,tmdb_id,statut,note_tmdb,votes_tmdb,date_sortie_fr,plateformes,plateformes_le,saga_id');
   if (error) return; // colonnes pas encore créées
   const auj = aujourdhui(), file = data.filter((f) => !f.plateformes_le || joursEntre(f.plateformes_le, auj) >= 7);
   if (!file.length) return;
-  // OMDb seulement à l'ouverture d'une fiche (quota de 1 000 requêtes par jour).
-  const travail = async () => { for (let f; (f = file.shift());) try { await mettreAJour(f, await details(f.tmdb_id), false); } catch {} };
+  const travail = async () => { for (let f; (f = file.shift());) try { await mettreAJour(f, await details(f.tmdb_id)); } catch {} };
   await Promise.all([travail(), travail(), travail(), travail()]);
   if (/^#(a-voir|collection|genre|sagas?|accueil)?(\/|$)/.test(location.hash) && !document.querySelector('dialog[open]') && !document.activeElement?.matches('input')) route();
 }
@@ -960,13 +943,8 @@ async function enregistrer(bouton) {
   if (vu && !valider([['err-ajout-note', note ? '' : MANQUE_NOTE]])) return;
   bouton.disabled = true;
   try {
-    let note_rt = null;
-    if (sources.omdb && film.imdb_id) {
-      // La note des critiques est facultative : un échec OMDb ne doit pas empêcher l'ajout.
-      try { note_rt = parseInt((await omdb(film.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value) || null; } catch {}
-    }
     const { data, error } = await sb.from('films')
-      .upsert({ ...film, user_id: uid, statut, note: vu && note ? note : null, coup_de_coeur: vu && coeur, note_rt }, { onConflict: 'user_id,tmdb_id' })
+      .upsert({ ...film, user_id: uid, statut, note: vu && note ? note : null, coup_de_coeur: vu && coeur }, { onConflict: 'user_id,tmdb_id' })
       .select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').single();
     if (error) throw error;
     if (vu) {
@@ -1090,7 +1068,7 @@ async function demarrer() {
   if (c.error) toast('Lecture du compte impossible : ' + c.error.message);
   admin = !!c.data?.admin;
   premium = p.data === true;
-  sources = { tmdb: !!c.data?.tmdb, omdb: !!c.data?.omdb };
+  sources = { tmdb: !!c.data?.tmdb };
   document.body.classList.toggle('admin', admin);
   document.querySelectorAll('[data-version]').forEach((e) => (e.textContent = 'DonkTV · version ' + VERSION));
   if (reglages.theme) appliquerTheme(reglages.theme);

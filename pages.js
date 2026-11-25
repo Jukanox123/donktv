@@ -788,9 +788,7 @@ async function ajouterAVoirRapide(id, b) {
   b.disabled = true;
   try {
     const film = versFilm(await tmdb(`/movie/${id}`, { append_to_response: 'credits,videos,release_dates', include_video_language: 'fr,en' }));
-    let note_rt = null;
-    if (sources.omdb && film.imdb_id) try { note_rt = parseInt((await omdb(film.imdb_id)).Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value) || null; } catch {}
-    const { data, error } = await sb.from('films').upsert({ ...film, user_id: uid, statut: 'a_voir', note: null, coup_de_coeur: false, note_rt }, { onConflict: 'user_id,tmdb_id' }).select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').single();
+    const { data, error } = await sb.from('films').upsert({ ...film, user_id: uid, statut: 'a_voir', note: null, coup_de_coeur: false }, { onConflict: 'user_id,tmdb_id' }).select('id,tmdb_id,titre,annee,affiche,statut,note,coup_de_coeur').single();
     if (error) throw error;
     films = [data, ...films.filter((f) => f.id !== data.id)];
     rch.close();

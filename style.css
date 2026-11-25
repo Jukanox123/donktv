@@ -753,7 +753,7 @@ dialog.feuille { width: min(520px, 100%); }
   .fiche-genres img { width: 32px; height: 32px; }
   .fiche-hero h1, .fiche-meta { order: 0; }
   .fiche-genres, .tuiles, .fiche-etiquettes, .fiche-actions { order: 1; }
-  .tuiles { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+  .tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
   .tuile { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
   .tuile svg { width: 36px; height: 36px; flex: none; }
   .tuile .chiffre { font-size: 22px; }
@@ -917,6 +917,8 @@ dialog.feuille { width: min(520px, 100%); }
 .pf-mien { border-color: var(--accent); background: var(--ok-bg); color: var(--ok-fg); }
 .pf-mien img { filter: none; opacity: 1; }
 .pf-mien b { color: var(--text); }
+a.pf { text-decoration: none; }
+.pf-ouvrir { flex: none; margin-left: 4px; }
 .tirage-pf img { width: 22px; height: 22px; border-radius: 5px; }
 .pf-note { font-size: 13px; }
 
