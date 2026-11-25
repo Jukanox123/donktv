@@ -200,4 +200,16 @@ fen.addEventListener('submit', async (e) => {
   catch (err) { toast(err.message); b.disabled = false; }
 });
 
+// Réglages › Mon compte : prénom modifiable.
+$('#page').addEventListener('submit', async (e) => {
+  if (!e.target.matches('[data-prenom-reglages]')) return;
+  e.preventDefault();
+  const b = $('button', e.target), prenom = e.target.prenom.value.trim();
+  if (!prenom) return toast('Indique ton prénom.');
+  b.disabled = true;
+  try { await enregistrerReglages({ prenom }); toast('Prénom enregistré.'); }
+  catch (err) { toast(err.message); }
+  finally { b.disabled = false; }
+});
+
 PAGES.amis = () => pageAmis();

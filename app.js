@@ -163,7 +163,7 @@ const CLES = [
 ];
 
 // Numéro affiché dans Réglages › À propos : majeur.mineur.correctif, augmenté à chaque mise en ligne.
-const VERSION = '1.5.1';
+const VERSION = '1.5.2';
 
 function pageReglages() {
   const theme = reglages.theme || 'auto';
@@ -183,6 +183,7 @@ function pageReglages() {
         <small>${k.aide}</small></div>`).join('')}
     </section>` : ''}
     <section class="carte"><h2>Mon compte</h2>
+      <form class="invit-form" data-prenom-reglages><label>Prénom<input name="prenom" type="text" autocomplete="given-name" maxlength="40" value="${esc(reglages.prenom)}" required></label><button class="btn" type="submit">Enregistrer</button></form>
       <label class="compte-email">E-mail<input type="email" value="${esc(moi)}" readonly></label>
       <div class="boutons"><button class="btn" type="button" data-changer-mdp>Changer mon mot de passe</button><button class="btn" type="button" data-deconnexion>Se déconnecter</button></div>
       <div class="compte-suppr"><p class="muted">Ton compte et tous tes films seront effacés définitivement.</p><button class="btn danger-trait" type="button" data-supprimer-compte>Supprimer mon compte</button></div>
